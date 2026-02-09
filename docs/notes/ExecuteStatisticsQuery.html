@@ -1,0 +1,614 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteStatisticsQuery</title>
+    <style>BODY { color: #000000; background-color: white; font-family: Verdana; margin-left: 0px; margin-top: 0px; } #content { margin-left: 30px; font-size: .70em; padding-bottom: 2em; } A:link { color: #336699; font-weight: bold; text-decoration: underline; } A:visited { color: #6699cc; font-weight: bold; text-decoration: underline; } A:active { color: #336699; font-weight: bold; text-decoration: underline; } .heading1 { background-color: #003366; border-bottom: #336699 6px solid; color: #ffffff; font-family: Tahoma; font-size: 26px; font-weight: normal;margin: 0em 0em 10px -20px; padding-bottom: 8px; padding-left: 30px;padding-top: 16px;} pre { font-size:small; background-color: #e5e5cc; padding: 5px; font-family: Courier New; margin-top: 0px; border: 1px #f0f0e0 solid; white-space: pre-wrap; white-space: -pre-wrap; word-wrap: break-word; } table { border-collapse: collapse; border-spacing: 0px; font-family: Verdana;} table th { border-right: 2px white solid; border-bottom: 2px white solid; font-weight: bold; background-color: #cecf9c;} table td { border-right: 2px white solid; border-bottom: 2px white solid; background-color: #e5e5cc;}</style>
+  </head>
+  <body>
+    <div id="content">
+      <p class="heading1">Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteStatisticsQuery</p>
+      <p></p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>Url: </b>
+        <span class="uri-template">https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteStatisticsQuery</span>
+      </p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>HTTP Method: </b>
+        <span class="method">POST</span>
+      </p>
+      <table>
+        <tr>
+          <th>Message direction</th>
+          <th>Format</th>
+          <th>Body</th>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Xml</td>
+          <td>
+            <a href="#request-xml">Example</a>,<a href="#request-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Json</td>
+          <td>
+            <a href="#request-json">Example</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Xml</td>
+          <td>
+            <a href="#response-xml">Example</a>,<a href="#response-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Json</td>
+          <td>
+            <a href="#response-json">Example</a>
+          </td>
+        </tr>
+      </table>
+      <p>
+        <a name="request-xml">The following is an example request Xml body:</a>
+        <pre class="request-xml">&lt;ExecuteStatisticsQueryParams xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;QueryType&gt;Undefined&lt;/QueryType&gt;
+  &lt;RestrictToObjNo&gt;2147483647&lt;/RestrictToObjNo&gt;
+  &lt;RestrictToUser&gt;true&lt;/RestrictToUser&gt;
+&lt;/ExecuteStatisticsQueryParams&gt;</pre>
+      </p>
+      <p>
+        <a name="request-json">The following is an example request Json body:</a>
+        <pre class="request-json">{
+	"QueryType":0,
+	"RestrictToObjNo":2147483647,
+	"RestrictToUser":true
+}</pre>
+      </p>
+      <p>
+        <a name="response-xml">The following is an example response Xml body:</a>
+        <pre class="response-xml">&lt;ExecuteStatisticsQueryResponse xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;QueryResult&gt;
+    &lt;QueryType&gt;Undefined&lt;/QueryType&gt;
+    &lt;ResultRows&gt;
+      &lt;WSExecStatsQueryResultRow&gt;
+        &lt;CountValue&gt;2147483647&lt;/CountValue&gt;
+        &lt;EntryName&gt;String content&lt;/EntryName&gt;
+        &lt;EntryNo&gt;2147483647&lt;/EntryNo&gt;
+      &lt;/WSExecStatsQueryResultRow&gt;
+      &lt;WSExecStatsQueryResultRow&gt;
+        &lt;CountValue&gt;2147483647&lt;/CountValue&gt;
+        &lt;EntryName&gt;String content&lt;/EntryName&gt;
+        &lt;EntryNo&gt;2147483647&lt;/EntryNo&gt;
+      &lt;/WSExecStatsQueryResultRow&gt;
+    &lt;/ResultRows&gt;
+  &lt;/QueryResult&gt;
+&lt;/ExecuteStatisticsQueryResponse&gt;</pre>
+      </p>
+      <p>
+        <a name="response-json">The following is an example response Json body:</a>
+        <pre class="response-json">{
+	"QueryResult":{
+		"QueryType":0,
+		"ResultRows":[{
+			"CountValue":2147483647,
+			"EntryName":"String content",
+			"EntryNo":2147483647
+		}]
+	}
+}</pre>
+      </p>
+      <p>
+        <a name="request-schema">The following is the request Xml Schema:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" /&gt;
+  &lt;xs:complexType name="ExecuteStatisticsQueryParams"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="QueryType" type="tns:WSStatisticsQueryType" /&gt;
+      &lt;xs:element minOccurs="0" name="RestrictToObjNo" nillable="true" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="RestrictToUser" type="xs:boolean" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ExecuteStatisticsQueryParams" nillable="true" type="tns:ExecuteStatisticsQueryParams" /&gt;
+  &lt;xs:simpleType name="WSStatisticsQueryType"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Undefined" /&gt;
+      &lt;xs:enumeration value="Workflow_InstancesByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;100&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;101&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesRunningByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;102&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesRunningByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;103&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesFinishedByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;104&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesFinishedByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;105&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_OverdueInstancesByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;106&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_OverdueInstancesByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;107&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_ErrorInstancesByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;108&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_ErrorInstancesByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;109&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;200&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CheckedOutByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;201&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedTodayByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;202&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedThisWeekByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;203&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedThisMonthByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;204&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedThisYearByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;205&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedLastWeekByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;206&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedLastMonthByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;207&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedLastYearByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;208&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_ToDo"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;400&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_Started"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;401&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_Done"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;402&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_AllByState"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;403&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_OverdueToDo"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;404&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_OverdueStarted"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;405&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSStatisticsQueryType" nillable="true" type="tns:WSStatisticsQueryType" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="request-schema">Additional request Xml Schemas:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="request-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">The following is the response Xml Schema:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" /&gt;
+  &lt;xs:complexType name="ExecuteStatisticsQueryResponse"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="QueryResult" nillable="true" type="tns:WSExecStatsQueryResult" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ExecuteStatisticsQueryResponse" nillable="true" type="tns:ExecuteStatisticsQueryResponse" /&gt;
+  &lt;xs:complexType name="WSExecStatsQueryResult"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="QueryType" type="tns:WSStatisticsQueryType" /&gt;
+      &lt;xs:element minOccurs="0" name="ResultRows" nillable="true" type="tns:ArrayOfWSExecStatsQueryResultRow" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSExecStatsQueryResult" nillable="true" type="tns:WSExecStatsQueryResult" /&gt;
+  &lt;xs:simpleType name="WSStatisticsQueryType"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Undefined" /&gt;
+      &lt;xs:enumeration value="Workflow_InstancesByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;100&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;101&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesRunningByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;102&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesRunningByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;103&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesFinishedByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;104&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_InstancesFinishedByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;105&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_OverdueInstancesByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;106&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_OverdueInstancesByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;107&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_ErrorInstancesByProcess"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;108&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Workflow_ErrorInstancesByTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;109&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;200&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CheckedOutByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;201&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedTodayByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;202&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedThisWeekByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;203&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedThisMonthByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;204&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedThisYearByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;205&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedLastWeekByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;206&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedLastMonthByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;207&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Documents_CreatedLastYearByCategory"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;208&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_ToDo"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;400&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_Started"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;401&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_Done"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;402&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_AllByState"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;403&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_OverdueToDo"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;404&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Tasks_OverdueStarted"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;405&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSStatisticsQueryType" nillable="true" type="tns:WSStatisticsQueryType" /&gt;
+  &lt;xs:complexType name="ArrayOfWSExecStatsQueryResultRow"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSExecStatsQueryResultRow" nillable="true" type="tns:WSExecStatsQueryResultRow" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSExecStatsQueryResultRow" nillable="true" type="tns:ArrayOfWSExecStatsQueryResultRow" /&gt;
+  &lt;xs:complexType name="WSExecStatsQueryResultRow"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="CountValue" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="EntryName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="EntryNo" type="xs:int" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSExecStatsQueryResultRow" nillable="true" type="tns:WSExecStatsQueryResultRow" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">Additional response Xml Schemas:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="response-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+    </div>
+  </body>
+</html>

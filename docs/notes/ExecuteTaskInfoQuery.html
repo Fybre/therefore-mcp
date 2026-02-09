@@ -1,0 +1,417 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteTaskInfoQuery</title>
+    <style>BODY { color: #000000; background-color: white; font-family: Verdana; margin-left: 0px; margin-top: 0px; } #content { margin-left: 30px; font-size: .70em; padding-bottom: 2em; } A:link { color: #336699; font-weight: bold; text-decoration: underline; } A:visited { color: #6699cc; font-weight: bold; text-decoration: underline; } A:active { color: #336699; font-weight: bold; text-decoration: underline; } .heading1 { background-color: #003366; border-bottom: #336699 6px solid; color: #ffffff; font-family: Tahoma; font-size: 26px; font-weight: normal;margin: 0em 0em 10px -20px; padding-bottom: 8px; padding-left: 30px;padding-top: 16px;} pre { font-size:small; background-color: #e5e5cc; padding: 5px; font-family: Courier New; margin-top: 0px; border: 1px #f0f0e0 solid; white-space: pre-wrap; white-space: -pre-wrap; word-wrap: break-word; } table { border-collapse: collapse; border-spacing: 0px; font-family: Verdana;} table th { border-right: 2px white solid; border-bottom: 2px white solid; font-weight: bold; background-color: #cecf9c;} table td { border-right: 2px white solid; border-bottom: 2px white solid; background-color: #e5e5cc;}</style>
+  </head>
+  <body>
+    <div id="content">
+      <p class="heading1">Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteTaskInfoQuery</p>
+      <p></p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>Url: </b>
+        <span class="uri-template">https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteTaskInfoQuery</span>
+      </p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>HTTP Method: </b>
+        <span class="method">POST</span>
+      </p>
+      <table>
+        <tr>
+          <th>Message direction</th>
+          <th>Format</th>
+          <th>Body</th>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Xml</td>
+          <td>
+            <a href="#request-xml">Example</a>,<a href="#request-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Json</td>
+          <td>
+            <a href="#request-json">Example</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Xml</td>
+          <td>
+            <a href="#response-xml">Example</a>,<a href="#response-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Json</td>
+          <td>
+            <a href="#response-json">Example</a>
+          </td>
+        </tr>
+      </table>
+      <p>
+        <a name="request-xml">The following is an example request Xml body:</a>
+        <pre class="request-xml">&lt;ExecuteTaskInfoQueryParams xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;MaxRows&gt;2147483647&lt;/MaxRows&gt;
+  &lt;QueryMode&gt;Normal&lt;/QueryMode&gt;
+  &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+  &lt;ViewMode&gt;AllTasks&lt;/ViewMode&gt;
+&lt;/ExecuteTaskInfoQueryParams&gt;</pre>
+      </p>
+      <p>
+        <a name="request-json">The following is an example request Json body:</a>
+        <pre class="request-json">{
+	"MaxRows":2147483647,
+	"QueryMode":0,
+	"TaskNo":2147483647,
+	"ViewMode":0
+}</pre>
+      </p>
+      <p>
+        <a name="response-xml">The following is an example response Xml body:</a>
+        <pre class="response-xml">&lt;ExecuteTaskInfoQueryResponse xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;QueryResult&gt;
+    &lt;WSTaskInfo&gt;
+      &lt;AssignedToName&gt;String content&lt;/AssignedToName&gt;
+      &lt;AssignedToNumber&gt;2147483647&lt;/AssignedToNumber&gt;
+      &lt;Comment&gt;String content&lt;/Comment&gt;
+      &lt;CompletedDecision&gt;Undefined&lt;/CompletedDecision&gt;
+      &lt;CreatedBy&gt;String content&lt;/CreatedBy&gt;
+      &lt;DocNo&gt;2147483647&lt;/DocNo&gt;
+      &lt;DueDate&gt;1999-05-31T11:20:00&lt;/DueDate&gt;
+      &lt;Instructions&gt;String content&lt;/Instructions&gt;
+      &lt;IsAssignedToUser&gt;true&lt;/IsAssignedToUser&gt;
+      &lt;LastUpdate&gt;1999-05-31T11:20:00&lt;/LastUpdate&gt;
+      &lt;Mode&gt;Complete&lt;/Mode&gt;
+      &lt;StartDate&gt;1999-05-31T11:20:00&lt;/StartDate&gt;
+      &lt;Status&gt;NotStartedStatus&lt;/Status&gt;
+      &lt;Subject&gt;String content&lt;/Subject&gt;
+      &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+      &lt;IsCreatedByUser&gt;true&lt;/IsCreatedByUser&gt;
+      &lt;CaseNo&gt;2147483647&lt;/CaseNo&gt;
+      &lt;DueDateISO8601&gt;String content&lt;/DueDateISO8601&gt;
+      &lt;LastUpdateISO8601&gt;String content&lt;/LastUpdateISO8601&gt;
+      &lt;StartDateISO8601&gt;String content&lt;/StartDateISO8601&gt;
+    &lt;/WSTaskInfo&gt;
+    &lt;WSTaskInfo&gt;
+      &lt;AssignedToName&gt;String content&lt;/AssignedToName&gt;
+      &lt;AssignedToNumber&gt;2147483647&lt;/AssignedToNumber&gt;
+      &lt;Comment&gt;String content&lt;/Comment&gt;
+      &lt;CompletedDecision&gt;Undefined&lt;/CompletedDecision&gt;
+      &lt;CreatedBy&gt;String content&lt;/CreatedBy&gt;
+      &lt;DocNo&gt;2147483647&lt;/DocNo&gt;
+      &lt;DueDate&gt;1999-05-31T11:20:00&lt;/DueDate&gt;
+      &lt;Instructions&gt;String content&lt;/Instructions&gt;
+      &lt;IsAssignedToUser&gt;true&lt;/IsAssignedToUser&gt;
+      &lt;LastUpdate&gt;1999-05-31T11:20:00&lt;/LastUpdate&gt;
+      &lt;Mode&gt;Complete&lt;/Mode&gt;
+      &lt;StartDate&gt;1999-05-31T11:20:00&lt;/StartDate&gt;
+      &lt;Status&gt;NotStartedStatus&lt;/Status&gt;
+      &lt;Subject&gt;String content&lt;/Subject&gt;
+      &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+      &lt;IsCreatedByUser&gt;true&lt;/IsCreatedByUser&gt;
+      &lt;CaseNo&gt;2147483647&lt;/CaseNo&gt;
+      &lt;DueDateISO8601&gt;String content&lt;/DueDateISO8601&gt;
+      &lt;LastUpdateISO8601&gt;String content&lt;/LastUpdateISO8601&gt;
+      &lt;StartDateISO8601&gt;String content&lt;/StartDateISO8601&gt;
+    &lt;/WSTaskInfo&gt;
+  &lt;/QueryResult&gt;
+&lt;/ExecuteTaskInfoQueryResponse&gt;</pre>
+      </p>
+      <p>
+        <a name="response-json">The following is an example response Json body:</a>
+        <pre class="response-json">{
+	"QueryResult":[{
+		"AssignedToName":"String content",
+		"AssignedToNumber":2147483647,
+		"Comment":"String content",
+		"CompletedDecision":0,
+		"CreatedBy":"String content",
+		"DocNo":2147483647,
+		"DueDate":"\/Date(928149600000+0000)\/",
+		"Instructions":"String content",
+		"IsAssignedToUser":true,
+		"LastUpdate":"\/Date(928149600000+0000)\/",
+		"Mode":0,
+		"StartDate":"\/Date(928149600000+0000)\/",
+		"Status":0,
+		"Subject":"String content",
+		"TaskNo":2147483647,
+		"IsCreatedByUser":true,
+		"CaseNo":2147483647,
+		"DueDateISO8601":"String content",
+		"LastUpdateISO8601":"String content",
+		"StartDateISO8601":"String content"
+	}]
+}</pre>
+      </p>
+      <p>
+        <a name="request-schema">The following is the request Xml Schema:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:complexType name="ExecuteTaskInfoQueryParams"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="MaxRows" type="xs:int" /&gt;
+      &lt;xs:element name="QueryMode" type="tns:WSTaskQueryMode" /&gt;
+      &lt;xs:element minOccurs="0" name="TaskNo" nillable="true" type="xs:int" /&gt;
+      &lt;xs:element name="ViewMode" type="tns:WSTaskViewMode" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ExecuteTaskInfoQueryParams" nillable="true" type="tns:ExecuteTaskInfoQueryParams" /&gt;
+  &lt;xs:simpleType name="WSTaskQueryMode"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Normal" /&gt;
+      &lt;xs:enumeration value="AllStarted" /&gt;
+      &lt;xs:enumeration value="AllParticipated" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSTaskQueryMode" nillable="true" type="tns:WSTaskQueryMode" /&gt;
+  &lt;xs:simpleType name="WSTaskViewMode"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="AllTasks" /&gt;
+      &lt;xs:enumeration value="Today" /&gt;
+      &lt;xs:enumeration value="Next7" /&gt;
+      &lt;xs:enumeration value="Overdue" /&gt;
+      &lt;xs:enumeration value="NotStarted" /&gt;
+      &lt;xs:enumeration value="Active" /&gt;
+      &lt;xs:enumeration value="Completed" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSTaskViewMode" nillable="true" type="tns:WSTaskViewMode" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="request-schema">Additional request Xml Schemas:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="request-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">The following is the response Xml Schema:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" /&gt;
+  &lt;xs:complexType name="ExecuteTaskInfoQueryResponse"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="QueryResult" nillable="true" type="tns:ArrayOfWSTaskInfo" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ExecuteTaskInfoQueryResponse" nillable="true" type="tns:ExecuteTaskInfoQueryResponse" /&gt;
+  &lt;xs:complexType name="ArrayOfWSTaskInfo"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSTaskInfo" nillable="true" type="tns:WSTaskInfo" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSTaskInfo" nillable="true" type="tns:ArrayOfWSTaskInfo" /&gt;
+  &lt;xs:complexType name="WSTaskInfo"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="AssignedToName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="AssignedToNumber" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Comment" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="CompletedDecision" type="tns:WSTaskDecision" /&gt;
+      &lt;xs:element minOccurs="0" name="CreatedBy" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="DocNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="DueDate" nillable="true" type="xs:dateTime" /&gt;
+      &lt;xs:element minOccurs="0" name="Instructions" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="IsAssignedToUser" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="LastUpdate" type="xs:dateTime" /&gt;
+      &lt;xs:element minOccurs="0" name="Mode" type="tns:WSTaskMode" /&gt;
+      &lt;xs:element minOccurs="0" name="StartDate" nillable="true" type="xs:dateTime" /&gt;
+      &lt;xs:element minOccurs="0" name="Status" type="tns:WSTaskStatus" /&gt;
+      &lt;xs:element minOccurs="0" name="Subject" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TaskNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="IsCreatedByUser" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="CaseNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="DueDateISO8601" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="LastUpdateISO8601" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="StartDateISO8601" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSTaskInfo" nillable="true" type="tns:WSTaskInfo" /&gt;
+  &lt;xs:simpleType name="WSTaskDecision"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Undefined" /&gt;
+      &lt;xs:enumeration value="Positive" /&gt;
+      &lt;xs:enumeration value="Negative" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSTaskDecision" nillable="true" type="tns:WSTaskDecision" /&gt;
+  &lt;xs:simpleType name="WSTaskMode"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Complete"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;1&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="CompleteDecline"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;2&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="ApproveReject"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;3&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="YesNo"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;4&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSTaskMode" nillable="true" type="tns:WSTaskMode" /&gt;
+  &lt;xs:simpleType name="WSTaskStatus"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="NotStartedStatus"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;1&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="InProgressStatus"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;2&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="WaitingStatus"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;3&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="DeferredStatus"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;4&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="CompletedStatus"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;5&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="RevokedStatus"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;6&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSTaskStatus" nillable="true" type="tns:WSTaskStatus" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">Additional response Xml Schemas:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="response-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+    </div>
+  </body>
+</html>

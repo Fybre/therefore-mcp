@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Samples - Invoices",
+    "path": "AI Classification / Indexing/Invoices/Samples - Invoices",
+    "item_no": 143,
+    "item_type": 2
+  },
+  {
+    "name": "Xero Invoices",
+    "path": "AI Classification / Indexing/Invoices/Xero Invoices",
+    "item_no": 73,
+    "item_type": 2
+  },
+  {
+    "name": "Xero Smart Capture",
+    "path": "AI Classification / Indexing/Invoices/Xero Smart Capture",
+    "item_no": 75,
+    "item_type": 2
+  },
+  {
+    "name": "Invoices",
+    "path": "System/Archive/Archive/Finance/Invoices",
+    "item_no": 57,
+    "item_type": 2
+  },
+  {
+    "name": "Invoices Line Items",
+    "path": "System/Archive/Archive/Finance/Invoices Line Items",
+    "item_no": 60,
+    "item_type": 2
+  },
+  {
+    "name": "KFC Invoice Test",
+    "path": "System/Archive/KFC Roofing/KFC Invoice Test",
+    "item_no": 251,
+    "item_type": 2
+  }
+]

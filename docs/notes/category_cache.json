@@ -1,0 +1,2485 @@
+{
+  "ts": 1770596686.573953,
+  "items": [
+    {
+      "name": "System",
+      "path": "System",
+      "item_no": 1,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 0,
+      "guid": "2b2e3601-6ed0-4608-adf3-fdbc5e9996a7"
+    },
+    {
+      "name": "configtest-folder-repository)folder",
+      "path": "System/configtest-folder-repository)folder",
+      "item_no": 194,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 1,
+      "guid": "5e382580-b3b6-4837-b090-a0a87e5c17f5"
+    },
+    {
+      "name": "configtest-folder-subfolder_with_security",
+      "path": "System/configtest-folder-repository)folder/configtest-folder-subfolder_with_security",
+      "item_no": 197,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 194,
+      "guid": "9cdcf7db-9126-4a1b-a931-414a975727f7"
+    },
+    {
+      "name": "configtest-case-person",
+      "path": "System/configtest-folder-repository)folder/configtest-folder-subfolder_with_security/configtest-case-person",
+      "item_no": 13,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 197,
+      "guid": "394ac193-3c3d-4393-b2bd-4c6d87db3500"
+    },
+    {
+      "name": "configtest-case_category_cat1",
+      "path": "System/configtest-folder-repository)folder/configtest-folder-subfolder_with_security/configtest-case-person/configtest-case_category_cat1",
+      "item_no": 263,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 13,
+      "parent_folder_no": 0,
+      "guid": "7cd952be-4f1c-45ed-ad7f-5c2ccf9e27ad"
+    },
+    {
+      "name": "configtest-category-test_category",
+      "path": "System/configtest-folder-repository)folder/configtest-category-test_category",
+      "item_no": 262,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 194,
+      "guid": "5bf68603-3879-4d34-9c74-15376dfda846"
+    },
+    {
+      "name": "Formatted Counter Test",
+      "path": "System/configtest-folder-repository)folder/Formatted Counter Test",
+      "item_no": 266,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 194,
+      "guid": "1cb1500c-56e3-4781-95a1-412429eb83c1"
+    },
+    {
+      "name": "Archive",
+      "path": "System/Archive",
+      "item_no": 172,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 1,
+      "guid": "ee2f51d7-9f82-44a8-992b-abe077940a8c"
+    },
+    {
+      "name": "Archive",
+      "path": "System/Archive/Archive",
+      "item_no": 105,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 172,
+      "guid": "b505a9dc-50b5-4de3-bab9-d9ec5b665bcf"
+    },
+    {
+      "name": "Testing",
+      "path": "System/Archive/Archive/Testing",
+      "item_no": 9,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "12f194e5-4dfa-44a5-a4ee-3a0a6e428a87"
+    },
+    {
+      "name": "Visitor Registration",
+      "path": "System/Archive/Archive/Testing/Visitor Registration",
+      "item_no": 13,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "afa3dd26-1d7e-4155-b817-d04344a29f59"
+    },
+    {
+      "name": "Visitor Registrations",
+      "path": "System/Archive/Archive/Testing/Visitor Registration/Visitor Registrations",
+      "item_no": 14,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 13,
+      "guid": "c8304422-4ab1-41c8-98f7-9319b32c37ba"
+    },
+    {
+      "name": "Host Details",
+      "path": "System/Archive/Archive/Testing/Visitor Registration/Host Details",
+      "item_no": 15,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 13,
+      "guid": "821e00a5-5584-4747-9c3e-1466830b929d"
+    },
+    {
+      "name": "Staff Registration",
+      "path": "System/Archive/Archive/Testing/Visitor Registration/Staff Registration",
+      "item_no": 261,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 13,
+      "guid": "2e88f5c6-9bc4-40c7-b2f7-b388751594ef"
+    },
+    {
+      "name": "Active Registrations",
+      "path": "System/Archive/Archive/Testing/Visitor Registration/Active Registrations",
+      "item_no": 13,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 13,
+      "guid": "a34ca41b-c0a1-413e-b3da-53f7ecd151fa"
+    },
+    {
+      "name": "EForms Showcases",
+      "path": "System/Archive/Archive/Testing/EForms Showcases",
+      "item_no": 53,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "815e1f3f-1445-4e3a-a22c-25714846b003"
+    },
+    {
+      "name": "APAC Webinar",
+      "path": "System/Archive/Archive/Testing/EForms Showcases/APAC Webinar",
+      "item_no": 51,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 53,
+      "guid": "0a15b947-203a-409e-8471-30a785171d48"
+    },
+    {
+      "name": "Create ICS-File Outlook-Calendar",
+      "path": "System/Archive/Archive/Testing/EForms Showcases/APAC Webinar/Create ICS-File Outlook-Calendar",
+      "item_no": 58,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 51,
+      "guid": "9ea04b0d-0970-4af7-9bfa-39d557cf37ea"
+    },
+    {
+      "name": "Docusign",
+      "path": "System/Archive/Archive/Testing/Docusign",
+      "item_no": 36,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "c7091bd2-4a08-45ec-b7ef-9d6ff82e83bf"
+    },
+    {
+      "name": "Docusign Test1",
+      "path": "System/Archive/Archive/Testing/Docusign/Docusign Test1",
+      "item_no": 38,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 36,
+      "guid": "c6ef7a39-3657-42b3-91a5-a7deebd53fc0"
+    },
+    {
+      "name": "Case Update Test",
+      "path": "System/Archive/Archive/Testing/Case Update Test",
+      "item_no": 142,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "13199d10-da4c-41f1-8434-0cf584753a0d"
+    },
+    {
+      "name": "Referenced Case Test",
+      "path": "System/Archive/Archive/Testing/Case Update Test/Referenced Case Test",
+      "item_no": 11,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 142,
+      "guid": "855e6fbb-66d3-4381-9c70-21d4a85bbf97"
+    },
+    {
+      "name": "Test Category 1",
+      "path": "System/Archive/Archive/Testing/Case Update Test/Referenced Case Test/Test Category 1",
+      "item_no": 154,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 11,
+      "parent_folder_no": 0,
+      "guid": "c685feba-692e-497e-beab-3e6fd99561a5"
+    },
+    {
+      "name": "Reference Data",
+      "path": "System/Archive/Archive/Testing/Case Update Test/Reference Data",
+      "item_no": 153,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 142,
+      "guid": "f6d685eb-7544-4631-a395-47c2702dbff3"
+    },
+    {
+      "name": "Tabcorp",
+      "path": "System/Archive/Archive/Testing/Tabcorp",
+      "item_no": 39,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "c865aca3-cda7-4d9c-b687-16488002cb73"
+    },
+    {
+      "name": "Tabcorp Lookup",
+      "path": "System/Archive/Archive/Testing/Tabcorp/Tabcorp Lookup",
+      "item_no": 46,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 39,
+      "guid": "559af2b1-4fd0-4329-a432-b9be2912c66b"
+    },
+    {
+      "name": "format test",
+      "path": "System/Archive/Archive/Testing/format test",
+      "item_no": 252,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "ca4c84c2-605b-4220-8602-cf9315e45b7c"
+    },
+    {
+      "name": "Visitor Pass",
+      "path": "System/Archive/Archive/Testing/Visitor Pass",
+      "item_no": 64,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "eb3a2f5f-4b12-40b3-8915-c293afade069"
+    },
+    {
+      "name": "Condition Test",
+      "path": "System/Archive/Archive/Testing/Condition Test",
+      "item_no": 135,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "599bcc12-02e7-4376-9322-f1e24494d7ec"
+    },
+    {
+      "name": "Generic Text Category",
+      "path": "System/Archive/Archive/Testing/Generic Text Category",
+      "item_no": 78,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "9bf9b640-b828-49b1-81af-c3c222dd7051"
+    },
+    {
+      "name": "Visitor Pass - Print",
+      "path": "System/Archive/Archive/Testing/Visitor Pass - Print",
+      "item_no": 65,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "55e10536-0fee-4206-963f-a0fd6f651a73"
+    },
+    {
+      "name": "OCR Test",
+      "path": "System/Archive/Archive/Testing/OCR Test",
+      "item_no": 146,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "29f17800-917e-4ead-a7dc-55bfbdebdb74"
+    },
+    {
+      "name": "Share",
+      "path": "System/Archive/Archive/Testing/Share",
+      "item_no": 59,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "753e365c-bf3d-4054-8138-ce6a8b84edc2"
+    },
+    {
+      "name": "Test Category",
+      "path": "System/Archive/Archive/Testing/Test Category",
+      "item_no": 56,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "3612383a-c6c9-4198-8572-a29f14d3ae05"
+    },
+    {
+      "name": "Print Test 1",
+      "path": "System/Archive/Archive/Testing/Print Test 1",
+      "item_no": 63,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "7e843f0f-e9c1-4f10-8fa4-ff6da0ed90db"
+    },
+    {
+      "name": "expiry test",
+      "path": "System/Archive/Archive/Testing/expiry test",
+      "item_no": 100,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 9,
+      "guid": "386af9a2-84fa-4e63-b02c-b90006501821"
+    },
+    {
+      "name": "SR1",
+      "path": "System/Archive/Archive/SR1",
+      "item_no": 87,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "a26513fe-355d-46de-b582-125106bd26da"
+    },
+    {
+      "name": "10. Ephemera",
+      "path": "System/Archive/Archive/SR1/10. Ephemera",
+      "item_no": 103,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "fb6a9f21-05a6-4307-9d5a-513734a9e060"
+    },
+    {
+      "name": "Ephemera",
+      "path": "System/Archive/Archive/SR1/10. Ephemera/Ephemera",
+      "item_no": 98,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 103,
+      "guid": "ac6bd47b-39f6-44ef-a81d-9d7af079b850"
+    },
+    {
+      "name": "07. School-Related Groups",
+      "path": "System/Archive/Archive/SR1/07. School-Related Groups",
+      "item_no": 100,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "11a25429-bb25-49a1-9c8a-2645a8a1ad05"
+    },
+    {
+      "name": "School-Related Groups",
+      "path": "System/Archive/Archive/SR1/07. School-Related Groups/School-Related Groups",
+      "item_no": 95,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 100,
+      "guid": "d119425d-e58a-4390-8195-92193e163bb8"
+    },
+    {
+      "name": "~Archive",
+      "path": "System/Archive/Archive/SR1/~Archive",
+      "item_no": 92,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "e0e52e06-8642-49cd-beb0-c2cac894270a"
+    },
+    {
+      "name": "Single Category",
+      "path": "System/Archive/Archive/SR1/~Archive/Single Category",
+      "item_no": 88,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "9a75f140-f221-4402-a082-ed12ffd27679"
+    },
+    {
+      "name": "Student Records",
+      "path": "System/Archive/Archive/SR1/~Archive/Single Category/Student Records",
+      "item_no": 79,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 88,
+      "guid": "c2d2a89b-001d-4a9b-bde7-ecc367c3dc13"
+    },
+    {
+      "name": "Admin",
+      "path": "System/Archive/Archive/SR1/~Archive/Admin",
+      "item_no": 109,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "41cdde98-bafa-4c07-9cc0-e357389187a8"
+    },
+    {
+      "name": "Users",
+      "path": "System/Archive/Archive/SR1/~Archive/Admin/Users",
+      "item_no": 103,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 109,
+      "guid": "4b5d43ad-63be-4bf9-8b95-c78781396947"
+    },
+    {
+      "name": "Case - By Record Type",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type",
+      "item_no": 91,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "74e11f02-5305-474a-a334-eed340435396"
+    },
+    {
+      "name": "Student Records Case 3",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type/Student Records Case 3",
+      "item_no": 4,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 91,
+      "guid": "6b67148f-79da-495e-9baf-1d827dec4e42"
+    },
+    {
+      "name": "Enrolment Application",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type/Student Records Case 3/Enrolment Application",
+      "item_no": 84,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 4,
+      "parent_folder_no": 0,
+      "guid": "36cc9923-b7f4-464f-851b-af92133325aa"
+    },
+    {
+      "name": "Medication Consent",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type/Student Records Case 3/Medication Consent",
+      "item_no": 88,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 4,
+      "parent_folder_no": 0,
+      "guid": "0c65cd44-bcce-4096-ab16-4c6d34898679"
+    },
+    {
+      "name": "Medical",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type/Student Records Case 3/Medical",
+      "item_no": 85,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 4,
+      "parent_folder_no": 0,
+      "guid": "22ef6244-8079-49f6-82e5-e03c3c7b6ab9"
+    },
+    {
+      "name": "Student Record Form",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type/Student Records Case 3/Student Record Form",
+      "item_no": 86,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 4,
+      "parent_folder_no": 0,
+      "guid": "bb9babd3-a780-4100-bd26-49a58b88f5b6"
+    },
+    {
+      "name": "Subject Change Form",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By Record Type/Student Records Case 3/Subject Change Form",
+      "item_no": 87,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 4,
+      "parent_folder_no": 0,
+      "guid": "7a2d6ae3-d328-4e0b-8e84-0aee6ce4bf3c"
+    },
+    {
+      "name": "04. Student Management.old",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old",
+      "item_no": 96,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "fd17c13b-3ed7-411b-9243-3c543f12fe86"
+    },
+    {
+      "name": "Student Record",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record",
+      "item_no": 5,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 96,
+      "guid": "9121f570-f240-4c08-895a-a36ec1e7dc30"
+    },
+    {
+      "name": "4.07 Child Protection",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.07 Child Protection",
+      "item_no": 121,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "e4aefc3b-d9f8-4c11-bcdd-fd570d6a4535"
+    },
+    {
+      "name": "4.04 Financial Assistance",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.04 Financial Assistance",
+      "item_no": 118,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "7c7e3999-d557-49eb-99f5-0ed4cd576772"
+    },
+    {
+      "name": "4.11 Co-Curricular Activities",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.11 Co-Curricular Activities",
+      "item_no": 125,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "9561b0fd-5e1b-431f-9782-ca1757413ec1"
+    },
+    {
+      "name": "4.08 Behaviour",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.08 Behaviour",
+      "item_no": 122,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "f006354f-2300-4037-8f2e-92d8c60e076f"
+    },
+    {
+      "name": "4.05 Awards",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.05 Awards",
+      "item_no": 119,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "644fb454-3cc1-418c-9475-545983459b59"
+    },
+    {
+      "name": "4.01 Student Master Record",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.01 Student Master Record",
+      "item_no": 99,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "a44e380e-8e12-472a-b99b-c759791d7afe"
+    },
+    {
+      "name": "Separators",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/Separators",
+      "item_no": 126,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "34022422-2ad6-49e5-8c1e-411b225d2972"
+    },
+    {
+      "name": "4.02 Admissions",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.02 Admissions",
+      "item_no": 116,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "4dbc4bb2-99bf-4125-afc0-be10ce458d96"
+    },
+    {
+      "name": "4.09 Home Schooling",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.09 Home Schooling",
+      "item_no": 123,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "3b979192-749a-4ef3-b437-7153a9d0b7f3"
+    },
+    {
+      "name": "4.06 Health and Welfare",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.06 Health and Welfare",
+      "item_no": 120,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "9ca32aad-c94e-4066-a976-01b23bd35cbc"
+    },
+    {
+      "name": "4.03 Attendance",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.03 Attendance",
+      "item_no": 117,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "054242a5-ba42-4dfa-9705-9ed981b15f2f"
+    },
+    {
+      "name": "4.10 Work Experience",
+      "path": "System/Archive/Archive/SR1/~Archive/04. Student Management.old/Student Record/4.10 Work Experience",
+      "item_no": 124,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 5,
+      "parent_folder_no": 0,
+      "guid": "fe89f185-7b1b-4d29-b2f8-e79718b7a467"
+    },
+    {
+      "name": "Case - Single Category",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - Single Category",
+      "item_no": 89,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "7fc6cb96-d043-4928-98c6-0f59472db40c"
+    },
+    {
+      "name": "Student Records Case",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - Single Category/Student Records Case",
+      "item_no": 2,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 89,
+      "guid": "692af6f5-7c88-43c7-b0f6-3183ab3b3c48"
+    },
+    {
+      "name": "Records",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - Single Category/Student Records Case/Records",
+      "item_no": 80,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 2,
+      "parent_folder_no": 0,
+      "guid": "c7a028e8-7be0-42d4-9d24-84332b664ad0"
+    },
+    {
+      "name": "Case - By School Level",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By School Level",
+      "item_no": 90,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "6b4401b0-0e3c-4342-b585-a77e69898590"
+    },
+    {
+      "name": "Student Records Case 2",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By School Level/Student Records Case 2",
+      "item_no": 3,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 90,
+      "guid": "b48cb8f7-a85e-4d25-8c7d-363de1075adf"
+    },
+    {
+      "name": "Primary School",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By School Level/Student Records Case 2/Primary School",
+      "item_no": 81,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 3,
+      "parent_folder_no": 0,
+      "guid": "c9d604f8-1ae2-4fb2-9a43-a73297228108"
+    },
+    {
+      "name": "Secondary School",
+      "path": "System/Archive/Archive/SR1/~Archive/Case - By School Level/Student Records Case 2/Secondary School",
+      "item_no": 83,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 3,
+      "parent_folder_no": 0,
+      "guid": "fca98148-7bb5-4403-8e58-b054bbcae238"
+    },
+    {
+      "name": "Student Record V2",
+      "path": "System/Archive/Archive/SR1/~Archive/Student Record V2",
+      "item_no": 7,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "64e58a29-3c97-4dd0-80c7-c67415f232d6"
+    },
+    {
+      "name": "Records",
+      "path": "System/Archive/Archive/SR1/~Archive/Student Record V2/Records",
+      "item_no": 115,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 7,
+      "parent_folder_no": 0,
+      "guid": "190ae1bc-89cf-42bb-adee-0e64d60bf0b7"
+    },
+    {
+      "name": "Document Type Data.old",
+      "path": "System/Archive/Archive/SR1/~Archive/Document Type Data.old",
+      "item_no": 130,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "0f314cd3-09c1-40f8-aa43-8232e51489f7"
+    },
+    {
+      "name": "Temp Import",
+      "path": "System/Archive/Archive/SR1/~Archive/Temp Import",
+      "item_no": 127,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 92,
+      "guid": "3712e9b8-fdca-4a19-afea-29a8efe8f9cf"
+    },
+    {
+      "name": "08. Spiritual Programs",
+      "path": "System/Archive/Archive/SR1/08. Spiritual Programs",
+      "item_no": 101,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "adfee9c1-32f4-44ca-a360-0938e933b21a"
+    },
+    {
+      "name": "Spiritual Programs",
+      "path": "System/Archive/Archive/SR1/08. Spiritual Programs/Spiritual Programs",
+      "item_no": 96,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 101,
+      "guid": "77b56199-e58b-4c4e-ad01-9a0641f8b0d6"
+    },
+    {
+      "name": "09. Objects",
+      "path": "System/Archive/Archive/SR1/09. Objects",
+      "item_no": 102,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "442e9a19-4a92-4c04-b83b-035fdeeadbd0"
+    },
+    {
+      "name": "Objects",
+      "path": "System/Archive/Archive/SR1/09. Objects/Objects",
+      "item_no": 97,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 102,
+      "guid": "5770cf80-c899-4044-9ab6-e2a144f93efb"
+    },
+    {
+      "name": "Student Record",
+      "path": "System/Archive/Archive/SR1/Student Record",
+      "item_no": 9,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "737c1580-f3e5-4e50-8681-7e7d4555b163"
+    },
+    {
+      "name": "[Template] Student Documents",
+      "path": "System/Archive/Archive/SR1/Student Record/[Template] Student Documents",
+      "item_no": 131,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 9,
+      "parent_folder_no": 0,
+      "guid": "21684b88-82e1-42b3-8d9d-350d8341c569"
+    },
+    {
+      "name": "02. Administration",
+      "path": "System/Archive/Archive/SR1/02. Administration",
+      "item_no": 91,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "42083ca7-da34-4e33-9b61-da1865c10407"
+    },
+    {
+      "name": "03. Student Services",
+      "path": "System/Archive/Archive/SR1/03. Student Services",
+      "item_no": 92,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "a6c96a17-c224-4b0d-9a42-ad0b6b1733a9"
+    },
+    {
+      "name": "01. Governace",
+      "path": "System/Archive/Archive/SR1/01. Governace",
+      "item_no": 90,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "70bf1cee-1633-4023-91a1-e4cb168b8931"
+    },
+    {
+      "name": "Communications & Community Relations",
+      "path": "System/Archive/Archive/SR1/Communications & Community Relations",
+      "item_no": 94,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 87,
+      "guid": "55d7b886-95c2-4cfd-ac26-bdaece2a523e"
+    },
+    {
+      "name": "Finance",
+      "path": "System/Archive/Archive/Finance",
+      "item_no": 66,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "8c9d9c47-9dba-4cf0-8e99-bbeac85ecbc8"
+    },
+    {
+      "name": "Order Lines",
+      "path": "System/Archive/Archive/Finance/Order Lines",
+      "item_no": 61,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 66,
+      "guid": "fca7ea7e-1124-48f9-bf6b-dce08fd46fea"
+    },
+    {
+      "name": "Suppliers",
+      "path": "System/Archive/Archive/Finance/Suppliers",
+      "item_no": 62,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 66,
+      "guid": "1d2af806-822e-4141-b77e-e3923d242042"
+    },
+    {
+      "name": "Invoices Line Items",
+      "path": "System/Archive/Archive/Finance/Invoices Line Items",
+      "item_no": 60,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 66,
+      "guid": "85f3ac2b-b79e-4822-9582-12b58a0226eb"
+    },
+    {
+      "name": "Invoices",
+      "path": "System/Archive/Archive/Finance/Invoices",
+      "item_no": 57,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 66,
+      "guid": "fba8dd0e-912f-4694-bde9-66415379cab9"
+    },
+    {
+      "name": "Clients",
+      "path": "System/Archive/Archive/Clients",
+      "item_no": 55,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "9543bf41-1a0f-4b30-8f4d-755658400ba9"
+    },
+    {
+      "name": "Oldfields",
+      "path": "System/Archive/Archive/Clients/Oldfields",
+      "item_no": 56,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 55,
+      "guid": "ee4aa3ee-525b-408d-837c-f4311c9a7d40"
+    },
+    {
+      "name": "System",
+      "path": "System/Archive/Archive/Clients/Oldfields/System",
+      "item_no": 57,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 56,
+      "guid": "5806aaf6-e98e-40ce-820e-1904c418e399"
+    },
+    {
+      "name": "Kennards Site",
+      "path": "System/Archive/Archive/Clients/Oldfields/System/Kennards Site",
+      "item_no": 66,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 57,
+      "guid": "1f028582-e664-4b9b-a255-e6c474756c5d"
+    },
+    {
+      "name": "Oldfields Product",
+      "path": "System/Archive/Archive/Clients/Oldfields/System/Oldfields Product",
+      "item_no": 67,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 57,
+      "guid": "c7d5c707-5556-4d21-8a7d-bcdab37ac72c"
+    },
+    {
+      "name": "Kennards Site Audit Report",
+      "path": "System/Archive/Archive/Clients/Oldfields/Kennards Site Audit Report",
+      "item_no": 68,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 56,
+      "guid": "80c21ce0-c350-46e7-bdd8-0474a7ecf2f1"
+    },
+    {
+      "name": "Smart Capture",
+      "path": "System/Archive/Archive/Smart Capture",
+      "item_no": 34,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "c1ffa229-7e13-48aa-90f1-755cbff37c99"
+    },
+    {
+      "name": "Smart Capture",
+      "path": "System/Archive/Archive/Smart Capture/Smart Capture",
+      "item_no": 12,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 34,
+      "guid": "217ec1c4-e4ca-4e24-b7b2-b3609b114f4b"
+    },
+    {
+      "name": "Workflow Report",
+      "path": "System/Archive/Archive/Workflow Report",
+      "item_no": 85,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "eb5367c3-b795-4880-a1dc-9e72ebc1d822"
+    },
+    {
+      "name": "Workflow Report Email",
+      "path": "System/Archive/Archive/Workflow Report/Workflow Report Email",
+      "item_no": 76,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 85,
+      "guid": "fe23fda5-96ab-4263-8e92-5d584d64016a"
+    },
+    {
+      "name": "Workflow Report Configuration",
+      "path": "System/Archive/Archive/Workflow Report/Workflow Report Configuration",
+      "item_no": 77,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 85,
+      "guid": "b251b782-2dda-4c1c-83e6-e278e72b8ed2"
+    },
+    {
+      "name": "Document Analyse",
+      "path": "System/Archive/Archive/Document Analyse",
+      "item_no": 132,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 105,
+      "guid": "a7e801a7-fcda-4fd8-9762-27fc8a9c763b"
+    },
+    {
+      "name": "Printwise",
+      "path": "System/Archive/Printwise",
+      "item_no": 179,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 172,
+      "guid": "6d556e21-4bdd-4157-b586-209dae17514c"
+    },
+    {
+      "name": "Admin",
+      "path": "System/Archive/Printwise/Admin",
+      "item_no": 182,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 179,
+      "guid": "a3ca8fab-a5b2-4b5d-b308-dc2fa231ad8d"
+    },
+    {
+      "name": "Staff",
+      "path": "System/Archive/Printwise/Admin/Staff",
+      "item_no": 249,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 182,
+      "guid": "ac61c35a-f9d6-40e0-b5e1-133d02069fd2"
+    },
+    {
+      "name": "Customer Action Plan",
+      "path": "System/Archive/Printwise/Customer Action Plan",
+      "item_no": 247,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 179,
+      "guid": "c21b2261-2647-4306-a81b-7b3d99ed8180"
+    },
+    {
+      "name": "KFC Roofing",
+      "path": "System/Archive/KFC Roofing",
+      "item_no": 184,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 172,
+      "guid": "11e3df77-fca6-4ccf-996d-1b4ae29d34a8"
+    },
+    {
+      "name": "KFC SmartCapture Input",
+      "path": "System/Archive/KFC Roofing/KFC SmartCapture Input",
+      "item_no": 253,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 184,
+      "guid": "70c87fce-cd69-4a3a-b552-077629d734e8"
+    },
+    {
+      "name": "KFC Invoice Test",
+      "path": "System/Archive/KFC Roofing/KFC Invoice Test",
+      "item_no": 251,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 184,
+      "guid": "f64f45fa-7d3b-4760-894f-af9cb565feda"
+    },
+    {
+      "name": "Onboarding",
+      "path": "System/Archive/Onboarding",
+      "item_no": 176,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 172,
+      "guid": "71df2d55-0035-414d-8c0a-471eca3c84ab"
+    },
+    {
+      "name": "Staff",
+      "path": "System/Archive/Onboarding/Staff",
+      "item_no": 240,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 176,
+      "guid": "eb77dee7-2525-454d-a85e-63d8fb54f2bb"
+    },
+    {
+      "name": "Onboarding",
+      "path": "System/Archive/Onboarding/Onboarding",
+      "item_no": 241,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 176,
+      "guid": "64199eda-ddda-49c3-bceb-a67110a9a950"
+    },
+    {
+      "name": "Student Test",
+      "path": "System/Archive/Student Test",
+      "item_no": 254,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 172,
+      "guid": "6e90277e-d18e-40bf-8ef7-263f57233f7e"
+    },
+    {
+      "name": "Reports",
+      "path": "System/Reports",
+      "item_no": 4,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 1,
+      "guid": "1545ec47-f675-4731-b9dd-e20fb95b7c2e"
+    },
+    {
+      "name": "Logfiles",
+      "path": "System/Logfiles",
+      "item_no": 1,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 1,
+      "guid": "13802a87-a377-4c4f-97c9-0f4111341440"
+    },
+    {
+      "name": "Templates",
+      "path": "System/Templates",
+      "item_no": 2,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 1,
+      "guid": "d3b6c8c6-f050-4ac0-b091-81a7759e1113"
+    },
+    {
+      "name": "Container Files",
+      "path": "System/Container Files",
+      "item_no": 3,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 1,
+      "guid": "1c81af6f-21ab-4b1c-acf3-cf424959909b"
+    },
+    {
+      "name": "EduVault",
+      "path": "EduVault",
+      "item_no": 121,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 0,
+      "guid": "ec54ec08-35a2-4f1d-8c4e-9c6d36f94a44"
+    },
+    {
+      "name": "General School Records",
+      "path": "EduVault/General School Records",
+      "item_no": 124,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 121,
+      "guid": "4dc4918c-1ab6-4942-9b10-fbf98d1cafc7"
+    },
+    {
+      "name": "01. Governance",
+      "path": "EduVault/General School Records/01. Governance",
+      "item_no": 125,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "67b6113b-3c83-45c5-b712-71365c4edb94"
+    },
+    {
+      "name": "1.13 - Corporate Identity",
+      "path": "EduVault/General School Records/01. Governance/1.13 - Corporate Identity",
+      "item_no": 168,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "40805832-4cc2-49bd-a19f-4d868e3c852b"
+    },
+    {
+      "name": "1.3 - Council and Committees",
+      "path": "EduVault/General School Records/01. Governance/1.3 - Council and Committees",
+      "item_no": 158,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "22045543-e098-4384-9be4-0ae46e8647f0"
+    },
+    {
+      "name": "1.10 - Policies and Procedures",
+      "path": "EduVault/General School Records/01. Governance/1.10 - Policies and Procedures",
+      "item_no": 165,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "51f85d93-8004-487d-bb42-df54ec3bc89e"
+    },
+    {
+      "name": "1.7 - Delegations and Authorisations",
+      "path": "EduVault/General School Records/01. Governance/1.7 - Delegations and Authorisations",
+      "item_no": 162,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "02552475-e715-4d1b-846d-04ce8a5fbef0"
+    },
+    {
+      "name": "1.14 - Legal Services",
+      "path": "EduVault/General School Records/01. Governance/1.14 - Legal Services",
+      "item_no": 169,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "3b559a44-d853-458b-8478-bbf3cc072eee"
+    },
+    {
+      "name": "1.4 - Regulation",
+      "path": "EduVault/General School Records/01. Governance/1.4 - Regulation",
+      "item_no": 159,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "6bf33011-321e-4354-be24-b77b18e3903d"
+    },
+    {
+      "name": "1.11 - Reporting",
+      "path": "EduVault/General School Records/01. Governance/1.11 - Reporting",
+      "item_no": 166,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "ff0f803f-cc9d-4ea2-b3fc-459462e434e7"
+    },
+    {
+      "name": "1.1 - Establishment",
+      "path": "EduVault/General School Records/01. Governance/1.1 - Establishment",
+      "item_no": 156,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "c2adc9b5-0fc6-40ef-bca1-8f1a489909f1"
+    },
+    {
+      "name": "1.8 - Agreements/Contracts",
+      "path": "EduVault/General School Records/01. Governance/1.8 - Agreements/Contracts",
+      "item_no": 163,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "b6b549f8-2ada-4e4a-9879-94febcc21bc3"
+    },
+    {
+      "name": "1.5 - Compliance Monitoring",
+      "path": "EduVault/General School Records/01. Governance/1.5 - Compliance Monitoring",
+      "item_no": 160,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "74c57046-807f-4ff2-99ac-a421412ef559"
+    },
+    {
+      "name": "1.12 - Child Protection",
+      "path": "EduVault/General School Records/01. Governance/1.12 - Child Protection",
+      "item_no": 167,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "97e56d38-159e-4056-9166-eff1a72dda66"
+    },
+    {
+      "name": "1.2 - Closure",
+      "path": "EduVault/General School Records/01. Governance/1.2 - Closure",
+      "item_no": 157,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "51109993-48fc-4d50-94cf-c14094ecd33b"
+    },
+    {
+      "name": "1.9 - Submissions",
+      "path": "EduVault/General School Records/01. Governance/1.9 - Submissions",
+      "item_no": 164,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "97ed3407-cdc4-4308-adf3-9ccda4711020"
+    },
+    {
+      "name": "1.6 - Planning",
+      "path": "EduVault/General School Records/01. Governance/1.6 - Planning",
+      "item_no": 161,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 125,
+      "guid": "0e93d630-735e-41f2-ba25-63c11b233f0e"
+    },
+    {
+      "name": "08. Spiritual Programs",
+      "path": "EduVault/General School Records/08. Spiritual Programs",
+      "item_no": 156,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "d813ae0d-b874-4557-9e04-5c9a5e686bb5"
+    },
+    {
+      "name": "8.1 - Religious Ceremonies And Services",
+      "path": "EduVault/General School Records/08. Spiritual Programs/8.1 - Religious Ceremonies And Services",
+      "item_no": 205,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 156,
+      "guid": "32037a9f-1c15-441b-9d6e-37b8bee9e690"
+    },
+    {
+      "name": "05. Teaching and Learning",
+      "path": "EduVault/General School Records/05. Teaching and Learning",
+      "item_no": 149,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "1d3342bf-fb62-4eab-a38e-e2ef4524c355"
+    },
+    {
+      "name": "5.5 - Learning Analytics - GSR",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.5 - Learning Analytics - GSR",
+      "item_no": 195,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "9d263ee6-12b9-45f4-b8e3-ba645a3bc619"
+    },
+    {
+      "name": "5.2 - Distance Education",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.2 - Distance Education",
+      "item_no": 192,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "f22337c6-3930-4443-b1eb-0c238cf1a640"
+    },
+    {
+      "name": "5.6 - Timetables",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.6 - Timetables",
+      "item_no": 196,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "a99c51f6-7f97-48cc-bcba-ca16edc450d5"
+    },
+    {
+      "name": "5.3 - Special Education - GSR",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.3 - Special Education - GSR",
+      "item_no": 193,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "b9e15503-d0eb-42b8-be67-15b5a3dede64"
+    },
+    {
+      "name": "5.7 - Examinations & Assessments - GSR",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.7 - Examinations & Assessments - GSR",
+      "item_no": 197,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "36ca8943-ea40-47cc-95fd-0aa30a415383"
+    },
+    {
+      "name": "5.4 - High Potential Programs - GSR",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.4 - High Potential Programs - GSR",
+      "item_no": 194,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "04346320-b5c8-4041-88ce-e5347a8f1be6"
+    },
+    {
+      "name": "5.1 - Curriculum - GSR",
+      "path": "EduVault/General School Records/05. Teaching and Learning/5.1 - Curriculum - GSR",
+      "item_no": 191,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 149,
+      "guid": "94b38001-5abd-4448-8e70-86f5fae64cd1"
+    },
+    {
+      "name": "04. Student Management",
+      "path": "EduVault/General School Records/04. Student Management",
+      "item_no": 128,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "24cef79d-10e6-45d6-bbf0-d336897bbfa0"
+    },
+    {
+      "name": "4.2 - Admissions - GSR",
+      "path": "EduVault/General School Records/04. Student Management/4.2 - Admissions - GSR",
+      "item_no": 185,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 128,
+      "guid": "2e907055-d6dd-41a8-be0f-c6d74e8b624d"
+    },
+    {
+      "name": "4.7 - Child Protection - GSR",
+      "path": "EduVault/General School Records/04. Student Management/4.7 - Child Protection - GSR",
+      "item_no": 189,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 128,
+      "guid": "0b63d442-4d87-4e9e-ab23-abce27875a91"
+    },
+    {
+      "name": "4.4 - Financial Assistance - GSR",
+      "path": "EduVault/General School Records/04. Student Management/4.4 - Financial Assistance - GSR",
+      "item_no": 186,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 128,
+      "guid": "cbfb2c31-31fd-46ae-a9b8-c6a55d18c223"
+    },
+    {
+      "name": "4.11 - Co-Curricular Activities - GSR",
+      "path": "EduVault/General School Records/04. Student Management/4.11 - Co-Curricular Activities - GSR",
+      "item_no": 190,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 128,
+      "guid": "14d8fb49-331f-4719-91bc-9d0721f43a3a"
+    },
+    {
+      "name": "4.5 - Awards - GSR",
+      "path": "EduVault/General School Records/04. Student Management/4.5 - Awards - GSR",
+      "item_no": 187,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 128,
+      "guid": "eb684df3-3a7d-4905-afd6-f2baf593ff35"
+    },
+    {
+      "name": "4.6 - Health and Welfare - GSR",
+      "path": "EduVault/General School Records/04. Student Management/4.6 - Health and Welfare - GSR",
+      "item_no": 188,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 128,
+      "guid": "b2815af9-263c-4f1f-b2d2-250b48e86351"
+    },
+    {
+      "name": "02. Administration",
+      "path": "EduVault/General School Records/02. Administration",
+      "item_no": 126,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "f025a9e6-dc4b-4e10-89ff-29f6f1276f9a"
+    },
+    {
+      "name": "2.6 - Rostering - GSR",
+      "path": "EduVault/General School Records/02. Administration/2.6 - Rostering - GSR",
+      "item_no": 175,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "032363c2-ba2b-4aa8-be2f-37f45891f3e9"
+    },
+    {
+      "name": "2.3 - Information Management",
+      "path": "EduVault/General School Records/02. Administration/2.3 - Information Management",
+      "item_no": 172,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "a02d680d-96f7-421b-bc83-b3ee7067abee"
+    },
+    {
+      "name": "2.7 - Enquiries",
+      "path": "EduVault/General School Records/02. Administration/2.7 - Enquiries",
+      "item_no": 176,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "05f85259-e79d-4afd-b43a-b73946bf4687"
+    },
+    {
+      "name": "2.4 - Human Resources - GSR",
+      "path": "EduVault/General School Records/02. Administration/2.4 - Human Resources - GSR",
+      "item_no": 173,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "303aa5d9-5b6a-40c9-bbce-a403c02c4f1e"
+    },
+    {
+      "name": "2.1 - Finance",
+      "path": "EduVault/General School Records/02. Administration/2.1 - Finance",
+      "item_no": 170,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "50b4c8bc-9f78-4056-8ef0-08c5ce1a8538"
+    },
+    {
+      "name": "2.5 - Occupational Health And Safety (Oh&S) - GSR",
+      "path": "EduVault/General School Records/02. Administration/2.5 - Occupational Health And Safety (Oh&S) - GSR",
+      "item_no": 174,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "1e0be765-bcc7-4ca2-a042-7c17b5d3c778"
+    },
+    {
+      "name": "2.2 - Property",
+      "path": "EduVault/General School Records/02. Administration/2.2 - Property",
+      "item_no": 171,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 126,
+      "guid": "f5377dc4-8dd8-4d19-ad36-ae329c391942"
+    },
+    {
+      "name": "07. School Related Groups",
+      "path": "EduVault/General School Records/07. School Related Groups",
+      "item_no": 154,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "2f6026b3-f627-47b7-bfd1-b0177e3a012a"
+    },
+    {
+      "name": "7.1 - Governance",
+      "path": "EduVault/General School Records/07. School Related Groups/7.1 - Governance",
+      "item_no": 202,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 154,
+      "guid": "9826b7e5-07d3-4429-9dd8-697ec8275329"
+    },
+    {
+      "name": "7.2 - Membership",
+      "path": "EduVault/General School Records/07. School Related Groups/7.2 - Membership",
+      "item_no": 203,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 154,
+      "guid": "dc61994a-b8ca-4ca7-bb63-fc643f15a2b1"
+    },
+    {
+      "name": "7.3 - Activities",
+      "path": "EduVault/General School Records/07. School Related Groups/7.3 - Activities",
+      "item_no": 204,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 154,
+      "guid": "a5fbdca0-2f4f-4a0b-8051-922a62ed5396"
+    },
+    {
+      "name": "03. Student Services",
+      "path": "EduVault/General School Records/03. Student Services",
+      "item_no": 127,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "a22ab75d-9d12-4306-b43b-87b7f9b7ec1a"
+    },
+    {
+      "name": "3.6 - Library",
+      "path": "EduVault/General School Records/03. Student Services/3.6 - Library",
+      "item_no": 182,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "facff767-5821-4d45-b313-eaa7dcd20b5f"
+    },
+    {
+      "name": "3.3 - Health And Welfare",
+      "path": "EduVault/General School Records/03. Student Services/3.3 - Health And Welfare",
+      "item_no": 179,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "a456822c-23b4-4f5a-bdf6-bf01cc4a763a"
+    },
+    {
+      "name": "3.7 - School Animal & Crop Management",
+      "path": "EduVault/General School Records/03. Student Services/3.7 - School Animal & Crop Management",
+      "item_no": 183,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "22323c3f-80b2-4b77-85da-eeb3cf4672f3"
+    },
+    {
+      "name": "3.4 - Accomodation",
+      "path": "EduVault/General School Records/03. Student Services/3.4 - Accomodation",
+      "item_no": 180,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "a5a4d1fe-303c-4fba-bee9-6a94f0b2fca8"
+    },
+    {
+      "name": "3.1 - Food Services",
+      "path": "EduVault/General School Records/03. Student Services/3.1 - Food Services",
+      "item_no": 177,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "b99fdde3-7f1e-44f9-9dda-99e55f248de9"
+    },
+    {
+      "name": "3.5 - Careers",
+      "path": "EduVault/General School Records/03. Student Services/3.5 - Careers",
+      "item_no": 181,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "91dae65e-5050-4d05-9891-9c196f20539c"
+    },
+    {
+      "name": "3.2 - Out Of Hours Care",
+      "path": "EduVault/General School Records/03. Student Services/3.2 - Out Of Hours Care",
+      "item_no": 178,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 127,
+      "guid": "0ad48e3c-d0c8-46ac-9a41-ddefe32349b6"
+    },
+    {
+      "name": "06. Communications & Community Relations",
+      "path": "EduVault/General School Records/06. Communications & Community Relations",
+      "item_no": 152,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "b44630a9-200e-41ab-b150-6d60cd83e271"
+    },
+    {
+      "name": "6.3 - Celebrations",
+      "path": "EduVault/General School Records/06. Communications & Community Relations/6.3 - Celebrations",
+      "item_no": 199,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 152,
+      "guid": "8fc968ac-9e61-462f-a26e-b4c8d5f9dbb8"
+    },
+    {
+      "name": "6.4 - Visits To The School",
+      "path": "EduVault/General School Records/06. Communications & Community Relations/6.4 - Visits To The School",
+      "item_no": 200,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 152,
+      "guid": "4341fa19-35dc-4607-b030-318b1a9d716e"
+    },
+    {
+      "name": "6.1 - Circulars And Instructions",
+      "path": "EduVault/General School Records/06. Communications & Community Relations/6.1 - Circulars And Instructions",
+      "item_no": 201,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 152,
+      "guid": "b3c6fd08-63bc-4122-bb88-1883879b89f7"
+    },
+    {
+      "name": "6.2 - Publications",
+      "path": "EduVault/General School Records/06. Communications & Community Relations/6.2 - Publications",
+      "item_no": 198,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 152,
+      "guid": "17db3be3-08e4-4b88-9ad1-b9d09c1c70bf"
+    },
+    {
+      "name": "09. Objects",
+      "path": "EduVault/General School Records/09. Objects",
+      "item_no": 157,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "a7c775ad-0164-43a0-8d61-3da455de1de7"
+    },
+    {
+      "name": "9 - Objects",
+      "path": "EduVault/General School Records/09. Objects/9 - Objects",
+      "item_no": 206,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 157,
+      "guid": "a1845c75-c258-4512-9bc0-22bb8655e7ce"
+    },
+    {
+      "name": "10. Ephemera",
+      "path": "EduVault/General School Records/10. Ephemera",
+      "item_no": 158,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "b65397b0-7e9a-4c42-9053-9dacf7a521a1"
+    },
+    {
+      "name": "10 - Ephemera",
+      "path": "EduVault/General School Records/10. Ephemera/10 - Ephemera",
+      "item_no": 207,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 158,
+      "guid": "f31c7709-1d01-4fac-85ed-611b5ebc6cae"
+    },
+    {
+      "name": "To classify - GSR",
+      "path": "EduVault/General School Records/To classify - GSR",
+      "item_no": 239,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 124,
+      "guid": "31b923c2-55c1-40d4-982c-83ffc33902c4"
+    },
+    {
+      "name": "Therefore Admin",
+      "path": "EduVault/Therefore Admin",
+      "item_no": 116,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 121,
+      "guid": "12e7c413-7914-44f0-b9be-0e3e5e01f957"
+    },
+    {
+      "name": "Separator Sheets",
+      "path": "EduVault/Therefore Admin/Separator Sheets",
+      "item_no": 163,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 116,
+      "guid": "d7762f29-3437-4dcb-a277-4919e22586b7"
+    },
+    {
+      "name": "Student Header Sheets",
+      "path": "EduVault/Therefore Admin/Separator Sheets/Student Header Sheets",
+      "item_no": 232,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 163,
+      "guid": "be9ad6e0-f501-4efb-a233-c1e1c3d08c60"
+    },
+    {
+      "name": "Document Separator - Specific",
+      "path": "EduVault/Therefore Admin/Separator Sheets/Document Separator - Specific",
+      "item_no": 209,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 163,
+      "guid": "71d5bb72-8622-4e52-8e7a-1b923ce7160c"
+    },
+    {
+      "name": "Staff Header Sheets",
+      "path": "EduVault/Therefore Admin/Separator Sheets/Staff Header Sheets",
+      "item_no": 231,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 163,
+      "guid": "633eb4b8-e7f9-4c70-a99b-c04db9ad0b89"
+    },
+    {
+      "name": "Document Separator - Generic",
+      "path": "EduVault/Therefore Admin/Separator Sheets/Document Separator - Generic",
+      "item_no": 238,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 163,
+      "guid": "2776965b-2100-4a2e-97c3-5c3022668bb1"
+    },
+    {
+      "name": "Import",
+      "path": "EduVault/Therefore Admin/Import",
+      "item_no": 169,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 116,
+      "guid": "89bd1ee5-5eb3-4ad9-99cf-01166cf062a2"
+    },
+    {
+      "name": "Powerscan Import",
+      "path": "EduVault/Therefore Admin/Import/Powerscan Import",
+      "item_no": 233,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 169,
+      "guid": "5c1c442f-d044-48a3-91fa-5889739472b1"
+    },
+    {
+      "name": "Lookup Data",
+      "path": "EduVault/Therefore Admin/Lookup Data",
+      "item_no": 164,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 116,
+      "guid": "38f1634d-d27a-4a45-abf9-2a03beafcb81"
+    },
+    {
+      "name": "Student Data",
+      "path": "EduVault/Therefore Admin/Lookup Data/Student Data",
+      "item_no": 129,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 164,
+      "guid": "367c8602-3deb-4697-a28f-37a26837b933"
+    },
+    {
+      "name": "Staff Data",
+      "path": "EduVault/Therefore Admin/Lookup Data/Staff Data",
+      "item_no": 136,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 164,
+      "guid": "e58a5016-0a89-47fa-a730-9174845505cd"
+    },
+    {
+      "name": "Document Type Data",
+      "path": "EduVault/Therefore Admin/Lookup Data/Document Type Data",
+      "item_no": 133,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 164,
+      "guid": "ed403a5f-60cc-48c6-9a2a-77add7a229a5"
+    },
+    {
+      "name": "Category Detail",
+      "path": "EduVault/Therefore Admin/Lookup Data/Category Detail",
+      "item_no": 234,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 164,
+      "guid": "d000e3b3-09c8-425b-bc2c-2943b302c9e6"
+    },
+    {
+      "name": "EduVault V2",
+      "path": "EduVault/Therefore Admin/EduVault V2",
+      "item_no": 186,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 116,
+      "guid": "c96f9747-3043-45eb-ab0d-4191c52fdf29"
+    },
+    {
+      "name": "General School Records",
+      "path": "EduVault/Therefore Admin/EduVault V2/General School Records",
+      "item_no": 187,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 186,
+      "guid": "4d50b428-84ff-4b97-a368-937bf7444270"
+    },
+    {
+      "name": "01. Governance",
+      "path": "EduVault/Therefore Admin/EduVault V2/General School Records/01. Governance",
+      "item_no": 188,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 187,
+      "guid": "5923adb0-3942-463d-9d0e-9fc896d00b9c"
+    },
+    {
+      "name": "1.1 - Establishment V2",
+      "path": "EduVault/Therefore Admin/EduVault V2/General School Records/01. Governance/1.1 - Establishment V2",
+      "item_no": 255,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 188,
+      "guid": "f60bf726-1fbb-4282-ab7c-cae7c0c36d65"
+    },
+    {
+      "name": "Documentation",
+      "path": "EduVault/Therefore Admin/Documentation",
+      "item_no": 246,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 116,
+      "guid": "e5fc26d7-05e0-4a42-9dd2-3ab7c1869118"
+    },
+    {
+      "name": "Individual Staff Records",
+      "path": "EduVault/Individual Staff Records",
+      "item_no": 123,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 121,
+      "guid": "249b9d08-1185-4462-8464-5b6c8a821ee4"
+    },
+    {
+      "name": "Staff Records",
+      "path": "EduVault/Individual Staff Records/Staff Records",
+      "item_no": 12,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 123,
+      "guid": "4d35cbc4-4d23-4cc3-8b49-4fc4a23fa7ff"
+    },
+    {
+      "name": "2.5 - Occupational Health And Safety (Oh&S)",
+      "path": "EduVault/Individual Staff Records/Staff Records/2.5 - Occupational Health And Safety (Oh&S)",
+      "item_no": 229,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 12,
+      "parent_folder_no": 0,
+      "guid": "66faf90f-5b89-4fb5-a034-9adffe3a5174"
+    },
+    {
+      "name": "2.6 - Rostering",
+      "path": "EduVault/Individual Staff Records/Staff Records/2.6 - Rostering",
+      "item_no": 230,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 12,
+      "parent_folder_no": 0,
+      "guid": "d4ddc775-a45a-4571-b65f-5541631f2307"
+    },
+    {
+      "name": "2.4 - Human Resources",
+      "path": "EduVault/Individual Staff Records/Staff Records/2.4 - Human Resources",
+      "item_no": 228,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 12,
+      "parent_folder_no": 0,
+      "guid": "99f36ad5-7472-495b-bb92-b737d162bb36"
+    },
+    {
+      "name": "To classify - Staff",
+      "path": "EduVault/Individual Staff Records/Staff Records/To classify - Staff",
+      "item_no": 245,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 12,
+      "parent_folder_no": 0,
+      "guid": "c4b800c3-aa42-47a3-8b89-e27cd12225d7"
+    },
+    {
+      "name": "Individual Student Records",
+      "path": "EduVault/Individual Student Records",
+      "item_no": 122,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 121,
+      "guid": "ce536159-2ef6-448c-acf7-7e87435c349b"
+    },
+    {
+      "name": "Student Records",
+      "path": "EduVault/Individual Student Records/Student Records",
+      "item_no": 10,
+      "item_type": 3,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 122,
+      "guid": "e0c3eb4a-480a-4a16-aa5c-aa290c54cbb0"
+    },
+    {
+      "name": "4.4 - Financial Assistance",
+      "path": "EduVault/Individual Student Records/Student Records/4.4 - Financial Assistance",
+      "item_no": 215,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "635f425f-19ce-4180-b712-47c5366fed50"
+    },
+    {
+      "name": "4.11 - Co-Curricular Activities",
+      "path": "EduVault/Individual Student Records/Student Records/4.11 - Co-Curricular Activities",
+      "item_no": 222,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "cf87797f-7825-43d8-8229-b01d5b4b6993"
+    },
+    {
+      "name": "4.1 - Student Master Record",
+      "path": "EduVault/Individual Student Records/Student Records/4.1 - Student Master Record",
+      "item_no": 212,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "b00f5cb1-8b36-45b2-ae44-bf9797ee3b39"
+    },
+    {
+      "name": "4.8 - Behaviour",
+      "path": "EduVault/Individual Student Records/Student Records/4.8 - Behaviour",
+      "item_no": 219,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "90477b97-f706-4a05-88a3-f1fb1084c12f"
+    },
+    {
+      "name": "5.5 - Learning Analytics",
+      "path": "EduVault/Individual Student Records/Student Records/5.5 - Learning Analytics",
+      "item_no": 226,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "cb5306e6-3aad-4a74-b59a-765c972bf6a2"
+    },
+    {
+      "name": "4.5 - Awards",
+      "path": "EduVault/Individual Student Records/Student Records/4.5 - Awards",
+      "item_no": 216,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "e22a1076-8038-4f13-9b33-c77dcf129043"
+    },
+    {
+      "name": "To Classify - Student",
+      "path": "EduVault/Individual Student Records/Student Records/To Classify - Student",
+      "item_no": 243,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "315348b6-1ccd-4009-b6e8-f61c4c923e82"
+    },
+    {
+      "name": "5.1 - Curriculum",
+      "path": "EduVault/Individual Student Records/Student Records/5.1 - Curriculum",
+      "item_no": 223,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "b70c08a1-398a-443a-be7b-09709798a50b"
+    },
+    {
+      "name": "4.2 - Admissions",
+      "path": "EduVault/Individual Student Records/Student Records/4.2 - Admissions",
+      "item_no": 213,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "cb1d9ce1-6952-41e6-9521-a0052a3b424c"
+    },
+    {
+      "name": "4.9 - Home Schooling",
+      "path": "EduVault/Individual Student Records/Student Records/4.9 - Home Schooling",
+      "item_no": 220,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "125b8cfa-9505-4b6f-a09e-54a8589a9665"
+    },
+    {
+      "name": "5.7 - Examinations & Assessments",
+      "path": "EduVault/Individual Student Records/Student Records/5.7 - Examinations & Assessments",
+      "item_no": 227,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "a6f7930a-536f-41d3-bc65-052e843ab133"
+    },
+    {
+      "name": "4.6 - Health and Welfare",
+      "path": "EduVault/Individual Student Records/Student Records/4.6 - Health and Welfare",
+      "item_no": 217,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "596276b3-0f6f-4217-aeef-31485e012ad3"
+    },
+    {
+      "name": "5.3 - Special Education",
+      "path": "EduVault/Individual Student Records/Student Records/5.3 - Special Education",
+      "item_no": 224,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "3426c1fa-f9cb-4a45-a7c0-0e7760d799a2"
+    },
+    {
+      "name": "4.3 - Attendance",
+      "path": "EduVault/Individual Student Records/Student Records/4.3 - Attendance",
+      "item_no": 214,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "a19468c6-35b0-4b78-80c7-81832df5a710"
+    },
+    {
+      "name": "4.10 - Work Experience",
+      "path": "EduVault/Individual Student Records/Student Records/4.10 - Work Experience",
+      "item_no": 221,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "92b02459-91ff-4980-bfe4-06f3cfc8eb4c"
+    },
+    {
+      "name": "4.7 - Child Protection",
+      "path": "EduVault/Individual Student Records/Student Records/4.7 - Child Protection",
+      "item_no": 218,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "5213b4a2-c0ed-40db-903e-52b6e28a70f8"
+    },
+    {
+      "name": "5.4 - High Potential Programs",
+      "path": "EduVault/Individual Student Records/Student Records/5.4 - High Potential Programs",
+      "item_no": 225,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 10,
+      "parent_folder_no": 0,
+      "guid": "eaf49661-d545-4686-b7df-75d79bd43999"
+    },
+    {
+      "name": "AI Classification / Indexing",
+      "path": "AI Classification / Indexing",
+      "item_no": 189,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 0,
+      "guid": "c03f17e7-bfa2-47a7-9772-b93a162adb85"
+    },
+    {
+      "name": "Config",
+      "path": "AI Classification / Indexing/Config",
+      "item_no": 133,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 189,
+      "guid": "113e4b0b-af51-4242-b5ab-18a1c571226b"
+    },
+    {
+      "name": "Prompts",
+      "path": "AI Classification / Indexing/Config/Prompts",
+      "item_no": 138,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 133,
+      "guid": "18836597-611f-4b8a-a0dd-a203f32c6cde"
+    },
+    {
+      "name": "Contracts",
+      "path": "AI Classification / Indexing/Contracts",
+      "item_no": 134,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 189,
+      "guid": "bd79ac99-6a19-476c-8f50-74776ca656f9"
+    },
+    {
+      "name": "Samples - Contracts",
+      "path": "AI Classification / Indexing/Contracts/Samples - Contracts",
+      "item_no": 142,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 134,
+      "guid": "886cbcf1-56d5-4c56-a99b-3110d638a717"
+    },
+    {
+      "name": "Contracts",
+      "path": "AI Classification / Indexing/Contracts/Contracts",
+      "item_no": 141,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 134,
+      "guid": "7f02b2bd-dadc-47e0-be19-943db624dedd"
+    },
+    {
+      "name": "Invoices",
+      "path": "AI Classification / Indexing/Invoices",
+      "item_no": 80,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 189,
+      "guid": "641465df-24e7-448f-b1ac-fbe34ff9bec0"
+    },
+    {
+      "name": "Xero Smart Capture",
+      "path": "AI Classification / Indexing/Invoices/Xero Smart Capture",
+      "item_no": 75,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 80,
+      "guid": "2968b0c9-8bbe-4b6d-93ff-58c9507051df"
+    },
+    {
+      "name": "Samples - Invoices",
+      "path": "AI Classification / Indexing/Invoices/Samples - Invoices",
+      "item_no": 143,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 80,
+      "guid": "d62e4c92-7c88-4a25-9653-d8d58a4772cf"
+    },
+    {
+      "name": "Xero Invoices",
+      "path": "AI Classification / Indexing/Invoices/Xero Invoices",
+      "item_no": 73,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 80,
+      "guid": "a4d7df4f-2e34-4b95-b38e-cfaf1476bbfd"
+    },
+    {
+      "name": "Resumes",
+      "path": "AI Classification / Indexing/Resumes",
+      "item_no": 129,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 189,
+      "guid": "8443fea1-5d07-41fc-8604-2829766253aa"
+    },
+    {
+      "name": "Config",
+      "path": "AI Classification / Indexing/Resumes/Config",
+      "item_no": 132,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 129,
+      "guid": "6f19dd65-a10e-4183-a020-8c21d7162cbe"
+    },
+    {
+      "name": "Job Details",
+      "path": "AI Classification / Indexing/Resumes/Config/Job Details",
+      "item_no": 139,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 132,
+      "guid": "bf6c5237-5fef-4e5e-9af2-2ce4e9a400f3"
+    },
+    {
+      "name": "Samples - Resumes",
+      "path": "AI Classification / Indexing/Resumes/Samples - Resumes",
+      "item_no": 140,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 129,
+      "guid": "6865ced4-d83c-4f05-9299-4187d76ec945"
+    },
+    {
+      "name": "Resumes",
+      "path": "AI Classification / Indexing/Resumes/Resumes",
+      "item_no": 137,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 129,
+      "guid": "3db9a70e-d968-4505-9da1-4faf304c02ea"
+    },
+    {
+      "name": "Delivery Dockets",
+      "path": "AI Classification / Indexing/Delivery Dockets",
+      "item_no": 137,
+      "item_type": 1,
+      "folder_type": 3,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 189,
+      "guid": "ca171d51-93fb-45b0-bcb8-4739f0346cf6"
+    },
+    {
+      "name": "Samples - Delivery Dockets",
+      "path": "AI Classification / Indexing/Delivery Dockets/Samples - Delivery Dockets",
+      "item_no": 257,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 137,
+      "guid": "c33b8684-1a9d-4ccf-ba79-173875ba9d67"
+    },
+    {
+      "name": "Delivery Dockets",
+      "path": "AI Classification / Indexing/Delivery Dockets/Delivery Dockets",
+      "item_no": 147,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 137,
+      "guid": "e5492a1e-7536-4399-a5d4-3be85aced622"
+    },
+    {
+      "name": "Classifier",
+      "path": "AI Classification / Indexing/Classifier",
+      "item_no": 259,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 189,
+      "guid": "778c896b-82e8-4065-8f5f-d1bfb128556c"
+    },
+    {
+      "name": "AppConfiguration",
+      "path": "AppConfiguration",
+      "item_no": 260,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 0,
+      "guid": "ea974e81-2667-4e26-8c67-1c398f7592e3"
+    },
+    {
+      "name": "Shared Files",
+      "path": "Shared Files",
+      "item_no": 265,
+      "item_type": 2,
+      "folder_type": 0,
+      "parent_case_def_no": 0,
+      "parent_folder_no": 0,
+      "guid": "9dde8bcc-7862-4705-a856-3e51657530dd"
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+{
+  "generated_at": "2026-02-09T01:35:59.093906+00:00",
+  "environment": {
+    "base_url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun",
+    "auth_method": "Basic",
+    "tenant_name": "craigdemo",
+    "safe_doc_id": "18537",
+    "safe_category_id": "262",
+    "allow_writes": "true"
+  },
+  "results": [
+    {
+      "operation": "GetWebAPIServerVersion",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetWebAPIServerVersion",
+      "status": 200,
+      "elapsed_ms": 235,
+      "json_keys": [
+        "VersionDescription",
+        "VersionString",
+        "ServiceVersion"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetConnectionToken",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetConnectionToken",
+      "status": 200,
+      "elapsed_ms": 139,
+      "json_keys": [
+        "Token"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetDomainInfo",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetDomainInfo",
+      "status": 200,
+      "elapsed_ms": 126,
+      "json_keys": [
+        "DefaultDomain",
+        "DomainNames"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetClientDiscoveryInfo",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetClientDiscoveryInfo",
+      "status": 200,
+      "elapsed_ms": 70,
+      "json_keys": [
+        "WebApiUrl",
+        "ClientSettings"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetConnectedUser",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetConnectedUser",
+      "status": 200,
+      "elapsed_ms": 114,
+      "json_keys": [
+        "User"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetPermissionConstants",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetPermissionConstants",
+      "status": 200,
+      "elapsed_ms": 135,
+      "json_keys": [
+        "PermissionConstants"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetRolePermissionConstants",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetRolePermissionConstants",
+      "status": 200,
+      "elapsed_ms": 129,
+      "json_keys": [
+        "PermissionConstants"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetCategoriesTree",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetCategoriesTree",
+      "status": 200,
+      "elapsed_ms": 155,
+      "json_keys": [
+        "TreeItems"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetCategoryInfo",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetCategoryInfo",
+      "status": 200,
+      "elapsed_ms": 429,
+      "json_keys": [
+        "AutoAppendMode",
+        "BelongsToCaseDefinition",
+        "CategoryFields",
+        "CategoryNo",
+        "CheckInCommentsMode",
+        "Description",
+        "DocumentTitleLength",
+        "FieldCount",
+        "FolderNo",
+        "Guid",
+        "Height",
+        "IsFulltextEnabled",
+        "Name",
+        "NewVersionOnIndexDataChange",
+        "QueryTemplateNo",
+        "SubCtgryFieldIx",
+        "TableName",
+        "Title",
+        "Version",
+        "WatermarkDocNo",
+        "WatermarkHPos",
+        "WatermarkMode",
+        "WatermarkResolution",
+        "WatermarkVPos",
+        "Width",
+        "WorkflowFolder",
+        "WorkflowForm",
+        "WorkflowProcessNo",
+        "WorkflowProcessNoUpdate",
+        "BackgroundColor",
+        "CoverMode",
+        "DocumentPreview",
+        "EmptyDocMode",
+        "FullTextDate",
+        "FullTextMode",
+        "AccessMask",
+        "FieldNoSearchOrder",
+        "RoleAccessMask",
+        "AvailableLCIDs",
+        "CurrentLCID",
+        "SharedLinkDefaultExpiryPeriod",
+        "SharedLinkEditRole",
+        "SharedLinkMandatoryPassword",
+        "SharedLinkReadOnlyRole",
+        "SharedLinkShareOption",
+        "DocTitleConfig",
+        "ReasonForRetrieval",
+        "CategoryID"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetObjectsList(Type=3)",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetObjectsList",
+      "status": 200,
+      "elapsed_ms": 125,
+      "json_keys": [
+        "AllItemsList"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetDocument",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetDocument",
+      "status": 200,
+      "elapsed_ms": 458,
+      "json_keys": [
+        "CheckOutStatus",
+        "DocNo",
+        "IndexData",
+        "StreamsInfo",
+        "AccessMask",
+        "RoleAccessMask"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetDocumentIndexData",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetDocumentIndexData",
+      "status": 200,
+      "elapsed_ms": 201,
+      "json_keys": [
+        "DocNo",
+        "IndexData",
+        "AccessMask",
+        "RoleAccessMask"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetDocumentProperties",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetDocumentProperties",
+      "status": 200,
+      "elapsed_ms": 135,
+      "json_keys": [
+        "DocumentProperties"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetDocumentHistory",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetDocumentHistory",
+      "status": 200,
+      "elapsed_ms": 180,
+      "json_keys": [
+        "DocumentHistory"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "GetDocumentCheckoutStatus",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetDocumentCheckoutStatus",
+      "status": 200,
+      "elapsed_ms": 219,
+      "json_keys": [
+        "CheckOutStatus"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "PreprocessIndexData",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/PreprocessIndexData",
+      "status": 200,
+      "elapsed_ms": 145,
+      "json_keys": [
+        "IndexData",
+        "CalculationResult"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "EvaluateConditionalProperties",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/EvaluateConditionalProperties",
+      "status": 200,
+      "elapsed_ms": 116,
+      "json_keys": [
+        "FieldProperties",
+        "TabCtrlProperties",
+        "TableProperties"
+      ],
+      "has_body": true,
+      "raw_snippet": null
+    },
+    {
+      "operation": "CreateDocument",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/CreateDocument",
+      "status": 200,
+      "elapsed_ms": 1732,
+      "json_keys": [
+        "DocNo",
+        "LastChangeTime",
+        "VersionNo",
+        "LastChangeTimeISO8601"
+      ],
+      "has_body": true,
+      "raw_snippet": null,
+      "doc_no": 18555
+    },
+    {
+      "operation": "DeleteDocument",
+      "url": "https://craigdemo.thereforeonline.com/theservice/v0001/restun/DeleteDocument",
+      "status": 200,
+      "elapsed_ms": 432,
+      "json_keys": [],
+      "has_body": false,
+      "raw_snippet": null,
+      "doc_no": 18555
+    }
+  ]
+}

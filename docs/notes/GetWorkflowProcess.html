@@ -1,0 +1,469 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetWorkflowProcess</title>
+    <style>BODY { color: #000000; background-color: white; font-family: Verdana; margin-left: 0px; margin-top: 0px; } #content { margin-left: 30px; font-size: .70em; padding-bottom: 2em; } A:link { color: #336699; font-weight: bold; text-decoration: underline; } A:visited { color: #6699cc; font-weight: bold; text-decoration: underline; } A:active { color: #336699; font-weight: bold; text-decoration: underline; } .heading1 { background-color: #003366; border-bottom: #336699 6px solid; color: #ffffff; font-family: Tahoma; font-size: 26px; font-weight: normal;margin: 0em 0em 10px -20px; padding-bottom: 8px; padding-left: 30px;padding-top: 16px;} pre { font-size:small; background-color: #e5e5cc; padding: 5px; font-family: Courier New; margin-top: 0px; border: 1px #f0f0e0 solid; white-space: pre-wrap; white-space: -pre-wrap; word-wrap: break-word; } table { border-collapse: collapse; border-spacing: 0px; font-family: Verdana;} table th { border-right: 2px white solid; border-bottom: 2px white solid; font-weight: bold; background-color: #cecf9c;} table td { border-right: 2px white solid; border-bottom: 2px white solid; background-color: #e5e5cc;}</style>
+  </head>
+  <body>
+    <div id="content">
+      <p class="heading1">Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetWorkflowProcess</p>
+      <p></p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>Url: </b>
+        <span class="uri-template">https://craigdemo.thereforeonline.com/theservice/v0001/restun/GetWorkflowProcess</span>
+      </p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>HTTP Method: </b>
+        <span class="method">POST</span>
+      </p>
+      <table>
+        <tr>
+          <th>Message direction</th>
+          <th>Format</th>
+          <th>Body</th>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Xml</td>
+          <td>
+            <a href="#request-xml">Example</a>,<a href="#request-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Json</td>
+          <td>
+            <a href="#request-json">Example</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Xml</td>
+          <td>
+            <a href="#response-xml">Example</a>,<a href="#response-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Json</td>
+          <td>
+            <a href="#response-json">Example</a>
+          </td>
+        </tr>
+      </table>
+      <p>
+        <a name="request-xml">The following is an example request Xml body:</a>
+        <pre class="request-xml">&lt;GetWorkflowProcessParams xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;ProcessNo&gt;2147483647&lt;/ProcessNo&gt;
+  &lt;VersionNo&gt;2147483647&lt;/VersionNo&gt;
+  &lt;LoadTasks&gt;true&lt;/LoadTasks&gt;
+  &lt;IsAccessMaskNeeded&gt;true&lt;/IsAccessMaskNeeded&gt;
+&lt;/GetWorkflowProcessParams&gt;</pre>
+      </p>
+      <p>
+        <a name="request-json">The following is an example request Json body:</a>
+        <pre class="request-json">{
+	"ProcessNo":2147483647,
+	"VersionNo":2147483647,
+	"LoadTasks":true,
+	"IsAccessMaskNeeded":true
+}</pre>
+      </p>
+      <p>
+        <a name="response-xml">The following is an example response Xml body:</a>
+        <pre class="response-xml">&lt;GetWorkflowProcessResponse xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;WorkflowProcess&gt;
+    &lt;Activated&gt;true&lt;/Activated&gt;
+    &lt;AllowManualStart&gt;true&lt;/AllowManualStart&gt;
+    &lt;CaseDefinitionNo&gt;2147483647&lt;/CaseDefinitionNo&gt;
+    &lt;CategoryNo&gt;2147483647&lt;/CategoryNo&gt;
+    &lt;DaysToDeleteInstances&gt;2147483647&lt;/DaysToDeleteInstances&gt;
+    &lt;DelegateMailText&gt;String content&lt;/DelegateMailText&gt;
+    &lt;Description&gt;String content&lt;/Description&gt;
+    &lt;Duration&gt;2147483647&lt;/Duration&gt;
+    &lt;Enabled&gt;true&lt;/Enabled&gt;
+    &lt;FolderNo&gt;2147483647&lt;/FolderNo&gt;
+    &lt;Guid&gt;1627aea5-8e0a-4371-9022-9b504344e724&lt;/Guid&gt;
+    &lt;LastModified&gt;1999-05-31T11:20:00&lt;/LastModified&gt;
+    &lt;Name&gt;String content&lt;/Name&gt;
+    &lt;NotificationMailText&gt;String content&lt;/NotificationMailText&gt;
+    &lt;NotifyOnError&gt;String content&lt;/NotifyOnError&gt;
+    &lt;OverdueMailText&gt;String content&lt;/OverdueMailText&gt;
+    &lt;ProcessNo&gt;2147483647&lt;/ProcessNo&gt;
+    &lt;VersionNo&gt;2147483647&lt;/VersionNo&gt;
+    &lt;Tasks&gt;
+      &lt;WSWFTask&gt;
+        &lt;AllowMultiSelection&gt;true&lt;/AllowMultiSelection&gt;
+        &lt;AskForPwd&gt;true&lt;/AskForPwd&gt;
+        &lt;AssignFromFieldNo&gt;2147483647&lt;/AssignFromFieldNo&gt;
+        &lt;ChoiceCount&gt;2147483647&lt;/ChoiceCount&gt;
+        &lt;Choices&gt;
+          &lt;WSWFChoice&gt;
+            &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+            &lt;UserName&gt;String content&lt;/UserName&gt;
+            &lt;UserNo&gt;2147483647&lt;/UserNo&gt;
+            &lt;UserType&gt;2147483647&lt;/UserType&gt;
+            &lt;DisplayName&gt;String content&lt;/DisplayName&gt;
+          &lt;/WSWFChoice&gt;
+          &lt;WSWFChoice&gt;
+            &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+            &lt;UserName&gt;String content&lt;/UserName&gt;
+            &lt;UserNo&gt;2147483647&lt;/UserNo&gt;
+            &lt;UserType&gt;2147483647&lt;/UserType&gt;
+            &lt;DisplayName&gt;String content&lt;/DisplayName&gt;
+          &lt;/WSWFChoice&gt;
+        &lt;/Choices&gt;
+        &lt;Duration&gt;2147483647&lt;/Duration&gt;
+        &lt;Guid&gt;1627aea5-8e0a-4371-9022-9b504344e724&lt;/Guid&gt;
+        &lt;IsDelegationDisabled&gt;true&lt;/IsDelegationDisabled&gt;
+        &lt;Name&gt;String content&lt;/Name&gt;
+        &lt;ProcessNo&gt;2147483647&lt;/ProcessNo&gt;
+        &lt;SeqPos&gt;2147483647&lt;/SeqPos&gt;
+        &lt;Type&gt;StartTask&lt;/Type&gt;
+        &lt;UseChecklist&gt;true&lt;/UseChecklist&gt;
+        &lt;UserChoice&gt;true&lt;/UserChoice&gt;
+        &lt;VersionNo&gt;2147483647&lt;/VersionNo&gt;
+        &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+        &lt;ActionTypeId&gt;String content&lt;/ActionTypeId&gt;
+        &lt;TaskGUID&gt;String content&lt;/TaskGUID&gt;
+      &lt;/WSWFTask&gt;
+      &lt;WSWFTask&gt;
+        &lt;AllowMultiSelection&gt;true&lt;/AllowMultiSelection&gt;
+        &lt;AskForPwd&gt;true&lt;/AskForPwd&gt;
+        &lt;AssignFromFieldNo&gt;2147483647&lt;/AssignFromFieldNo&gt;
+        &lt;ChoiceCount&gt;2147483647&lt;/ChoiceCount&gt;
+        &lt;Choices&gt;
+          &lt;WSWFChoice&gt;
+            &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+            &lt;UserName&gt;String content&lt;/UserName&gt;
+            &lt;UserNo&gt;2147483647&lt;/UserNo&gt;
+            &lt;UserType&gt;2147483647&lt;/UserType&gt;
+            &lt;DisplayName&gt;String content&lt;/DisplayName&gt;
+          &lt;/WSWFChoice&gt;
+          &lt;WSWFChoice&gt;
+            &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+            &lt;UserName&gt;String content&lt;/UserName&gt;
+            &lt;UserNo&gt;2147483647&lt;/UserNo&gt;
+            &lt;UserType&gt;2147483647&lt;/UserType&gt;
+            &lt;DisplayName&gt;String content&lt;/DisplayName&gt;
+          &lt;/WSWFChoice&gt;
+        &lt;/Choices&gt;
+        &lt;Duration&gt;2147483647&lt;/Duration&gt;
+        &lt;Guid&gt;1627aea5-8e0a-4371-9022-9b504344e724&lt;/Guid&gt;
+        &lt;IsDelegationDisabled&gt;true&lt;/IsDelegationDisabled&gt;
+        &lt;Name&gt;String content&lt;/Name&gt;
+        &lt;ProcessNo&gt;2147483647&lt;/ProcessNo&gt;
+        &lt;SeqPos&gt;2147483647&lt;/SeqPos&gt;
+        &lt;Type&gt;StartTask&lt;/Type&gt;
+        &lt;UseChecklist&gt;true&lt;/UseChecklist&gt;
+        &lt;UserChoice&gt;true&lt;/UserChoice&gt;
+        &lt;VersionNo&gt;2147483647&lt;/VersionNo&gt;
+        &lt;TaskNo&gt;2147483647&lt;/TaskNo&gt;
+        &lt;ActionTypeId&gt;String content&lt;/ActionTypeId&gt;
+        &lt;TaskGUID&gt;String content&lt;/TaskGUID&gt;
+      &lt;/WSWFTask&gt;
+    &lt;/Tasks&gt;
+    &lt;LastModifiedISO8601&gt;String content&lt;/LastModifiedISO8601&gt;
+    &lt;ProcessID&gt;String content&lt;/ProcessID&gt;
+  &lt;/WorkflowProcess&gt;
+  &lt;RoleAccessMask&gt;
+    &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+  &lt;/RoleAccessMask&gt;
+&lt;/GetWorkflowProcessResponse&gt;</pre>
+      </p>
+      <p>
+        <a name="response-json">The following is an example response Json body:</a>
+        <pre class="response-json">{
+	"WorkflowProcess":{
+		"Activated":true,
+		"AllowManualStart":true,
+		"CaseDefinitionNo":2147483647,
+		"CategoryNo":2147483647,
+		"DaysToDeleteInstances":2147483647,
+		"DelegateMailText":"String content",
+		"Description":"String content",
+		"Duration":2147483647,
+		"Enabled":true,
+		"FolderNo":2147483647,
+		"Guid":"1627aea5-8e0a-4371-9022-9b504344e724",
+		"LastModified":"\/Date(928149600000+0000)\/",
+		"Name":"String content",
+		"NotificationMailText":"String content",
+		"NotifyOnError":"String content",
+		"OverdueMailText":"String content",
+		"ProcessNo":2147483647,
+		"VersionNo":2147483647,
+		"Tasks":[{
+			"AllowMultiSelection":true,
+			"AskForPwd":true,
+			"AssignFromFieldNo":2147483647,
+			"ChoiceCount":2147483647,
+			"Choices":[{
+				"TaskNo":2147483647,
+				"UserName":"String content",
+				"UserNo":2147483647,
+				"UserType":2147483647,
+				"DisplayName":"String content"
+			}],
+			"Duration":2147483647,
+			"Guid":"1627aea5-8e0a-4371-9022-9b504344e724",
+			"IsDelegationDisabled":true,
+			"Name":"String content",
+			"ProcessNo":2147483647,
+			"SeqPos":2147483647,
+			"Type":0,
+			"UseChecklist":true,
+			"UserChoice":true,
+			"VersionNo":2147483647,
+			"TaskNo":2147483647,
+			"ActionTypeId":"String content",
+			"TaskGUID":"String content"
+		}],
+		"LastModifiedISO8601":"String content",
+		"ProcessID":"String content"
+	},
+	"RoleAccessMask":{
+		"Value":18446744073709551615
+	}
+}</pre>
+      </p>
+      <p>
+        <a name="request-schema">The following is the request Xml Schema:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:complexType name="GetWorkflowProcessParams"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="ProcessNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="VersionNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="LoadTasks" nillable="true" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="IsAccessMaskNeeded" type="xs:boolean" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="GetWorkflowProcessParams" nillable="true" type="tns:GetWorkflowProcessParams" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="request-schema">Additional request Xml Schemas:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="request-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">The following is the response Xml Schema:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:ser="http://schemas.microsoft.com/2003/10/Serialization/" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" /&gt;
+  &lt;xs:complexType name="GetWorkflowProcessResponse"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="WorkflowProcess" nillable="true" type="tns:WSWFProcess" /&gt;
+      &lt;xs:element minOccurs="0" name="RoleAccessMask" nillable="true" type="tns:WSRoleAccessMask" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="GetWorkflowProcessResponse" nillable="true" type="tns:GetWorkflowProcessResponse" /&gt;
+  &lt;xs:complexType name="WSWFProcess"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="Activated" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="AllowManualStart" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="CaseDefinitionNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="CategoryNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="DaysToDeleteInstances" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="DelegateMailText" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="Description" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="Duration" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Enabled" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="FolderNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Guid" type="ser:guid" /&gt;
+      &lt;xs:element minOccurs="0" name="LastModified" type="xs:dateTime" /&gt;
+      &lt;xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="NotificationMailText" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="NotifyOnError" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="OverdueMailText" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="ProcessNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="VersionNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Tasks" nillable="true" type="tns:ArrayOfWSWFTask" /&gt;
+      &lt;xs:element minOccurs="0" name="LastModifiedISO8601" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="ProcessID" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSWFProcess" nillable="true" type="tns:WSWFProcess" /&gt;
+  &lt;xs:complexType name="ArrayOfWSWFTask"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSWFTask" nillable="true" type="tns:WSWFTask" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSWFTask" nillable="true" type="tns:ArrayOfWSWFTask" /&gt;
+  &lt;xs:complexType name="WSWFTask"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="AllowMultiSelection" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="AskForPwd" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="AssignFromFieldNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="ChoiceCount" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Choices" nillable="true" type="tns:ArrayOfWSWFChoice" /&gt;
+      &lt;xs:element minOccurs="0" name="Duration" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Guid" type="ser:guid" /&gt;
+      &lt;xs:element minOccurs="0" name="IsDelegationDisabled" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="ProcessNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="SeqPos" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Type" type="tns:WSWFTaskType" /&gt;
+      &lt;xs:element minOccurs="0" name="UseChecklist" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="UserChoice" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="VersionNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TaskNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="ActionTypeId" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TaskGUID" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSWFTask" nillable="true" type="tns:WSWFTask" /&gt;
+  &lt;xs:complexType name="ArrayOfWSWFChoice"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSWFChoice" nillable="true" type="tns:WSWFChoice" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSWFChoice" nillable="true" type="tns:ArrayOfWSWFChoice" /&gt;
+  &lt;xs:complexType name="WSWFChoice"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="TaskNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="UserName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="UserNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="UserType" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="DisplayName" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSWFChoice" nillable="true" type="tns:WSWFChoice" /&gt;
+  &lt;xs:simpleType name="WSWFTaskType"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="StartTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;1&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="EndTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;2&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="ManualTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;3&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="AutomaticTask"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;4&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSWFTaskType" nillable="true" type="tns:WSWFTaskType" /&gt;
+  &lt;xs:complexType name="WSRoleAccessMask"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="Value" type="xs:unsignedLong" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSRoleAccessMask" nillable="true" type="tns:WSRoleAccessMask" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">Additional response Xml Schemas:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="response-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,1077 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteSimpleQuery</title>
+    <style>BODY { color: #000000; background-color: white; font-family: Verdana; margin-left: 0px; margin-top: 0px; } #content { margin-left: 30px; font-size: .70em; padding-bottom: 2em; } A:link { color: #336699; font-weight: bold; text-decoration: underline; } A:visited { color: #6699cc; font-weight: bold; text-decoration: underline; } A:active { color: #336699; font-weight: bold; text-decoration: underline; } .heading1 { background-color: #003366; border-bottom: #336699 6px solid; color: #ffffff; font-family: Tahoma; font-size: 26px; font-weight: normal;margin: 0em 0em 10px -20px; padding-bottom: 8px; padding-left: 30px;padding-top: 16px;} pre { font-size:small; background-color: #e5e5cc; padding: 5px; font-family: Courier New; margin-top: 0px; border: 1px #f0f0e0 solid; white-space: pre-wrap; white-space: -pre-wrap; word-wrap: break-word; } table { border-collapse: collapse; border-spacing: 0px; font-family: Verdana;} table th { border-right: 2px white solid; border-bottom: 2px white solid; font-weight: bold; background-color: #cecf9c;} table td { border-right: 2px white solid; border-bottom: 2px white solid; background-color: #e5e5cc;}</style>
+  </head>
+  <body>
+    <div id="content">
+      <p class="heading1">Reference for  https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteSimpleQuery</p>
+      <p></p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>Url: </b>
+        <span class="uri-template">https://craigdemo.thereforeonline.com/theservice/v0001/restun/ExecuteSimpleQuery</span>
+      </p>
+      <p xmlns="http://www.w3.org/1999/xhtml">
+        <b>HTTP Method: </b>
+        <span class="method">POST</span>
+      </p>
+      <table>
+        <tr>
+          <th>Message direction</th>
+          <th>Format</th>
+          <th>Body</th>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Xml</td>
+          <td>
+            <a href="#request-xml">Example</a>,<a href="#request-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Request</td>
+          <td>Json</td>
+          <td>
+            <a href="#request-json">Example</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Xml</td>
+          <td>
+            <a href="#response-xml">Example</a>,<a href="#response-schema">Schema</a></td>
+        </tr>
+        <tr>
+          <td>Response</td>
+          <td>Json</td>
+          <td>
+            <a href="#response-json">Example</a>
+          </td>
+        </tr>
+      </table>
+      <p>
+        <a name="request-xml">The following is an example request Xml body:</a>
+        <pre class="request-xml">&lt;ExecuteSimpleQueryParams xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;CategoryNo&gt;2147483647&lt;/CategoryNo&gt;
+  &lt;Condition&gt;String content&lt;/Condition&gt;
+  &lt;FieldNo&gt;2147483647&lt;/FieldNo&gt;
+  &lt;OrderByFieldNo&gt;2147483647&lt;/OrderByFieldNo&gt;
+&lt;/ExecuteSimpleQueryParams&gt;</pre>
+      </p>
+      <p>
+        <a name="request-json">The following is an example request Json body:</a>
+        <pre class="request-json">{
+	"CategoryNo":2147483647,
+	"Condition":"String content",
+	"FieldNo":2147483647,
+	"OrderByFieldNo":2147483647
+}</pre>
+      </p>
+      <p>
+        <a name="response-xml">The following is an example response Xml body:</a>
+        <pre class="response-xml">&lt;ExecuteSimpleQueryResponse xmlns="http://schemas.therefore.net/webservices/interop/v0001/types"&gt;
+  &lt;QueryResult&gt;
+    &lt;CaseDefinitionNo&gt;2147483647&lt;/CaseDefinitionNo&gt;
+    &lt;CategoryNo&gt;2147483647&lt;/CategoryNo&gt;
+    &lt;ProcessNo&gt;2147483647&lt;/ProcessNo&gt;
+    &lt;ResultRows&gt;
+      &lt;WSQueryResultRow&gt;
+        &lt;AccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/AccessMask&gt;
+        &lt;DocNo&gt;2147483647&lt;/DocNo&gt;
+        &lt;IndexValues&gt;
+          &lt;IndexValue&gt;String content&lt;/IndexValue&gt;
+          &lt;IndexValue&gt;String content&lt;/IndexValue&gt;
+        &lt;/IndexValues&gt;
+        &lt;Size&gt;9223372036854775807&lt;/Size&gt;
+        &lt;VersionNo&gt;2147483647&lt;/VersionNo&gt;
+        &lt;Status&gt;DocStatusCheckedIn&lt;/Status&gt;
+        &lt;RoleAccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/RoleAccessMask&gt;
+      &lt;/WSQueryResultRow&gt;
+      &lt;WSQueryResultRow&gt;
+        &lt;AccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/AccessMask&gt;
+        &lt;DocNo&gt;2147483647&lt;/DocNo&gt;
+        &lt;IndexValues&gt;
+          &lt;IndexValue&gt;String content&lt;/IndexValue&gt;
+          &lt;IndexValue&gt;String content&lt;/IndexValue&gt;
+        &lt;/IndexValues&gt;
+        &lt;Size&gt;9223372036854775807&lt;/Size&gt;
+        &lt;VersionNo&gt;2147483647&lt;/VersionNo&gt;
+        &lt;Status&gt;DocStatusCheckedIn&lt;/Status&gt;
+        &lt;RoleAccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/RoleAccessMask&gt;
+      &lt;/WSQueryResultRow&gt;
+    &lt;/ResultRows&gt;
+    &lt;Columns&gt;
+      &lt;WSCategoryField&gt;
+        &lt;BelongsTo&gt;2147483647&lt;/BelongsTo&gt;
+        &lt;BelongsToTable&gt;2147483647&lt;/BelongsToTable&gt;
+        &lt;Caption&gt;String content&lt;/Caption&gt;
+        &lt;CaseSensitive&gt;true&lt;/CaseSensitive&gt;
+        &lt;ColName&gt;String content&lt;/ColName&gt;
+        &lt;CounterMode&gt;Undefined&lt;/CounterMode&gt;
+        &lt;DefaultVal&gt;String content&lt;/DefaultVal&gt;
+        &lt;DependencyMode&gt;Referenced&lt;/DependencyMode&gt;
+        &lt;DisplayOrderPos&gt;2147483647&lt;/DisplayOrderPos&gt;
+        &lt;DontLoadValues&gt;true&lt;/DontLoadValues&gt;
+        &lt;FieldNo&gt;2147483647&lt;/FieldNo&gt;
+        &lt;FieldType&gt;StringField&lt;/FieldType&gt;
+        &lt;ForeignCol&gt;String content&lt;/ForeignCol&gt;
+        &lt;Guid&gt;1627aea5-8e0a-4371-9022-9b504344e724&lt;/Guid&gt;
+        &lt;Height&gt;2147483647&lt;/Height&gt;
+        &lt;IndexDataFieldName&gt;String content&lt;/IndexDataFieldName&gt;
+        &lt;IndexType&gt;2147483647&lt;/IndexType&gt;
+        &lt;IsForeignDatatype&gt;true&lt;/IsForeignDatatype&gt;
+        &lt;IsMultipleKeyword&gt;true&lt;/IsMultipleKeyword&gt;
+        &lt;IsSingleKeyword&gt;true&lt;/IsSingleKeyword&gt;
+        &lt;KeepRedundant&gt;true&lt;/KeepRedundant&gt;
+        &lt;Length&gt;2147483647&lt;/Length&gt;
+        &lt;Mandatory&gt;true&lt;/Mandatory&gt;
+        &lt;PosX&gt;2147483647&lt;/PosX&gt;
+        &lt;PosY&gt;2147483647&lt;/PosY&gt;
+        &lt;RegularExpr&gt;String content&lt;/RegularExpr&gt;
+        &lt;TabOrderPos&gt;2147483647&lt;/TabOrderPos&gt;
+        &lt;TypeGroup&gt;StandardTypeGroup&lt;/TypeGroup&gt;
+        &lt;TypeIndexColumn&gt;String content&lt;/TypeIndexColumn&gt;
+        &lt;TypeMultiInner&gt;String content&lt;/TypeMultiInner&gt;
+        &lt;TypeMultiJoin&gt;String content&lt;/TypeMultiJoin&gt;
+        &lt;TypeMultiOuter&gt;String content&lt;/TypeMultiOuter&gt;
+        &lt;TypeNo&gt;2147483647&lt;/TypeNo&gt;
+        &lt;TypeTableName&gt;String content&lt;/TypeTableName&gt;
+        &lt;Visible&gt;true&lt;/Visible&gt;
+        &lt;Width&gt;2147483647&lt;/Width&gt;
+        &lt;WorkflowField&gt;String content&lt;/WorkflowField&gt;
+        &lt;SelectFromDropDownBox&gt;true&lt;/SelectFromDropDownBox&gt;
+        &lt;DisplayProperties&gt;
+          &lt;BackgroundColor&gt;2147483647&lt;/BackgroundColor&gt;
+          &lt;Bold&gt;true&lt;/Bold&gt;
+          &lt;FaceName&gt;String content&lt;/FaceName&gt;
+          &lt;FontSize&gt;2147483647&lt;/FontSize&gt;
+          &lt;HorizontalAlignment&gt;Left&lt;/HorizontalAlignment&gt;
+          &lt;Italic&gt;true&lt;/Italic&gt;
+          &lt;Padding&gt;2147483647&lt;/Padding&gt;
+          &lt;TextColor&gt;2147483647&lt;/TextColor&gt;
+          &lt;Underlined&gt;true&lt;/Underlined&gt;
+          &lt;VerticalAlignment&gt;Top&lt;/VerticalAlignment&gt;
+        &lt;/DisplayProperties&gt;
+        &lt;ImageDocNo&gt;2147483647&lt;/ImageDocNo&gt;
+        &lt;IsImageFieldType&gt;true&lt;/IsImageFieldType&gt;
+        &lt;IsTabControlFieldType&gt;true&lt;/IsTabControlFieldType&gt;
+        &lt;ParentFieldNo&gt;2147483647&lt;/ParentFieldNo&gt;
+        &lt;ShowInTabNo&gt;2147483647&lt;/ShowInTabNo&gt;
+        &lt;Tabs&gt;
+          &lt;WSTabInfo&gt;
+            &lt;BackgroundColor&gt;2147483647&lt;/BackgroundColor&gt;
+            &lt;Caption&gt;String content&lt;/Caption&gt;
+            &lt;Position&gt;2147483647&lt;/Position&gt;
+            &lt;TabColor&gt;2147483647&lt;/TabColor&gt;
+            &lt;TabNo&gt;2147483647&lt;/TabNo&gt;
+            &lt;TextColor&gt;2147483647&lt;/TextColor&gt;
+            &lt;Visible&gt;true&lt;/Visible&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+          &lt;/WSTabInfo&gt;
+          &lt;WSTabInfo&gt;
+            &lt;BackgroundColor&gt;2147483647&lt;/BackgroundColor&gt;
+            &lt;Caption&gt;String content&lt;/Caption&gt;
+            &lt;Position&gt;2147483647&lt;/Position&gt;
+            &lt;TabColor&gt;2147483647&lt;/TabColor&gt;
+            &lt;TabNo&gt;2147483647&lt;/TabNo&gt;
+            &lt;TextColor&gt;2147483647&lt;/TextColor&gt;
+            &lt;Visible&gt;true&lt;/Visible&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+          &lt;/WSTabInfo&gt;
+        &lt;/Tabs&gt;
+        &lt;AccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/AccessMask&gt;
+        &lt;IsAutoAppendField&gt;true&lt;/IsAutoAppendField&gt;
+        &lt;IsDateTimeFieldType&gt;true&lt;/IsDateTimeFieldType&gt;
+        &lt;Scale&gt;2147483647&lt;/Scale&gt;
+        &lt;RegExSample&gt;String content&lt;/RegExSample&gt;
+        &lt;FieldID&gt;String content&lt;/FieldID&gt;
+        &lt;Condition&gt;String content&lt;/Condition&gt;
+        &lt;ConditionalFormatting&gt;
+          &lt;BackgroundColorBGR&gt;2147483647&lt;/BackgroundColorBGR&gt;
+          &lt;BackgroundColorRGB&gt;2147483647&lt;/BackgroundColorRGB&gt;
+          &lt;FieldNo&gt;2147483647&lt;/FieldNo&gt;
+          &lt;TextColorBGR&gt;2147483647&lt;/TextColorBGR&gt;
+          &lt;TextColorRGB&gt;2147483647&lt;/TextColorRGB&gt;
+        &lt;/ConditionalFormatting&gt;
+        &lt;Formula&gt;String content&lt;/Formula&gt;
+        &lt;IsCalculationTrigger&gt;true&lt;/IsCalculationTrigger&gt;
+        &lt;IsFormattingTrigger&gt;true&lt;/IsFormattingTrigger&gt;
+        &lt;RoleAccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/RoleAccessMask&gt;
+        &lt;SortDescending&gt;true&lt;/SortDescending&gt;
+        &lt;Filter&gt;
+          &lt;WSFieldFilter&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+            &lt;ReferencedTableColumn&gt;String content&lt;/ReferencedTableColumn&gt;
+          &lt;/WSFieldFilter&gt;
+          &lt;WSFieldFilter&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+            &lt;ReferencedTableColumn&gt;String content&lt;/ReferencedTableColumn&gt;
+          &lt;/WSFieldFilter&gt;
+        &lt;/Filter&gt;
+        &lt;ConditionMode&gt;Formatting&lt;/ConditionMode&gt;
+        &lt;IsDependencyTrigger&gt;true&lt;/IsDependencyTrigger&gt;
+        &lt;TypeMultiInnerCase&gt;String content&lt;/TypeMultiInnerCase&gt;
+      &lt;/WSCategoryField&gt;
+      &lt;WSCategoryField&gt;
+        &lt;BelongsTo&gt;2147483647&lt;/BelongsTo&gt;
+        &lt;BelongsToTable&gt;2147483647&lt;/BelongsToTable&gt;
+        &lt;Caption&gt;String content&lt;/Caption&gt;
+        &lt;CaseSensitive&gt;true&lt;/CaseSensitive&gt;
+        &lt;ColName&gt;String content&lt;/ColName&gt;
+        &lt;CounterMode&gt;Undefined&lt;/CounterMode&gt;
+        &lt;DefaultVal&gt;String content&lt;/DefaultVal&gt;
+        &lt;DependencyMode&gt;Referenced&lt;/DependencyMode&gt;
+        &lt;DisplayOrderPos&gt;2147483647&lt;/DisplayOrderPos&gt;
+        &lt;DontLoadValues&gt;true&lt;/DontLoadValues&gt;
+        &lt;FieldNo&gt;2147483647&lt;/FieldNo&gt;
+        &lt;FieldType&gt;StringField&lt;/FieldType&gt;
+        &lt;ForeignCol&gt;String content&lt;/ForeignCol&gt;
+        &lt;Guid&gt;1627aea5-8e0a-4371-9022-9b504344e724&lt;/Guid&gt;
+        &lt;Height&gt;2147483647&lt;/Height&gt;
+        &lt;IndexDataFieldName&gt;String content&lt;/IndexDataFieldName&gt;
+        &lt;IndexType&gt;2147483647&lt;/IndexType&gt;
+        &lt;IsForeignDatatype&gt;true&lt;/IsForeignDatatype&gt;
+        &lt;IsMultipleKeyword&gt;true&lt;/IsMultipleKeyword&gt;
+        &lt;IsSingleKeyword&gt;true&lt;/IsSingleKeyword&gt;
+        &lt;KeepRedundant&gt;true&lt;/KeepRedundant&gt;
+        &lt;Length&gt;2147483647&lt;/Length&gt;
+        &lt;Mandatory&gt;true&lt;/Mandatory&gt;
+        &lt;PosX&gt;2147483647&lt;/PosX&gt;
+        &lt;PosY&gt;2147483647&lt;/PosY&gt;
+        &lt;RegularExpr&gt;String content&lt;/RegularExpr&gt;
+        &lt;TabOrderPos&gt;2147483647&lt;/TabOrderPos&gt;
+        &lt;TypeGroup&gt;StandardTypeGroup&lt;/TypeGroup&gt;
+        &lt;TypeIndexColumn&gt;String content&lt;/TypeIndexColumn&gt;
+        &lt;TypeMultiInner&gt;String content&lt;/TypeMultiInner&gt;
+        &lt;TypeMultiJoin&gt;String content&lt;/TypeMultiJoin&gt;
+        &lt;TypeMultiOuter&gt;String content&lt;/TypeMultiOuter&gt;
+        &lt;TypeNo&gt;2147483647&lt;/TypeNo&gt;
+        &lt;TypeTableName&gt;String content&lt;/TypeTableName&gt;
+        &lt;Visible&gt;true&lt;/Visible&gt;
+        &lt;Width&gt;2147483647&lt;/Width&gt;
+        &lt;WorkflowField&gt;String content&lt;/WorkflowField&gt;
+        &lt;SelectFromDropDownBox&gt;true&lt;/SelectFromDropDownBox&gt;
+        &lt;DisplayProperties&gt;
+          &lt;BackgroundColor&gt;2147483647&lt;/BackgroundColor&gt;
+          &lt;Bold&gt;true&lt;/Bold&gt;
+          &lt;FaceName&gt;String content&lt;/FaceName&gt;
+          &lt;FontSize&gt;2147483647&lt;/FontSize&gt;
+          &lt;HorizontalAlignment&gt;Left&lt;/HorizontalAlignment&gt;
+          &lt;Italic&gt;true&lt;/Italic&gt;
+          &lt;Padding&gt;2147483647&lt;/Padding&gt;
+          &lt;TextColor&gt;2147483647&lt;/TextColor&gt;
+          &lt;Underlined&gt;true&lt;/Underlined&gt;
+          &lt;VerticalAlignment&gt;Top&lt;/VerticalAlignment&gt;
+        &lt;/DisplayProperties&gt;
+        &lt;ImageDocNo&gt;2147483647&lt;/ImageDocNo&gt;
+        &lt;IsImageFieldType&gt;true&lt;/IsImageFieldType&gt;
+        &lt;IsTabControlFieldType&gt;true&lt;/IsTabControlFieldType&gt;
+        &lt;ParentFieldNo&gt;2147483647&lt;/ParentFieldNo&gt;
+        &lt;ShowInTabNo&gt;2147483647&lt;/ShowInTabNo&gt;
+        &lt;Tabs&gt;
+          &lt;WSTabInfo&gt;
+            &lt;BackgroundColor&gt;2147483647&lt;/BackgroundColor&gt;
+            &lt;Caption&gt;String content&lt;/Caption&gt;
+            &lt;Position&gt;2147483647&lt;/Position&gt;
+            &lt;TabColor&gt;2147483647&lt;/TabColor&gt;
+            &lt;TabNo&gt;2147483647&lt;/TabNo&gt;
+            &lt;TextColor&gt;2147483647&lt;/TextColor&gt;
+            &lt;Visible&gt;true&lt;/Visible&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+          &lt;/WSTabInfo&gt;
+          &lt;WSTabInfo&gt;
+            &lt;BackgroundColor&gt;2147483647&lt;/BackgroundColor&gt;
+            &lt;Caption&gt;String content&lt;/Caption&gt;
+            &lt;Position&gt;2147483647&lt;/Position&gt;
+            &lt;TabColor&gt;2147483647&lt;/TabColor&gt;
+            &lt;TabNo&gt;2147483647&lt;/TabNo&gt;
+            &lt;TextColor&gt;2147483647&lt;/TextColor&gt;
+            &lt;Visible&gt;true&lt;/Visible&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+          &lt;/WSTabInfo&gt;
+        &lt;/Tabs&gt;
+        &lt;AccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/AccessMask&gt;
+        &lt;IsAutoAppendField&gt;true&lt;/IsAutoAppendField&gt;
+        &lt;IsDateTimeFieldType&gt;true&lt;/IsDateTimeFieldType&gt;
+        &lt;Scale&gt;2147483647&lt;/Scale&gt;
+        &lt;RegExSample&gt;String content&lt;/RegExSample&gt;
+        &lt;FieldID&gt;String content&lt;/FieldID&gt;
+        &lt;Condition&gt;String content&lt;/Condition&gt;
+        &lt;ConditionalFormatting&gt;
+          &lt;BackgroundColorBGR&gt;2147483647&lt;/BackgroundColorBGR&gt;
+          &lt;BackgroundColorRGB&gt;2147483647&lt;/BackgroundColorRGB&gt;
+          &lt;FieldNo&gt;2147483647&lt;/FieldNo&gt;
+          &lt;TextColorBGR&gt;2147483647&lt;/TextColorBGR&gt;
+          &lt;TextColorRGB&gt;2147483647&lt;/TextColorRGB&gt;
+        &lt;/ConditionalFormatting&gt;
+        &lt;Formula&gt;String content&lt;/Formula&gt;
+        &lt;IsCalculationTrigger&gt;true&lt;/IsCalculationTrigger&gt;
+        &lt;IsFormattingTrigger&gt;true&lt;/IsFormattingTrigger&gt;
+        &lt;RoleAccessMask&gt;
+          &lt;Value&gt;18446744073709551615&lt;/Value&gt;
+        &lt;/RoleAccessMask&gt;
+        &lt;SortDescending&gt;true&lt;/SortDescending&gt;
+        &lt;Filter&gt;
+          &lt;WSFieldFilter&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+            &lt;ReferencedTableColumn&gt;String content&lt;/ReferencedTableColumn&gt;
+          &lt;/WSFieldFilter&gt;
+          &lt;WSFieldFilter&gt;
+            &lt;Condition&gt;String content&lt;/Condition&gt;
+            &lt;ReferencedTableColumn&gt;String content&lt;/ReferencedTableColumn&gt;
+          &lt;/WSFieldFilter&gt;
+        &lt;/Filter&gt;
+        &lt;ConditionMode&gt;Formatting&lt;/ConditionMode&gt;
+        &lt;IsDependencyTrigger&gt;true&lt;/IsDependencyTrigger&gt;
+        &lt;TypeMultiInnerCase&gt;String content&lt;/TypeMultiInnerCase&gt;
+      &lt;/WSCategoryField&gt;
+    &lt;/Columns&gt;
+    &lt;DocTitleConfig&gt;
+      &lt;WSDocTitleConfigEntry&gt;
+        &lt;FieldNos&gt;
+          &lt;int xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays"&gt;2147483647&lt;/int&gt;
+          &lt;int xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays"&gt;2147483647&lt;/int&gt;
+        &lt;/FieldNos&gt;
+        &lt;HideCtgryName&gt;true&lt;/HideCtgryName&gt;
+        &lt;MaxLength&gt;2147483647&lt;/MaxLength&gt;
+        &lt;ShowFieldName&gt;true&lt;/ShowFieldName&gt;
+        &lt;TitleType&gt;Undef&lt;/TitleType&gt;
+      &lt;/WSDocTitleConfigEntry&gt;
+      &lt;WSDocTitleConfigEntry&gt;
+        &lt;FieldNos&gt;
+          &lt;int xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays"&gt;2147483647&lt;/int&gt;
+          &lt;int xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays"&gt;2147483647&lt;/int&gt;
+        &lt;/FieldNos&gt;
+        &lt;HideCtgryName&gt;true&lt;/HideCtgryName&gt;
+        &lt;MaxLength&gt;2147483647&lt;/MaxLength&gt;
+        &lt;ShowFieldName&gt;true&lt;/ShowFieldName&gt;
+        &lt;TitleType&gt;Undef&lt;/TitleType&gt;
+      &lt;/WSDocTitleConfigEntry&gt;
+    &lt;/DocTitleConfig&gt;
+  &lt;/QueryResult&gt;
+&lt;/ExecuteSimpleQueryResponse&gt;</pre>
+      </p>
+      <p>
+        <a name="response-json">The following is an example response Json body:</a>
+        <pre class="response-json">{
+	"QueryResult":{
+		"CaseDefinitionNo":2147483647,
+		"CategoryNo":2147483647,
+		"ProcessNo":2147483647,
+		"ResultRows":[{
+			"AccessMask":{
+				"Value":18446744073709551615
+			},
+			"DocNo":2147483647,
+			"IndexValues":["String content"],
+			"Size":9223372036854775807,
+			"VersionNo":2147483647,
+			"Status":0,
+			"RoleAccessMask":{
+				"Value":18446744073709551615
+			}
+		}],
+		"Columns":[{
+			"BelongsTo":2147483647,
+			"BelongsToTable":2147483647,
+			"Caption":"String content",
+			"CaseSensitive":true,
+			"ColName":"String content",
+			"CounterMode":0,
+			"DefaultVal":"String content",
+			"DependencyMode":0,
+			"DisplayOrderPos":2147483647,
+			"DontLoadValues":true,
+			"FieldNo":2147483647,
+			"FieldType":0,
+			"ForeignCol":"String content",
+			"Guid":"1627aea5-8e0a-4371-9022-9b504344e724",
+			"Height":2147483647,
+			"IndexDataFieldName":"String content",
+			"IndexType":2147483647,
+			"IsForeignDatatype":true,
+			"IsMultipleKeyword":true,
+			"IsSingleKeyword":true,
+			"KeepRedundant":true,
+			"Length":2147483647,
+			"Mandatory":true,
+			"PosX":2147483647,
+			"PosY":2147483647,
+			"RegularExpr":"String content",
+			"TabOrderPos":2147483647,
+			"TypeGroup":0,
+			"TypeIndexColumn":"String content",
+			"TypeMultiInner":"String content",
+			"TypeMultiJoin":"String content",
+			"TypeMultiOuter":"String content",
+			"TypeNo":2147483647,
+			"TypeTableName":"String content",
+			"Visible":true,
+			"Width":2147483647,
+			"WorkflowField":"String content",
+			"SelectFromDropDownBox":true,
+			"DisplayProperties":{
+				"BackgroundColor":2147483647,
+				"Bold":true,
+				"FaceName":"String content",
+				"FontSize":2147483647,
+				"HorizontalAlignment":0,
+				"Italic":true,
+				"Padding":2147483647,
+				"TextColor":2147483647,
+				"Underlined":true,
+				"VerticalAlignment":0
+			},
+			"ImageDocNo":2147483647,
+			"IsImageFieldType":true,
+			"IsTabControlFieldType":true,
+			"ParentFieldNo":2147483647,
+			"ShowInTabNo":2147483647,
+			"Tabs":[{
+				"BackgroundColor":2147483647,
+				"Caption":"String content",
+				"Position":2147483647,
+				"TabColor":2147483647,
+				"TabNo":2147483647,
+				"TextColor":2147483647,
+				"Visible":true,
+				"Condition":"String content"
+			}],
+			"AccessMask":{
+				"Value":18446744073709551615
+			},
+			"IsAutoAppendField":true,
+			"IsDateTimeFieldType":true,
+			"Scale":2147483647,
+			"RegExSample":"String content",
+			"FieldID":"String content",
+			"Condition":"String content",
+			"ConditionalFormatting":{
+				"BackgroundColorBGR":2147483647,
+				"BackgroundColorRGB":2147483647,
+				"FieldNo":2147483647,
+				"TextColorBGR":2147483647,
+				"TextColorRGB":2147483647
+			},
+			"Formula":"String content",
+			"IsCalculationTrigger":true,
+			"IsFormattingTrigger":true,
+			"RoleAccessMask":{
+				"Value":18446744073709551615
+			},
+			"SortDescending":true,
+			"Filter":[{
+				"Condition":"String content",
+				"ReferencedTableColumn":"String content"
+			}],
+			"ConditionMode":0,
+			"IsDependencyTrigger":true,
+			"TypeMultiInnerCase":"String content"
+		}],
+		"DocTitleConfig":[{
+			"FieldNos":[2147483647],
+			"HideCtgryName":true,
+			"MaxLength":2147483647,
+			"ShowFieldName":true,
+			"TitleType":0
+		}]
+	}
+}</pre>
+      </p>
+      <p>
+        <a name="request-schema">The following is the request Xml Schema:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:complexType name="ExecuteSimpleQueryParams"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element name="CategoryNo" type="xs:int" /&gt;
+      &lt;xs:element name="Condition" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element name="FieldNo" type="xs:int" /&gt;
+      &lt;xs:element name="OrderByFieldNo" type="xs:int" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ExecuteSimpleQueryParams" nillable="true" type="tns:ExecuteSimpleQueryParams" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="request-schema">Additional request Xml Schemas:</a>
+        <pre class="request-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="request-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">The following is the response Xml Schema:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:ser="http://schemas.microsoft.com/2003/10/Serialization/" elementFormDefault="qualified" targetNamespace="http://schemas.therefore.net/webservices/interop/v0001/types" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" /&gt;
+  &lt;xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" /&gt;
+  &lt;xs:complexType name="ExecuteSimpleQueryResponse"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="QueryResult" nillable="true" type="tns:WSQueryResult" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ExecuteSimpleQueryResponse" nillable="true" type="tns:ExecuteSimpleQueryResponse" /&gt;
+  &lt;xs:complexType name="WSQueryResult"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="CaseDefinitionNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="CategoryNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="ProcessNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="ResultRows" nillable="true" type="tns:ArrayOfWSQueryResultRow" /&gt;
+      &lt;xs:element minOccurs="0" name="Columns" nillable="true" type="tns:ArrayOfWSCategoryField" /&gt;
+      &lt;xs:element minOccurs="0" name="DocTitleConfig" nillable="true" type="tns:ArrayOfWSDocTitleConfigEntry" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSQueryResult" nillable="true" type="tns:WSQueryResult" /&gt;
+  &lt;xs:complexType name="ArrayOfWSQueryResultRow"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSQueryResultRow" nillable="true" type="tns:WSQueryResultRow" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSQueryResultRow" nillable="true" type="tns:ArrayOfWSQueryResultRow" /&gt;
+  &lt;xs:complexType name="WSQueryResultRow"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="AccessMask" nillable="true" type="tns:WSAccessMask" /&gt;
+      &lt;xs:element minOccurs="0" name="DocNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="IndexValues" nillable="true" type="tns:IndexValueList" /&gt;
+      &lt;xs:element minOccurs="0" name="Size" type="xs:long" /&gt;
+      &lt;xs:element minOccurs="0" name="VersionNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Status" type="tns:WSQueryResultRowStatus" /&gt;
+      &lt;xs:element minOccurs="0" name="RoleAccessMask" nillable="true" type="tns:WSRoleAccessMask" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSQueryResultRow" nillable="true" type="tns:WSQueryResultRow" /&gt;
+  &lt;xs:complexType name="WSAccessMask"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="Value" type="xs:unsignedLong" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSAccessMask" nillable="true" type="tns:WSAccessMask" /&gt;
+  &lt;xs:complexType name="IndexValueList"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="IndexValue" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="IndexValueList" nillable="true" type="tns:IndexValueList" /&gt;
+  &lt;xs:simpleType name="WSQueryResultRowStatus"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="DocStatusCheckedIn" /&gt;
+      &lt;xs:enumeration value="DocStatusCheckedOutByUser" /&gt;
+      &lt;xs:enumeration value="DocStatusCheckedOut" /&gt;
+      &lt;xs:enumeration value="CaseStatusNormal"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;10&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="CaseStatusClosed"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;11&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Reserved1"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;9101&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Reserved2"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;9102&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSQueryResultRowStatus" nillable="true" type="tns:WSQueryResultRowStatus" /&gt;
+  &lt;xs:complexType name="WSRoleAccessMask"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="Value" type="xs:unsignedLong" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSRoleAccessMask" nillable="true" type="tns:WSRoleAccessMask" /&gt;
+  &lt;xs:complexType name="ArrayOfWSCategoryField"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSCategoryField" nillable="true" type="tns:WSCategoryField" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSCategoryField" nillable="true" type="tns:ArrayOfWSCategoryField" /&gt;
+  &lt;xs:complexType name="WSCategoryField"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="BelongsTo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="BelongsToTable" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Caption" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="CaseSensitive" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="ColName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="CounterMode" type="tns:WSCounterMode" /&gt;
+      &lt;xs:element minOccurs="0" name="DefaultVal" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="DependencyMode" type="tns:WSDependencyMode" /&gt;
+      &lt;xs:element minOccurs="0" name="DisplayOrderPos" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="DontLoadValues" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="FieldNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="FieldType" type="tns:WSCategoryFieldType" /&gt;
+      &lt;xs:element minOccurs="0" name="ForeignCol" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="Guid" type="ser:guid" /&gt;
+      &lt;xs:element minOccurs="0" name="Height" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="IndexDataFieldName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="IndexType" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="IsForeignDatatype" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="IsMultipleKeyword" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="IsSingleKeyword" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="KeepRedundant" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Length" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Mandatory" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="PosX" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="PosY" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="RegularExpr" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TabOrderPos" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeGroup" type="tns:WSTypeGroup" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeIndexColumn" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeMultiInner" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeMultiJoin" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeMultiOuter" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeTableName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="Visible" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Width" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="WorkflowField" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="SelectFromDropDownBox" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="DisplayProperties" nillable="true" type="tns:WSDisplayProperties" /&gt;
+      &lt;xs:element minOccurs="0" name="ImageDocNo" nillable="true" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="IsImageFieldType" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="IsTabControlFieldType" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="ParentFieldNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="ShowInTabNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Tabs" nillable="true" type="tns:ArrayOfWSTabInfo" /&gt;
+      &lt;xs:element minOccurs="0" name="AccessMask" nillable="true" type="tns:WSAccessMask" /&gt;
+      &lt;xs:element minOccurs="0" name="IsAutoAppendField" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="IsDateTimeFieldType" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Scale" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="RegExSample" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="FieldID" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="Condition" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="ConditionalFormatting" nillable="true" type="tns:WSConditionalFormatting" /&gt;
+      &lt;xs:element minOccurs="0" name="Formula" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="IsCalculationTrigger" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="IsFormattingTrigger" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="RoleAccessMask" nillable="true" type="tns:WSRoleAccessMask" /&gt;
+      &lt;xs:element minOccurs="0" name="SortDescending" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Filter" nillable="true" type="tns:ArrayOfWSFieldFilter" /&gt;
+      &lt;xs:element minOccurs="0" name="ConditionMode" type="tns:WSConditionMode" /&gt;
+      &lt;xs:element minOccurs="0" name="IsDependencyTrigger" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="TypeMultiInnerCase" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSCategoryField" nillable="true" type="tns:WSCategoryField" /&gt;
+  &lt;xs:simpleType name="WSCounterMode"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Undefined" /&gt;
+      &lt;xs:enumeration value="ClientCounter" /&gt;
+      &lt;xs:enumeration value="ServerCounter" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSCounterMode" nillable="true" type="tns:WSCounterMode" /&gt;
+  &lt;xs:simpleType name="WSDependencyMode"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Referenced" /&gt;
+      &lt;xs:enumeration value="SynchronizedRedundant" /&gt;
+      &lt;xs:enumeration value="EditableRedundant" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSDependencyMode" nillable="true" type="tns:WSDependencyMode" /&gt;
+  &lt;xs:simpleType name="WSCategoryFieldType"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="StringField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;1&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="IntField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;2&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="DateField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;3&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="LabelField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;4&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="MoneyField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;5&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="LogicalField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;6&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="NumericCounter"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;8&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="TextCounter"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;9&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="TableField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;10&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="CustomField"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;99&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSCategoryFieldType" nillable="true" type="tns:WSCategoryFieldType" /&gt;
+  &lt;xs:simpleType name="WSTypeGroup"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="StandardTypeGroup"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;1&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="KeywordTypeGroup"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;2&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="UserInt"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;3&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="UserTextAnsi"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;4&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="UserDate"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;5&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="UserFloat"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;6&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="UserTextUnicode"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;7&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="CaseDefinitionTypeGroup"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;8&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSTypeGroup" nillable="true" type="tns:WSTypeGroup" /&gt;
+  &lt;xs:complexType name="WSDisplayProperties"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="BackgroundColor" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Bold" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="FaceName" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="FontSize" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="HorizontalAlignment" type="tns:WSHorizontalAlignment" /&gt;
+      &lt;xs:element minOccurs="0" name="Italic" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Padding" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TextColor" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Underlined" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="VerticalAlignment" type="tns:WSVerticalAlignment" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSDisplayProperties" nillable="true" type="tns:WSDisplayProperties" /&gt;
+  &lt;xs:simpleType name="WSHorizontalAlignment"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Left" /&gt;
+      &lt;xs:enumeration value="CenterH" /&gt;
+      &lt;xs:enumeration value="Right" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSHorizontalAlignment" nillable="true" type="tns:WSHorizontalAlignment" /&gt;
+  &lt;xs:simpleType name="WSVerticalAlignment"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Top" /&gt;
+      &lt;xs:enumeration value="CenterV"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;4&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+      &lt;xs:enumeration value="Bottom"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;8&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSVerticalAlignment" nillable="true" type="tns:WSVerticalAlignment" /&gt;
+  &lt;xs:complexType name="ArrayOfWSTabInfo"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSTabInfo" nillable="true" type="tns:WSTabInfo" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSTabInfo" nillable="true" type="tns:ArrayOfWSTabInfo" /&gt;
+  &lt;xs:complexType name="WSTabInfo"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="BackgroundColor" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Caption" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="Position" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TabColor" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TabNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TextColor" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="Visible" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="Condition" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSTabInfo" nillable="true" type="tns:WSTabInfo" /&gt;
+  &lt;xs:complexType name="WSConditionalFormatting"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="BackgroundColorBGR" nillable="true" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="BackgroundColorRGB" nillable="true" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="FieldNo" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TextColorBGR" nillable="true" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="TextColorRGB" nillable="true" type="xs:int" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSConditionalFormatting" nillable="true" type="tns:WSConditionalFormatting" /&gt;
+  &lt;xs:complexType name="ArrayOfWSFieldFilter"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSFieldFilter" nillable="true" type="tns:WSFieldFilter" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSFieldFilter" nillable="true" type="tns:ArrayOfWSFieldFilter" /&gt;
+  &lt;xs:complexType name="WSFieldFilter"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="Condition" nillable="true" type="xs:string" /&gt;
+      &lt;xs:element minOccurs="0" name="ReferencedTableColumn" nillable="true" type="xs:string" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSFieldFilter" nillable="true" type="tns:WSFieldFilter" /&gt;
+  &lt;xs:simpleType name="WSConditionMode"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Formatting" /&gt;
+      &lt;xs:enumeration value="Disabled" /&gt;
+      &lt;xs:enumeration value="Mandatory" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSConditionMode" nillable="true" type="tns:WSConditionMode" /&gt;
+  &lt;xs:complexType name="ArrayOfWSDocTitleConfigEntry"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="WSDocTitleConfigEntry" nillable="true" type="tns:WSDocTitleConfigEntry" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfWSDocTitleConfigEntry" nillable="true" type="tns:ArrayOfWSDocTitleConfigEntry" /&gt;
+  &lt;xs:complexType name="WSDocTitleConfigEntry"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" name="FieldNos" nillable="true" xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" type="q1:ArrayOfint" /&gt;
+      &lt;xs:element minOccurs="0" name="HideCtgryName" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="MaxLength" type="xs:int" /&gt;
+      &lt;xs:element minOccurs="0" name="ShowFieldName" type="xs:boolean" /&gt;
+      &lt;xs:element minOccurs="0" name="TitleType" type="tns:WSDocTitleType" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="WSDocTitleConfigEntry" nillable="true" type="tns:WSDocTitleConfigEntry" /&gt;
+  &lt;xs:simpleType name="WSDocTitleType"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:enumeration value="Undef" /&gt;
+      &lt;xs:enumeration value="Default" /&gt;
+      &lt;xs:enumeration value="TitleBar" /&gt;
+      &lt;xs:enumeration value="DocumentName" /&gt;
+      &lt;xs:enumeration value="Mobile" /&gt;
+      &lt;xs:enumeration value="Teams" /&gt;
+      &lt;xs:enumeration value="Export" /&gt;
+      &lt;xs:enumeration value="Send" /&gt;
+      &lt;xs:enumeration value="TreeView" /&gt;
+      &lt;xs:enumeration value="RecycleBin" /&gt;
+      &lt;xs:enumeration value="Logs" /&gt;
+      &lt;xs:enumeration value="History" /&gt;
+      &lt;xs:enumeration value="Copilot"&gt;
+        &lt;xs:annotation&gt;
+          &lt;xs:appinfo&gt;
+            &lt;EnumerationValue xmlns="http://schemas.microsoft.com/2003/10/Serialization/"&gt;13&lt;/EnumerationValue&gt;
+          &lt;/xs:appinfo&gt;
+        &lt;/xs:annotation&gt;
+      &lt;/xs:enumeration&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="WSDocTitleType" nillable="true" type="tns:WSDocTitleType" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <a name="response-schema">Additional response Xml Schemas:</a>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:element name="anyType" nillable="true" type="xs:anyType" /&gt;
+  &lt;xs:element name="anyURI" nillable="true" type="xs:anyURI" /&gt;
+  &lt;xs:element name="base64Binary" nillable="true" type="xs:base64Binary" /&gt;
+  &lt;xs:element name="boolean" nillable="true" type="xs:boolean" /&gt;
+  &lt;xs:element name="byte" nillable="true" type="xs:byte" /&gt;
+  &lt;xs:element name="dateTime" nillable="true" type="xs:dateTime" /&gt;
+  &lt;xs:element name="decimal" nillable="true" type="xs:decimal" /&gt;
+  &lt;xs:element name="double" nillable="true" type="xs:double" /&gt;
+  &lt;xs:element name="float" nillable="true" type="xs:float" /&gt;
+  &lt;xs:element name="int" nillable="true" type="xs:int" /&gt;
+  &lt;xs:element name="long" nillable="true" type="xs:long" /&gt;
+  &lt;xs:element name="QName" nillable="true" type="xs:QName" /&gt;
+  &lt;xs:element name="short" nillable="true" type="xs:short" /&gt;
+  &lt;xs:element name="string" nillable="true" type="xs:string" /&gt;
+  &lt;xs:element name="unsignedByte" nillable="true" type="xs:unsignedByte" /&gt;
+  &lt;xs:element name="unsignedInt" nillable="true" type="xs:unsignedInt" /&gt;
+  &lt;xs:element name="unsignedLong" nillable="true" type="xs:unsignedLong" /&gt;
+  &lt;xs:element name="unsignedShort" nillable="true" type="xs:unsignedShort" /&gt;
+  &lt;xs:element name="char" nillable="true" type="tns:char" /&gt;
+  &lt;xs:simpleType name="char"&gt;
+    &lt;xs:restriction base="xs:int" /&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="duration" nillable="true" type="tns:duration" /&gt;
+  &lt;xs:simpleType name="duration"&gt;
+    &lt;xs:restriction base="xs:duration"&gt;
+      &lt;xs:pattern value="\-?P(\d*D)?(T(\d*H)?(\d*M)?(\d*(\.\d*)?S)?)?" /&gt;
+      &lt;xs:minInclusive value="-P10675199DT2H48M5.4775808S" /&gt;
+      &lt;xs:maxInclusive value="P10675199DT2H48M5.4775807S" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:element name="guid" nillable="true" type="tns:guid" /&gt;
+  &lt;xs:simpleType name="guid"&gt;
+    &lt;xs:restriction base="xs:string"&gt;
+      &lt;xs:pattern value="[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}" /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+  &lt;xs:attribute name="FactoryType" type="xs:QName" /&gt;
+  &lt;xs:attribute name="Id" type="xs:ID" /&gt;
+  &lt;xs:attribute name="Ref" type="xs:IDREF" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="response-schema">&lt;xs:schema xmlns:tns="http://schemas.microsoft.com/2003/10/Serialization/Arrays" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" xmlns:xs="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;xs:complexType name="ArrayOfint"&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element minOccurs="0" maxOccurs="unbounded" name="int" type="xs:int" /&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+  &lt;xs:element name="ArrayOfint" nillable="true" type="tns:ArrayOfint" /&gt;
+&lt;/xs:schema&gt;</pre>
+      </p>
+      <p>
+        <pre class="response-schema">&lt;tns:schema targetNamespace="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;tns:element name="schema"&gt;
+    &lt;tns:complexType /&gt;
+  &lt;/tns:element&gt;
+&lt;/tns:schema&gt;</pre>
+      </p>
+    </div>
+  </body>
+</html>

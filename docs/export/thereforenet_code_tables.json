@@ -1,0 +1,930 @@
+[
+  {
+    "page_title": "Add Service Reference in Visual Studio",
+    "page_href": "the_webapi_guide_addservicereference.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_addservicereference.html",
+    "table_index": 3,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Open Microsoft Visual Studio. Open your project or create a new one."
+      ],
+      [
+        "2",
+        "In the Solution Explorer right-click on YourSolution / YourProject /References."
+      ],
+      [
+        "3",
+        "Select \"Add Service Reference...\" from the context menu."
+      ],
+      [
+        ""
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 3,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Connection and Authentication",
+    "page_href": "the_webapi_guide_connectionandauth.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_connectionandauth.html",
+    "table_index": 1,
+    "headers": null,
+    "rows": [
+      [
+        "Code page number",
+        "Name",
+        "Display name",
+        ".NET Framework support"
+      ],
+      [
+        "936",
+        "gb2312",
+        "Chinese Simplified (GB2312)",
+        "\u2713"
+      ],
+      [
+        "1200",
+        "utf-16",
+        "Unicode",
+        "\u2713"
+      ],
+      [
+        "1201",
+        "unicodeFFFE",
+        "Unicode (Big endian)",
+        "\u2713"
+      ],
+      [
+        "1252",
+        "Windows-1252",
+        "Western European (Windows)",
+        "\u2713"
+      ],
+      [
+        "10003",
+        "x-mac-korean",
+        "Korean (Mac)",
+        "\u2713"
+      ],
+      [
+        "10008",
+        "x-mac-chinesesimp",
+        "Chinese Simplified (Mac)",
+        "\u2713"
+      ],
+      [
+        "12000",
+        "utf-32",
+        "Unicode (UTF-32)",
+        "\u2713"
+      ],
+      [
+        "12001",
+        "utf-32BE",
+        "Unicode (UTF-32 Big endian)",
+        "\u2713"
+      ],
+      [
+        "20127",
+        "us-ascii",
+        "US-ASCII",
+        "\u2713"
+      ],
+      [
+        "20936",
+        "x-cp20936",
+        "Chinese Simplified (GB2312-80)",
+        "\u2713"
+      ],
+      [
+        "20949",
+        "x-cp20949",
+        "Korean Wansung",
+        "\u2713"
+      ],
+      [
+        "28591",
+        "iso-8859-1",
+        "Western European (ISO)",
+        "\u2713"
+      ],
+      [
+        "28598",
+        "iso-8859-8",
+        "Hebrew (ISO-Visual)",
+        "\u2713"
+      ],
+      [
+        "38598",
+        "iso-8859-8-i",
+        "Hebrew (ISO-Logical)",
+        "\u2713"
+      ],
+      [
+        "50220",
+        "iso-2022-jp",
+        "Japanese (JIS)",
+        "\u2713"
+      ],
+      [
+        "50221",
+        "csISO2022JP",
+        "Japanese (JIS-Allow 1 byte Kana)",
+        "\u2713"
+      ],
+      [
+        "50222",
+        "iso-2022-jp",
+        "Japanese (JIS-Allow 1 byte Kana - SO/SI)",
+        "\u2713"
+      ],
+      [
+        "50225",
+        "iso-2022-kr",
+        "Korean (ISO)",
+        "\u2713"
+      ],
+      [
+        "50227",
+        "x-cp50227",
+        "Chinese Simplified (ISO-2022)",
+        "\u2713"
+      ],
+      [
+        "51932",
+        "euc-jp",
+        "Japanese (EUC)",
+        "\u2713"
+      ],
+      [
+        "51936",
+        "EUC-CN",
+        "Chinese Simplified (EUC)",
+        "\u2713"
+      ],
+      [
+        "51949",
+        "euc-kr",
+        "Korean (EUC)",
+        "\u2713"
+      ],
+      [
+        "52936",
+        "hz-gb-2312",
+        "Chinese Simplified (HZ)",
+        "\u2713"
+      ],
+      [
+        "54936",
+        "GB18030",
+        "Chinese Simplified (GB18030)",
+        "\u2713"
+      ],
+      [
+        "57002",
+        "x-iscii-de",
+        "ISCII Devanagari",
+        "\u2713"
+      ],
+      [
+        "57003",
+        "x-iscii-be",
+        "ISCII Bengali",
+        "\u2713"
+      ],
+      [
+        "57004",
+        "x-iscii-ta",
+        "ISCII Tamil",
+        "\u2713"
+      ],
+      [
+        "57005",
+        "x-iscii-te",
+        "ISCII Telugu",
+        "\u2713"
+      ],
+      [
+        "57006",
+        "x-iscii-as",
+        "ISCII Assamese",
+        "\u2713"
+      ],
+      [
+        "57007",
+        "x-iscii-or",
+        "ISCII Oriya",
+        "\u2713"
+      ],
+      [
+        "57008",
+        "x-iscii-ka",
+        "ISCII Kannada",
+        "\u2713"
+      ],
+      [
+        "57009",
+        "x-iscii-ma",
+        "ISCII Malayalam",
+        "\u2713"
+      ],
+      [
+        "57010",
+        "x-iscii-gu",
+        "ISCII Gujarati",
+        "\u2713"
+      ],
+      [
+        "57011",
+        "x-iscii-pa",
+        "ISCII Punjabi",
+        "\u2713"
+      ],
+      [
+        "65000",
+        "utf-7",
+        "Unicode (UTF-7)",
+        "\u2713"
+      ],
+      [
+        "65001",
+        "utf-8",
+        "Unicode (UTF-8)",
+        "\u2713"
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 36,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Archiving Documents",
+    "page_href": "the_webapi_guide_archivedocuments.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_archivedocuments.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory for the web service endpoint. Please refer to the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create requested parameter instances."
+      ],
+      [
+        "4",
+        "Set a category number for the document's index data."
+      ],
+      [
+        "5",
+        "Add one or more file streams to the document."
+      ],
+      [
+        "6",
+        "Set some values in the document's index data."
+      ],
+      [
+        "7",
+        "Execute a create operation to store documents on the server."
+      ],
+      [
+        "8",
+        "Close the channel and channel factory."
+      ],
+      [
+        "9",
+        "Process a response."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 9,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Retrieve Documents",
+    "page_href": "the_webapi_guide_retrievedocuments.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_retrievedocuments.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create requested parameter instances. Set the requested document number and other parameters."
+      ],
+      [
+        "4",
+        "Execute the GetDocument operation to get document data from the server."
+      ],
+      [
+        "5",
+        "Close the channel and channel factory."
+      ],
+      [
+        "6",
+        "Process response."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 6,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Retrieving Files from Documents",
+    "page_href": "the_webapi_guide_retrievefiles.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_retrievefiles.html",
+    "table_index": 4,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create request parameters instance. Set requested document number and IsStreamsInfoAndDataNeeded parameter to true."
+      ],
+      [
+        "4",
+        "Retrieve the document from the server."
+      ],
+      [
+        "5",
+        "Close the channel and channel factory."
+      ],
+      [
+        "6",
+        "Extract all file streams to the specified directory."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 6,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Edit and Save Index Data",
+    "page_href": "the_webapi_guide_saveindexdata.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_saveindexdata.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create a request to modify the index data values."
+      ],
+      [
+        "4",
+        "Save the changes to the server."
+      ],
+      [
+        "5",
+        "Close the channel and channel factory."
+      ],
+      [
+        "6",
+        "Display a confirmation message."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 6,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Simple Query",
+    "page_href": "the_webapi_guide_simplequery.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_simplequery.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create request parameters. Please consult the documentation of the ExecuteSimpleQuery operation for more information on parameters and usage."
+      ],
+      [
+        "4",
+        "Execute request on the server."
+      ],
+      [
+        "5",
+        "Close the channel and channel factory."
+      ],
+      [
+        "6",
+        "Display a message box with the results."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 6,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Full Text Search Query",
+    "page_href": "the_webapi_guide_fulltextsearch.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_fulltextsearch.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Define a query looking for \"Therefore\" in categories"
+      ],
+      [
+        "4",
+        "Execute the query"
+      ],
+      [
+        "5",
+        "Close the channel and channel factory."
+      ],
+      [
+        "6",
+        "Process a response."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 6,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Find Instances of a Specific Process",
+    "page_href": "the_webapi_guide_findwfinstancesforprocess.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_findwfinstancesforprocess.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create requested parameters. Define a process number."
+      ],
+      [
+        "4",
+        "Execute the query on the server."
+      ],
+      [
+        "5",
+        "Display the results in a message box."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 5,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Find Instances of All Processes",
+    "page_href": "the_webapi_guide_findwfinstancesforallprocesses.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_findwfinstancesforallprocesses.html",
+    "table_index": 2,
+    "headers": null,
+    "rows": [
+      [
+        "1",
+        "Create a channel factory to the web service endpoint. Please see the Connection and Authentication section for more details about initializing ChannelFactory ."
+      ],
+      [
+        "2",
+        "Create a channel to the web service endpoint."
+      ],
+      [
+        "3",
+        "Create request parameters"
+      ],
+      [
+        "4",
+        "Execute the query on the server"
+      ],
+      [
+        "5",
+        "Display the results in a message box."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 5,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Find Documents",
+    "page_href": "the_webapi_guide_internalfields.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_guide_internalfields.html",
+    "table_index": 1,
+    "headers": null,
+    "rows": [
+      [
+        "Field Name",
+        "FieldNo",
+        "Description"
+      ],
+      [
+        "DocSize",
+        "1",
+        "Size of the Therefore\u2122 document"
+      ],
+      [
+        "FileCount",
+        "2",
+        "Number of files in the Therefore\u2122 document"
+      ],
+      [
+        "LastModified",
+        "3",
+        "Date/time when the document was last modified"
+      ],
+      [
+        "OldVersion",
+        "4",
+        "Is there an older version of the document. Returns Yes/No"
+      ],
+      [
+        "CreatedOn",
+        "5",
+        "Date/time when the document was created"
+      ],
+      [
+        "CreatedByDisplayName",
+        "6",
+        "User who created the document"
+      ],
+      [
+        "ModifiedByDisplayName",
+        "7",
+        "Last user who modified the document"
+      ],
+      [
+        "CheckedOutOn",
+        "8",
+        "Date/time when the document was checked-out"
+      ],
+      [
+        "CheckedOutByDisplayName",
+        "9",
+        "User who checked the document out"
+      ],
+      [
+        "IsCheckedOut",
+        "10",
+        "Is the document checked out. Returns Yes/No"
+      ],
+      [
+        "Extension",
+        "11",
+        "The document extension."
+      ],
+      [
+        "CreatedBy",
+        "13",
+        "User who created the document"
+      ],
+      [
+        "CreatedByUserNo",
+        "14",
+        "User who created the document"
+      ],
+      [
+        "ModifiedBy",
+        "15",
+        "Last user who modified the document"
+      ],
+      [
+        "ModifiedByUserNo",
+        "16",
+        "Last user who modified the document"
+      ],
+      [
+        "CheckedOutBy",
+        "17",
+        "User who checked the document out"
+      ],
+      [
+        "CheckedOutByUserNo",
+        "18",
+        "User who checked the document out"
+      ],
+      [
+        "DocSize_DESC",
+        "-1",
+        "Size of Therefore\u00ad\u2122 document in descending order (only for sorting)"
+      ],
+      [
+        "FileCount_DESC",
+        "-2",
+        "Number of files in the Therefore\u2122 document in descending order (only for sorting)"
+      ],
+      [
+        "LastModified_DESC",
+        "-3",
+        "Date/time when the document was last modified in descending order (only for sorting)"
+      ],
+      [
+        "OldVersion_DESC",
+        "-4",
+        "Is there an older version of the document. Returns Yes/No in descending order (only for sorting)"
+      ],
+      [
+        "CreatedOn_DESC",
+        "-5",
+        "Date/time when the document was created in descending order (only for sorting)"
+      ],
+      [
+        "CreatedByDisplayName_DESC",
+        "-6",
+        "User who created the document in descending order (only for sorting)"
+      ],
+      [
+        "ModifiedByDisplayName_DESC",
+        "-7",
+        "Last user who modified the document in descending order (only for sorting)"
+      ],
+      [
+        "CheckedOutOn_DESC",
+        "-8",
+        "Date/time when the document was checked-out in descending order (only for sorting)"
+      ],
+      [
+        "CheckedOutByDisplayName_DESC",
+        "-9",
+        "User who checked the document out in descending order (only for sorting)"
+      ],
+      [
+        "IsCheckedOut_DESC",
+        "-10",
+        "Is the document checked out. Returns Yes/No in descending order (only for sorting)"
+      ],
+      [
+        "Extension_DESC",
+        "-11",
+        "The document extension. (only for sorting)"
+      ],
+      [
+        "CreatedBy",
+        "-13",
+        "User who created the document in descending order (only for sorting)"
+      ],
+      [
+        "CreatedByUserNo",
+        "-14",
+        "User who created the document in descending order (only for sorting)"
+      ],
+      [
+        "ModifiedBy",
+        "-15",
+        "Last user who modified the document in descending order (only for sorting)"
+      ],
+      [
+        "ModifiedByUserNo",
+        "-16",
+        "Last user who modified the document in descending order (only for sorting)"
+      ],
+      [
+        "CheckedOutBy",
+        "-17",
+        "User who checked the document out in descending order (only for sorting)"
+      ],
+      [
+        "CheckedOutByUserNo",
+        "-18",
+        "User who checked the document out in descending order (only for sorting)"
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 0,
+    "numeric_second_count": 34
+  },
+  {
+    "page_title": "Client Types",
+    "page_href": "the_webapi_clienttypes.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_clienttypes.html",
+    "table_index": 1,
+    "headers": null,
+    "rows": [
+      [
+        "Client Type",
+        "Description"
+      ],
+      [
+        "1",
+        "The client is a Therefore\u2122 Navigator instance."
+      ],
+      [
+        "2",
+        "The client is a Therefore\u2122 Viewer instance."
+      ],
+      [
+        "6",
+        "The client is a custom application with active rights."
+      ],
+      [
+        "4",
+        "The client is a Therefore\u2122 Capture Client instance."
+      ],
+      [
+        "6",
+        "This is used for the category dialog when used in other applications like the Office Connector."
+      ],
+      [
+        "7",
+        "The client is a Therefore\u2122 Case Manager Client instance."
+      ],
+      [
+        "41",
+        "This is used for connecting from a workflow DLL."
+      ],
+      [
+        "42",
+        "This is used for connecting from a custom service. Does not trigger license move."
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 8,
+    "numeric_second_count": 0
+  },
+  {
+    "page_title": "Web API Configuration",
+    "page_href": "the_webapi_rbac.html",
+    "page_url": "https://therefore.net/help/Online/en-us/AR/SDK/WebAPI/the_webapi_rbac.html",
+    "table_index": 1,
+    "headers": null,
+    "rows": [
+      [
+        "Permission Name",
+        "Permission Mask"
+      ],
+      [
+        "IgnorePermissions",
+        "0"
+      ],
+      [
+        "OperatorPermission",
+        "1"
+      ],
+      [
+        "AdminPermission",
+        "2"
+      ],
+      [
+        "SetPermPermission",
+        "4"
+      ],
+      [
+        "AccessPermission",
+        "8"
+      ],
+      [
+        "TheSystemWritePermission",
+        "32"
+      ],
+      [
+        "CategoryArchivePermission",
+        "64"
+      ],
+      [
+        "QueryAdminPermission",
+        "128"
+      ],
+      [
+        "QueryExecutePermission",
+        "256"
+      ],
+      [
+        "KeywordDictionaryChangePermission",
+        "512"
+      ],
+      [
+        "DocViewinHitListPermission",
+        "4096"
+      ],
+      [
+        "DocViewDocPermission",
+        "8192"
+      ],
+      [
+        "DocPrintPermission",
+        "16384"
+      ],
+      [
+        "DocExportSendPermission",
+        "32768"
+      ],
+      [
+        "DocViewHistoryPermission",
+        "262144"
+      ],
+      [
+        "WfParticipatePermission",
+        "8589934592"
+      ],
+      [
+        "DocAddAnnotationsPermission",
+        "524288"
+      ],
+      [
+        "WfAddDocPermission",
+        "17179869184"
+      ],
+      [
+        "DocDeleteAnnotationsPermission",
+        "1048576"
+      ],
+      [
+        "WfViewHistoryPermission",
+        "34359738368"
+      ],
+      [
+        "DocEditPermission",
+        "2097152"
+      ],
+      [
+        "WfDelegatePermission",
+        "68719476736"
+      ],
+      [
+        "DocUpdateIndexDataPermission",
+        "4194304"
+      ],
+      [
+        "WfViewAllPermission",
+        "137438953472"
+      ],
+      [
+        "DocAddPagePermission",
+        "8388608"
+      ],
+      [
+        "WfDeletePermission",
+        "274877906944"
+      ],
+      [
+        "DocDeletePagePermission",
+        "16777216"
+      ],
+      [
+        "DocDeleteDocPermission",
+        "33554432"
+      ],
+      [
+        "CategoryFieldReadPermission",
+        "4096"
+      ],
+      [
+        "CategoryFieldSetPermission",
+        "64"
+      ],
+      [
+        "CategoryFieldChangePermission",
+        "4194304"
+      ]
+    ],
+    "header_hint": false,
+    "numeric_first_count": 0,
+    "numeric_second_count": 31
+  }
+]

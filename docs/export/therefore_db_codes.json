@@ -1,0 +1,2627 @@
+[
+  {
+    "section": "TheActno*.TypeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Server"
+      },
+      {
+        "code": "2",
+        "description": "Document"
+      },
+      {
+        "code": "3",
+        "description": "Category"
+      },
+      {
+        "code": "4",
+        "description": "Category Field"
+      },
+      {
+        "code": "5",
+        "description": "Datatype"
+      },
+      {
+        "code": "6",
+        "description": "Media Pool"
+      },
+      {
+        "code": "7",
+        "description": "Media"
+      },
+      {
+        "code": "8",
+        "description": "Parser Profile"
+      },
+      {
+        "code": "9",
+        "description": "Spool Type"
+      },
+      {
+        "code": "10",
+        "description": "Query"
+      },
+      {
+        "code": "11",
+        "description": "User"
+      },
+      {
+        "code": "12",
+        "description": "Group"
+      },
+      {
+        "code": "13",
+        "description": "Capture Profile"
+      },
+      {
+        "code": "14",
+        "description": "Preprocessor"
+      },
+      {
+        "code": "15",
+        "description": "COLD Form"
+      },
+      {
+        "code": "16",
+        "description": "Query Template"
+      },
+      {
+        "code": "17",
+        "description": "Folder"
+      },
+      {
+        "code": "18",
+        "description": "Document Loader Profile"
+      },
+      {
+        "code": "19",
+        "description": "Workflow Process"
+      },
+      {
+        "code": "20",
+        "description": "Workflow Task"
+      },
+      {
+        "code": "21",
+        "description": "Workflow Instance"
+      },
+      {
+        "code": "22",
+        "description": "Keyword Dictionary"
+      },
+      {
+        "code": "23",
+        "description": "Storage Policy"
+      },
+      {
+        "code": "24",
+        "description": "Device 25 26 27"
+      },
+      {
+        "code": "28",
+        "description": "Tree View"
+      },
+      {
+        "code": "29",
+        "description": "Universal Connector Profile"
+      },
+      {
+        "code": "30",
+        "description": "Task"
+      },
+      {
+        "code": "31",
+        "description": "SharePoint Profile"
+      },
+      {
+        "code": "32",
+        "description": "Automatic Counter"
+      },
+      {
+        "code": "33",
+        "description": "Data Extractor"
+      },
+      {
+        "code": "34",
+        "description": "Content Connector source"
+      },
+      {
+        "code": "35",
+        "description": "Replication connection"
+      },
+      {
+        "code": "36",
+        "description": "Replication table"
+      },
+      {
+        "code": "37",
+        "description": "Case definition"
+      },
+      {
+        "code": "38",
+        "description": "Case Header Storage Area Retention Policy MFP Device Therefore DB Codes 1"
+      },
+      {
+        "code": "39",
+        "description": "Office Profile"
+      },
+      {
+        "code": "40",
+        "description": "Stamp"
+      },
+      {
+        "code": "41",
+        "description": "SQL Reporting Definition"
+      },
+      {
+        "code": "42",
+        "description": "PowerBI Table"
+      },
+      {
+        "code": "43",
+        "description": "PowerBI Dataset"
+      },
+      {
+        "code": "44",
+        "description": "SharePoint Connector: connection to SharePoint"
+      },
+      {
+        "code": "45",
+        "description": "Cloud Storage"
+      },
+      {
+        "code": "46",
+        "description": "Common Script"
+      },
+      {
+        "code": "47",
+        "description": "EForm"
+      },
+      {
+        "code": "48",
+        "description": "EForm Submission"
+      },
+      {
+        "code": "49",
+        "description": "ESignature Provider"
+      },
+      {
+        "code": "50",
+        "description": "Dashboard"
+      },
+      {
+        "code": "51",
+        "description": "Role Interleaved 2 of 5"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptBarcode.BarType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "3 of 9 2"
+      },
+      {
+        "code": "4",
+        "description": "Code 128"
+      },
+      {
+        "code": "8",
+        "description": "EAN"
+      },
+      {
+        "code": "16",
+        "description": "UPC-A"
+      },
+      {
+        "code": "32",
+        "description": "UPC-E"
+      },
+      {
+        "code": "64",
+        "description": "Codabar"
+      },
+      {
+        "code": "128",
+        "description": "Code 93"
+      },
+      {
+        "code": "256",
+        "description": "Postnet"
+      },
+      {
+        "code": "512",
+        "description": "Linear 2 of 5"
+      },
+      {
+        "code": "1024",
+        "description": "Aztek"
+      },
+      {
+        "code": "2048",
+        "description": "PDF 417"
+      },
+      {
+        "code": "4096",
+        "description": "Datamatrix"
+      },
+      {
+        "code": "16384",
+        "description": "QR"
+      },
+      {
+        "code": "1048576",
+        "description": "EAN-5 Addon The database column can contain a combination of these flags. (See note on flags)."
+      }
+    ]
+  },
+  {
+    "section": "TheCaptBarcode.Encoding",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Automatic"
+      },
+      {
+        "code": "1",
+        "description": "UTF-8"
+      },
+      {
+        "code": "2",
+        "description": "UTF-16"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptBarcode.Frequency",
+    "entries": [
+      {
+        "code": "0",
+        "description": "None \u2013 no barcode used"
+      },
+      {
+        "code": "1",
+        "description": "The barcode exists on exactly one page of the document"
+      },
+      {
+        "code": "2",
+        "description": "The barcode exists on some pages of the document \u2013 if a second page has the same barcode, no document break is made"
+      },
+      {
+        "code": "3",
+        "description": "The barcode exists on each page of the document \u2013 if there is one page without barcode, a warning is reported."
+      }
+    ]
+  },
+  {
+    "section": "TheCaptBarcode.Orientation",
+    "entries": [
+      {
+        "code": "1",
+        "description": "0\u00b0"
+      },
+      {
+        "code": "2",
+        "description": "90\u00b0 Therefore DB Codes 2"
+      },
+      {
+        "code": "4",
+        "description": "180\u00b0"
+      },
+      {
+        "code": "8",
+        "description": "270\u00b0 The database column can contain a combination of these flags. (See note on flags)."
+      }
+    ]
+  },
+  {
+    "section": "TheCaptBarcode.Quality",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Good"
+      },
+      {
+        "code": "1",
+        "description": "Normal"
+      },
+      {
+        "code": "2",
+        "description": "Poor"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptBarcode.Ratio",
+    "entries": [
+      {
+        "code": "0",
+        "description": "3:1"
+      },
+      {
+        "code": "1",
+        "description": "2:1"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptGrid.TypeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Display the document counter"
+      },
+      {
+        "code": "2",
+        "description": "Display the category name"
+      },
+      {
+        "code": "3",
+        "description": "Display the page count"
+      },
+      {
+        "code": "4",
+        "description": "Display a category field"
+      },
+      {
+        "code": "5",
+        "description": "Display information"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.ColorMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Black & white"
+      },
+      {
+        "code": "2",
+        "description": "24-bit Color"
+      },
+      {
+        "code": "4",
+        "description": "256 colors"
+      },
+      {
+        "code": "8",
+        "description": "256-Level gray"
+      },
+      {
+        "code": "16",
+        "description": "16-Level gray"
+      },
+      {
+        "code": "32",
+        "description": "4-Level gray"
+      },
+      {
+        "code": "64",
+        "description": "3-bit color"
+      },
+      {
+        "code": "128",
+        "description": "6-bit color"
+      },
+      {
+        "code": "256",
+        "description": "12-bit color"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.DocBreak",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Single page documents"
+      },
+      {
+        "code": "2",
+        "description": "Use separator pages (e.g.: DR 3020)"
+      },
+      {
+        "code": "3",
+        "description": "Manual \u2013 scan all pages into one document"
+      },
+      {
+        "code": "4",
+        "description": "Barcode/OCR"
+      },
+      {
+        "code": "5",
+        "description": "Barcode \u2013 skip page with barcode TheCaptProfile:ScanDropOutColor"
+      },
+      {
+        "code": "0",
+        "description": "None"
+      },
+      {
+        "code": "1",
+        "description": "Red"
+      },
+      {
+        "code": "2",
+        "description": "Green"
+      },
+      {
+        "code": "4",
+        "description": "Blue"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.ScanMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Panel"
+      },
+      {
+        "code": "2",
+        "description": "Line"
+      },
+      {
+        "code": "4",
+        "description": "Photo Therefore DB Codes 3"
+      },
+      {
+        "code": "8",
+        "description": "Mixed"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.ScanRotate",
+    "entries": [
+      {
+        "code": "0",
+        "description": "None"
+      },
+      {
+        "code": "1",
+        "description": "90\u00b0 (rotate right)"
+      },
+      {
+        "code": "2",
+        "description": "180\u00b0"
+      },
+      {
+        "code": "3",
+        "description": "270\u00b0 (rotate left)"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.ScanSize",
+    "entries": []
+  },
+  {
+    "section": "TheCaptProfile.ScanSource",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Flatbed"
+      },
+      {
+        "code": "2",
+        "description": "ADF"
+      },
+      {
+        "code": "4",
+        "description": "Panel"
+      },
+      {
+        "code": "8",
+        "description": "Manual"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.StorageCompression",
+    "entries": [
+      {
+        "code": "3",
+        "description": "Packbits"
+      },
+      {
+        "code": "4",
+        "description": "LZW"
+      },
+      {
+        "code": "5",
+        "description": "ZIP Therefore DB Codes 4"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptProfile.StorageMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Original"
+      },
+      {
+        "code": "1",
+        "description": "Single TIFF"
+      },
+      {
+        "code": "2",
+        "description": "Single PDF"
+      },
+      {
+        "code": "3",
+        "description": "Multipage TIFF"
+      },
+      {
+        "code": "4",
+        "description": "Multipage PDF"
+      },
+      {
+        "code": "5",
+        "description": "Searchable PDF"
+      },
+      {
+        "code": "6",
+        "description": "Searchable PDF/A"
+      },
+      {
+        "code": "7",
+        "description": "Multipage PDF Jpeg2000"
+      },
+      {
+        "code": "8",
+        "description": "Multipage PDF/A"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptStep.TypeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Scan"
+      },
+      {
+        "code": "2",
+        "description": "Barcode"
+      },
+      {
+        "code": "3",
+        "description": "OCR"
+      },
+      {
+        "code": "4",
+        "description": "Define Category"
+      },
+      {
+        "code": "5",
+        "description": "Automatically set index data"
+      },
+      {
+        "code": "6",
+        "description": "Set index data via dll"
+      },
+      {
+        "code": "7",
+        "description": "Call verification dll"
+      },
+      {
+        "code": "8",
+        "description": "Archive"
+      },
+      {
+        "code": "9",
+        "description": "Call trigger dll (after archive) Image enhancement 10"
+      },
+      {
+        "code": "11",
+        "description": "Nuance OCR"
+      }
+    ]
+  },
+  {
+    "section": "TheCaptVerify.VerifyMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Ascending"
+      },
+      {
+        "code": "2",
+        "description": "Descending"
+      },
+      {
+        "code": "3",
+        "description": "Constant"
+      }
+    ]
+  },
+  {
+    "section": "TheCase.Security",
+    "entries": []
+  },
+  {
+    "section": "TheCategory.AutoApndMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Default 1"
+      },
+      {
+        "code": "2",
+        "description": "Append to end"
+      },
+      {
+        "code": "3",
+        "description": "Replace"
+      },
+      {
+        "code": "4",
+        "description": "Disabled"
+      }
+    ]
+  },
+  {
+    "section": "TheCategory.CheckInMode",
+    "entries": []
+  },
+  {
+    "section": "TheCategory.CoverMode",
+    "entries": []
+  },
+  {
+    "section": "TheCategory.EmptyDocMode",
+    "entries": []
+  },
+  {
+    "section": "TheCategory.FulltextMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Full-text indexing is disabled"
+      },
+      {
+        "code": "1",
+        "description": "Full-text indexing is turned on for all documents"
+      },
+      {
+        "code": "2",
+        "description": "Full-text indexing is turned on for all documents newer than the date in THECategory.FulltextDate"
+      }
+    ]
+  },
+  {
+    "section": "TheCategory.WMMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Normal mode"
+      },
+      {
+        "code": "1",
+        "description": "Secure mode \u2013 deny printing if the watermark image is not available"
+      }
+    ]
+  },
+  {
+    "section": "TheCatSpool.Status",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Original input file archived"
+      },
+      {
+        "code": "1",
+        "description": "Preprocessed"
+      },
+      {
+        "code": "2",
+        "description": "Processing completed"
+      },
+      {
+        "code": "4",
+        "description": "Faulty \u2013 may be combined with one of the previous status flags"
+      }
+    ]
+  },
+  {
+    "section": "TheCloudStorage.CloudProvider",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Dropbox"
+      },
+      {
+        "code": "2",
+        "description": "Google Drive"
+      },
+      {
+        "code": "3",
+        "description": "One Drive"
+      },
+      {
+        "code": "4",
+        "description": "Box"
+      }
+    ]
+  },
+  {
+    "section": "TheCntConnError.Status",
+    "entries": [
+      {
+        "code": "-1",
+        "description": "Unknown"
+      },
+      {
+        "code": "0",
+        "description": "Normal error status: error reported"
+      },
+      {
+        "code": "1",
+        "description": "Queued for retry"
+      },
+      {
+        "code": "2",
+        "description": "Retry failed \u2013 the file already exists"
+      },
+      {
+        "code": "3",
+        "description": "Retry failed \u2013 other reasons"
+      },
+      {
+        "code": "4",
+        "description": "Too many OCR threads are running within the conversion service"
+      }
+    ]
+  },
+  {
+    "section": "TheCntConnJob.StorageMode",
+    "entries": []
+  },
+  {
+    "section": "TheCntConnSource.SourceMode",
+    "entries": []
+  },
+  {
+    "section": "TheCommonScript.ScriptLang",
+    "entries": [
+      {
+        "code": "1",
+        "description": "VBScript JScript 2"
+      }
+    ]
+  },
+  {
+    "section": "TheCounter.CounterType",
+    "entries": [
+      {
+        "code": "2",
+        "description": "Text (formatted)"
+      }
+    ]
+  },
+  {
+    "section": "TheCtgryFields.CounterMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Client-side counter, filled before displaying index information"
+      },
+      {
+        "code": "2",
+        "description": "Server-side counter, filled by the server when saving the document"
+      }
+    ]
+  },
+  {
+    "section": "TheCtgryFields.DependencyMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Referenced"
+      },
+      {
+        "code": "1",
+        "description": "Synchronized redundant"
+      },
+      {
+        "code": "2",
+        "description": "Editable redundant"
+      }
+    ]
+  },
+  {
+    "section": "TheCtgryFields.IndexType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "None \u2013 no index"
+      },
+      {
+        "code": "1",
+        "description": "Normal index"
+      },
+      {
+        "code": "2",
+        "description": "Unique index Integer"
+      }
+    ]
+  },
+  {
+    "section": "TheCtgryFields.TypeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "String 2"
+      },
+      {
+        "code": "3",
+        "description": "Date"
+      },
+      {
+        "code": "4",
+        "description": "Label"
+      },
+      {
+        "code": "5",
+        "description": "Decimal"
+      },
+      {
+        "code": "6",
+        "description": "Logical"
+      },
+      {
+        "code": "7",
+        "description": "Datetime (internal use only)"
+      },
+      {
+        "code": "8",
+        "description": "Counter (integer)"
+      },
+      {
+        "code": "9",
+        "description": "Counter (formatted)"
+      },
+      {
+        "code": "10",
+        "description": "Table field 11 12"
+      },
+      {
+        "code": "13",
+        "description": "Tab Integer, 64-bit Image other  User defined datatypes; get data type information from TheDatatype"
+      }
+    ]
+  },
+  {
+    "section": "TheDataExtractor.ModeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Text, line-based"
+      },
+      {
+        "code": "2",
+        "description": "Text, page-based"
+      },
+      {
+        "code": "3",
+        "description": "PDF"
+      },
+      {
+        "code": "4",
+        "description": "XML"
+      },
+      {
+        "code": "5",
+        "description": "OCR"
+      },
+      {
+        "code": "6",
+        "description": "Existing Doc"
+      }
+    ]
+  },
+  {
+    "section": "TheDataExtractorItem.DocBreakMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "None"
+      },
+      {
+        "code": "1",
+        "description": "On change"
+      },
+      {
+        "code": "2",
+        "description": "On value"
+      }
+    ]
+  },
+  {
+    "section": "TheDataExtractorItem.TypeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Text, line-based"
+      },
+      {
+        "code": "2",
+        "description": "Text, page-based"
+      },
+      {
+        "code": "3",
+        "description": "PDF zone Therefore DB Codes 7"
+      },
+      {
+        "code": "4",
+        "description": "XML tag"
+      },
+      {
+        "code": "5",
+        "description": "OCR"
+      },
+      {
+        "code": "6",
+        "description": "PDF attachment"
+      },
+      {
+        "code": "7",
+        "description": "PDF signature"
+      }
+    ]
+  },
+  {
+    "section": "TheDataType.TypeGroup",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Standard \u2013 predefined datatype (String, Integer, Date, \u2026)"
+      },
+      {
+        "code": "2",
+        "description": "Keyword"
+      },
+      {
+        "code": "3",
+        "description": "User defined datatype; primary index column of referenced table is of type integer"
+      },
+      {
+        "code": "4",
+        "description": "User defined datatype; primary index column of referenced table is of type ansi-text"
+      },
+      {
+        "code": "5",
+        "description": "User defined datatype; primary index column of referenced table is of type date"
+      },
+      {
+        "code": "6",
+        "description": "User defined datatype; primary index column of referenced table is of type float"
+      },
+      {
+        "code": "7",
+        "description": "User defined datatype; primary index column of referenced table is of type unicode- text"
+      },
+      {
+        "code": "8",
+        "description": "Case definition"
+      }
+    ]
+  },
+  {
+    "section": "TheDemigrate.Action",
+    "entries": [
+      {
+        "code": "1",
+        "description": "After copying the document back to the buffer, primary migration to the new storage group is scheduled (requires CopyToBuffer)"
+      },
+      {
+        "code": "2",
+        "description": "After copying the document back to the buffer, backup migration to the new storage group is scheduled (requires CopyToBuffer)"
+      },
+      {
+        "code": "4",
+        "description": "Copy the document from the medium to the buffer"
+      },
+      {
+        "code": "8",
+        "description": "Delete the document on the primary media"
+      },
+      {
+        "code": "16",
+        "description": "Delete the document on the backup media"
+      },
+      {
+        "code": "32",
+        "description": "Delete the document on the primary media after it has been migrated to the new primary media"
+      },
+      {
+        "code": "64",
+        "description": "Delete the document on the backup media after it has been migrated to the new backup media"
+      },
+      {
+        "code": "128",
+        "description": "Set TheDocument.MediaNo to 0"
+      },
+      {
+        "code": "256",
+        "description": "Set TheDocument.BackMediaNo to 0"
+      },
+      {
+        "code": "512",
+        "description": "Set TheDocument.ServerNo to the demigrate server (useful with CopyToBuffer) The database column can contain a combination of these flags. (See note on flags). Jukebox"
+      }
+    ]
+  },
+  {
+    "section": "TheDevice.Type",
+    "entries": [
+      {
+        "code": "2",
+        "description": "RAID (local folder)"
+      },
+      {
+        "code": "3",
+        "description": "Optical drive"
+      },
+      {
+        "code": "4",
+        "description": "Network Share"
+      }
+    ]
+  },
+  {
+    "section": "TheDocument.Security",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Standard security as defined on category and sub-category level"
+      },
+      {
+        "code": "1",
+        "description": "Use ACL of the document only - no inheritance from (sub-)category"
+      },
+      {
+        "code": "2",
+        "description": "Use ACL of the document and inherit permissions from (sub-)category"
+      }
+    ]
+  },
+  {
+    "section": "TheEFormSubmission.SubmissionType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Default"
+      },
+      {
+        "code": "2",
+        "description": "User"
+      },
+      {
+        "code": "3",
+        "description": "Draft Therefore DB Codes 8"
+      }
+    ]
+  },
+  {
+    "section": "TheFolder.FolderType",
+    "entries": []
+  },
+  {
+    "section": "TheForm.FormType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "TIFF"
+      },
+      {
+        "code": "3",
+        "description": "Greenbar"
+      },
+      {
+        "code": "4",
+        "description": "XML"
+      }
+    ]
+  },
+  {
+    "section": "TheForm.PageOrder",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Cyclic (1,2,3,\u2026 n,1,2,\u2026)"
+      },
+      {
+        "code": "1",
+        "description": "Special first and last page (1, 2, 2, 2, 2, 2, \u2026, 3)"
+      },
+      {
+        "code": "2",
+        "description": "Special first page (1, 2, 3, \u2026 n, 2, 3, \u2026)"
+      },
+      {
+        "code": "3",
+        "description": "Special last page (1, 2, 3, \u2026 n-1, 1, 2, \u2026, n)"
+      }
+    ]
+  },
+  {
+    "section": "TheFulltextQueue.Action",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Rebuild the complete catalog"
+      },
+      {
+        "code": "2",
+        "description": "Remove document from catalog"
+      },
+      {
+        "code": "3",
+        "description": "Add document to catalog"
+      },
+      {
+        "code": "4",
+        "description": "Update document"
+      },
+      {
+        "code": "5",
+        "description": "Compress the catalog"
+      }
+    ]
+  },
+  {
+    "section": "TheIndexingAssignment.ErrorMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Abort Ignore 2"
+      },
+      {
+        "code": "3",
+        "description": "Use fall back"
+      },
+      {
+        "code": "4",
+        "description": "Report error"
+      }
+    ]
+  },
+  {
+    "section": "TheIndexingProfile.AutoAppendMode",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Category default 1 Insert"
+      },
+      {
+        "code": "2",
+        "description": "Append"
+      },
+      {
+        "code": "3",
+        "description": "Replace"
+      },
+      {
+        "code": "4",
+        "description": "No check"
+      },
+      {
+        "code": "5",
+        "description": "Error"
+      },
+      {
+        "code": "6",
+        "description": "Skip document"
+      }
+    ]
+  },
+  {
+    "section": "TheIndexingProfile.ModeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "File"
+      },
+      {
+        "code": "2",
+        "description": "Mail"
+      },
+      {
+        "code": "3",
+        "description": "Word"
+      },
+      {
+        "code": "4",
+        "description": "Excel"
+      },
+      {
+        "code": "5",
+        "description": "Capture Client"
+      },
+      {
+        "code": "6",
+        "description": "Office"
+      },
+      {
+        "code": "7",
+        "description": "Workflow \u2013 update index data"
+      },
+      {
+        "code": "8",
+        "description": "Workflow \u2013 change category"
+      },
+      {
+        "code": "9",
+        "description": "New form"
+      },
+      {
+        "code": "10",
+        "description": "Signature"
+      },
+      {
+        "code": "11",
+        "description": "Workflow \u2013 Update case header Therefore DB Codes 9"
+      }
+    ]
+  },
+  {
+    "section": "TheIndexingProfile.ScriptLang",
+    "entries": [
+      {
+        "code": "1",
+        "description": "VBScript JScript 2"
+      }
+    ]
+  },
+  {
+    "section": "TheMedia.DirStruct",
+    "entries": [
+      {
+        "code": "100",
+        "description": "= 87; the category table is TWC3"
+      },
+      {
+        "code": "1",
+        "description": "Classic \u2013 TWC3\\a\\3\\2\\1\\0123ab; each page is stored in a separate file"
+      },
+      {
+        "code": "2",
+        "description": "Base36CF \u2013 b\\a\\0123ab.ados; the document is stored as a compound file"
+      },
+      {
+        "code": "3",
+        "description": "Buffer \u2013 87\\0123ab.ados; the document is stored as a compound file"
+      },
+      {
+        "code": "6",
+        "description": "UDO \u2013 01\\77\\71\\0123ab.ados; there are 100 documents per folder and 3 levels of folders, each having 100 sub folders."
+      }
+    ]
+  },
+  {
+    "section": "TheMedia.Status",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Raw (not formatted)"
+      },
+      {
+        "code": "1",
+        "description": "Formatted (not assigned to a storage group)"
+      },
+      {
+        "code": "2",
+        "description": "Assigned to a storage group"
+      },
+      {
+        "code": "4",
+        "description": "Full"
+      },
+      {
+        "code": "8",
+        "description": "Damaged"
+      }
+    ]
+  },
+  {
+    "section": "TheMediaPool.DirStruct",
+    "entries": []
+  },
+  {
+    "section": "TheMediaPool.FileSystem",
+    "entries": [
+      {
+        "code": "1",
+        "description": "FAT"
+      },
+      {
+        "code": "2",
+        "description": "NTFS"
+      },
+      {
+        "code": "3",
+        "description": "NTFS compressed"
+      }
+    ]
+  },
+  {
+    "section": "TheMFPDevice.Color",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Black & white"
+      },
+      {
+        "code": "2",
+        "description": "Gray"
+      },
+      {
+        "code": "4",
+        "description": "Color"
+      }
+    ]
+  },
+  {
+    "section": "TheMFPDevice.ImageType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Text"
+      },
+      {
+        "code": "2",
+        "description": "Text/image 4 Image"
+      },
+      {
+        "code": "8",
+        "description": "Photo"
+      },
+      {
+        "code": "16",
+        "description": "Text/photo"
+      },
+      {
+        "code": "32",
+        "description": "Text/map/photo"
+      },
+      {
+        "code": "64",
+        "description": "Map"
+      },
+      {
+        "code": "128",
+        "description": "Second copy"
+      }
+    ]
+  },
+  {
+    "section": "TheMFPDevice.ScanOrientation",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Automatic Therefore DB Codes 10"
+      },
+      {
+        "code": "2",
+        "description": "Long-edge feed"
+      },
+      {
+        "code": "4",
+        "description": "Short-edge feed"
+      }
+    ]
+  },
+  {
+    "section": "TheMFPDevice.ScanSize",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Any"
+      },
+      {
+        "code": "2",
+        "description": "A3"
+      },
+      {
+        "code": "4",
+        "description": "A4"
+      },
+      {
+        "code": "8",
+        "description": "A5"
+      },
+      {
+        "code": "16",
+        "description": "A6"
+      },
+      {
+        "code": "32",
+        "description": "SRA3"
+      },
+      {
+        "code": "64",
+        "description": "B4"
+      },
+      {
+        "code": "128",
+        "description": "B5"
+      },
+      {
+        "code": "256",
+        "description": "Letter"
+      },
+      {
+        "code": "512",
+        "description": "Legal"
+      },
+      {
+        "code": "1024",
+        "description": "Statement"
+      },
+      {
+        "code": "2048",
+        "description": "K8"
+      },
+      {
+        "code": "4096",
+        "description": "K16"
+      },
+      {
+        "code": "8192",
+        "description": "Hagaki Inch 12x18 16384"
+      },
+      {
+        "code": "32768",
+        "description": "Ledger"
+      }
+    ]
+  },
+  {
+    "section": "TheMigrate.Action",
+    "entries": [
+      {
+        "code": "1",
+        "description": "The server will do the primary migration of the document"
+      },
+      {
+        "code": "2",
+        "description": "The server will do the backup migration of the document"
+      },
+      {
+        "code": "4",
+        "description": "The server will pre-fetch the document"
+      },
+      {
+        "code": "8",
+        "description": "The server has to delete the document from its local buffer when the document has been migrated to the primary disk (TheDocument.MediaNo is set)"
+      },
+      {
+        "code": "16",
+        "description": "The server has to delete the document from its local buffer when the document has been migrated to primary and backup disks (TheDocument.MediaNo and BackMediaNo is set) The database column can contain a combination of these flags. (See note on flags)."
+      }
+    ]
+  },
+  {
+    "section": "TheObjLinks.DestTypeNo",
+    "entries": []
+  },
+  {
+    "section": "TheObjLinks.SrcTypeNo",
+    "entries": []
+  },
+  {
+    "section": "TheOfficeAction.ActionType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Base New document 2 3 Save"
+      },
+      {
+        "code": "4",
+        "description": "Send"
+      },
+      {
+        "code": "5",
+        "description": "Print"
+      },
+      {
+        "code": "6",
+        "description": "Script Therefore DB Codes 11"
+      }
+    ]
+  },
+  {
+    "section": "TheOfficeAssignment.AssignmentType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Content control Form field 2 Cell 3"
+      },
+      {
+        "code": "4",
+        "description": "Mail basic"
+      },
+      {
+        "code": "5",
+        "description": "Mail advanced"
+      },
+      {
+        "code": "10",
+        "description": "Document property"
+      }
+    ]
+  },
+  {
+    "section": "TheOfficeProfile.ProfileType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Undefined"
+      },
+      {
+        "code": "1",
+        "description": "Word Excel 2 Template only  (For example non office templates \u2010 replaces the Template feature) 3"
+      },
+      {
+        "code": "4",
+        "description": "Mail"
+      }
+    ]
+  },
+  {
+    "section": "ThePowerBITable.FrequencyType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Hourly"
+      },
+      {
+        "code": "2",
+        "description": "Daily"
+      }
+    ]
+  },
+  {
+    "section": "ThePowerBITable.TableType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Category"
+      },
+      {
+        "code": "2",
+        "description": "Workflow"
+      }
+    ]
+  },
+  {
+    "section": "TheQuery.VersionNo",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Therefore 2017 or earlier"
+      },
+      {
+        "code": "1",
+        "description": "Therefore 2018 or later"
+      }
+    ]
+  },
+  {
+    "section": "TheQueryField.Alignment",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Default"
+      },
+      {
+        "code": "1",
+        "description": "Left 2 3 Center Right"
+      }
+    ]
+  },
+  {
+    "section": "TheRecycleBin.BelongsToType",
+    "entries": []
+  },
+  {
+    "section": "TheReplColumn.ColType",
+    "entries": [
+      {
+        "code": "2",
+        "description": "Date Text 3 Float 4"
+      },
+      {
+        "code": "5",
+        "description": "Short"
+      },
+      {
+        "code": "6",
+        "description": "Bool"
+      },
+      {
+        "code": "7",
+        "description": "Datetime"
+      },
+      {
+        "code": "8",
+        "description": "ANSI text"
+      },
+      {
+        "code": "9",
+        "description": "NText 10 Int64"
+      },
+      {
+        "code": "11",
+        "description": "GUID Therefore DB Codes 12"
+      }
+    ]
+  },
+  {
+    "section": "TheReplConn.DBBrand",
+    "entries": [
+      {
+        "code": "1",
+        "description": "SQL Server"
+      },
+      {
+        "code": "2",
+        "description": "Oracle"
+      },
+      {
+        "code": "6",
+        "description": "SQL Server via ODBC"
+      }
+    ]
+  },
+  {
+    "section": "TheReporting.EventType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "WF process start"
+      },
+      {
+        "code": "2",
+        "description": "WF task start WF instance claimed 3 WF instance unclaimed 4"
+      },
+      {
+        "code": "5",
+        "description": "WF instance delegated"
+      },
+      {
+        "code": "6",
+        "description": "WF instance rerouted"
+      },
+      {
+        "code": "7",
+        "description": "WF task finished"
+      },
+      {
+        "code": "8",
+        "description": "WF process finished"
+      },
+      {
+        "code": "9",
+        "description": "WF instance deleted"
+      }
+    ]
+  },
+  {
+    "section": "TheRetentionQueue.Action",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Delete single version of document 2 4 Delete document (with all versions) Ignore media (Before final delete from the TheDocument table is performed, the retention algorithm checks whether document TheDocVersion.MediaNo and"
+      }
+    ]
+  },
+  {
+    "section": "TheDocVersion.BackMediaNo",
+    "entries": []
+  },
+  {
+    "section": "TheRole.Permission",
+    "entries": [
+      {
+        "code": "1",
+        "description": "024"
+      },
+      {
+        "code": "2",
+        "description": "048"
+      },
+      {
+        "code": "4",
+        "description": "096"
+      },
+      {
+        "code": "8",
+        "description": "192"
+      },
+      {
+        "code": "16",
+        "description": "384"
+      },
+      {
+        "code": "32",
+        "description": "768"
+      },
+      {
+        "code": "65",
+        "description": "536"
+      },
+      {
+        "code": "131",
+        "description": "072"
+      },
+      {
+        "code": "262",
+        "description": "144"
+      },
+      {
+        "code": "524",
+        "description": "288"
+      },
+      {
+        "code": "1",
+        "description": "048 576"
+      },
+      {
+        "code": "2",
+        "description": "097 152 Hex value 0x01  Operator 0x02  Administrator 0x04  Set Permissions 0x08  Access/Read 0x10  <not used> 0x20  <not used> 0x40  Category/Case: add documents 0x80  Manage searches 0x100  Execute searches 0x200  Manage keyword dictionary 0x400  Document/Case: create tasks 0x800  <not used> 0x1000  Document/Case: view in hit list 0x2000  Document/Case: open and view 0x4000  Document/Case: print 0x8000  Document/Case: export and send 0x1 0000  <not used> 0x2 0000  <not used> 0x4 0000  Document/Case: view history 0x8 0000  Document: add annotations 0x10 0000  Document: delete annotations 0x20 0000  Document: edit document Therefore DB Codes 13"
+      },
+      {
+        "code": "4",
+        "description": "194 304"
+      },
+      {
+        "code": "8",
+        "description": "388 608"
+      },
+      {
+        "code": "16",
+        "description": "777 216"
+      },
+      {
+        "code": "33",
+        "description": "554 432"
+      },
+      {
+        "code": "67",
+        "description": "108 864"
+      },
+      {
+        "code": "134",
+        "description": "217 728"
+      },
+      {
+        "code": "268",
+        "description": "435 456"
+      },
+      {
+        "code": "536",
+        "description": "870 912"
+      },
+      {
+        "code": "1",
+        "description": "073 741 824"
+      },
+      {
+        "code": "2",
+        "description": "147 483 648"
+      },
+      {
+        "code": "4",
+        "description": "294 967 296"
+      },
+      {
+        "code": "8",
+        "description": "589 934 592"
+      },
+      {
+        "code": "17",
+        "description": "179 869 184"
+      },
+      {
+        "code": "34",
+        "description": "359 738 368"
+      },
+      {
+        "code": "68",
+        "description": "719 476 736"
+      },
+      {
+        "code": "137",
+        "description": "438 953 472"
+      },
+      {
+        "code": "274",
+        "description": "877 906 944"
+      },
+      {
+        "code": "549",
+        "description": "755 813 888 0x40 0000  Document: update index data 0x80 0000  Document: add file 0x100 0000  Document: delete file 0x200 0000 0x400 0000 0x800 0000  Document/Case: manage links Document: delete document Document: retention protection 0x1000 0000  Case: create 0x2000 0000  Case: delete 0x4000 0000  Case: close 0x8000 0000  Read permission 0x1 0000 0000  Case: reopen 0x2 0000 0000  Workflow: participate 0x4 0000 0000  Workflow: add a document 0x8 0000 0000  Workflow: view history 0x10 0000 0000  Workflow: delegate 0x20 0000 0000  Workflow: view all 0x40 0000 0000  Workflow: delete 0x80 0000 0000  Workflow: start manually"
+      },
+      {
+        "code": "1",
+        "description": "099 511 627 776  0x100 0000 0000  Case: update index data The database column can contain a combination of these flags. (See note on flags)."
+      }
+    ]
+  },
+  {
+    "section": "TheRoleAssignments.ObjectType",
+    "entries": []
+  },
+  {
+    "section": "TheRoleAssignments.SubObjNo",
+    "entries": [
+      {
+        "code": "1000",
+        "description": "Therefore System \u2013 root folder"
+      },
+      {
+        "code": "1001",
+        "description": "Content Connector \u2013 root folder"
+      },
+      {
+        "code": "1002",
+        "description": "Exchange Connector \u2013 root folder"
+      },
+      {
+        "code": "1004",
+        "description": "SAP Connector \u2013 root folder"
+      },
+      {
+        "code": "1005",
+        "description": "User Management \u2013 root folder"
+      },
+      {
+        "code": "1006",
+        "description": "Portal \u2013 root folder"
+      }
+    ]
+  },
+  {
+    "section": "TheSigningStatus.Status",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Uploaded"
+      },
+      {
+        "code": "1",
+        "description": "Completed, ready for download"
+      },
+      {
+        "code": "2",
+        "description": "Declined, ready for download"
+      },
+      {
+        "code": "3",
+        "description": "Processed"
+      },
+      {
+        "code": "4",
+        "description": "Declined"
+      },
+      {
+        "code": "5",
+        "description": "Error, completed"
+      },
+      {
+        "code": "6",
+        "description": "Error, declined"
+      },
+      {
+        "code": "7",
+        "description": "Error, unknown"
+      }
+    ]
+  },
+  {
+    "section": "TheSPProfile.Conversion",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Original Therefore DB Codes 14"
+      },
+      {
+        "code": "1",
+        "description": "Single-page TIFF"
+      },
+      {
+        "code": "2",
+        "description": "Single-page PDF"
+      },
+      {
+        "code": "3",
+        "description": "Multi-page TIFF"
+      },
+      {
+        "code": "4",
+        "description": "Multi-page PDF"
+      },
+      {
+        "code": "5",
+        "description": "Searchable PDF"
+      },
+      {
+        "code": "6",
+        "description": "Searchable PDF/A 50 JPEG"
+      }
+    ]
+  },
+  {
+    "section": "TheSPProfile.Direction",
+    "entries": [
+      {
+        "code": "1",
+        "description": "From SharePoint to Therefore"
+      },
+      {
+        "code": "2",
+        "description": "From Therefore to SharePoint"
+      }
+    ]
+  },
+  {
+    "section": "TheSPProfile.OPMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Copy"
+      },
+      {
+        "code": "2",
+        "description": "Move"
+      }
+    ]
+  },
+  {
+    "section": "TheSPProfile.Versioning",
+    "entries": [
+      {
+        "code": "3",
+        "description": "Latest version"
+      }
+    ]
+  },
+  {
+    "section": "TheStamp.StampType",
+    "entries": [
+      {
+        "code": "0",
+        "description": "PDF"
+      },
+      {
+        "code": "1",
+        "description": "PNG"
+      }
+    ]
+  },
+  {
+    "section": "TheStatistics.TypeNo",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Retrieve"
+      },
+      {
+        "code": "2",
+        "description": "Connect"
+      },
+      {
+        "code": "4",
+        "description": "Archive"
+      },
+      {
+        "code": "8",
+        "description": "COLD processing"
+      }
+    ]
+  },
+  {
+    "section": "TheStorageFiles.Status",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Normal \u2013 no error reported"
+      },
+      {
+        "code": "304",
+        "description": "Document not found on Therefore medium"
+      },
+      {
+        "code": "306",
+        "description": "No index information found for the document"
+      },
+      {
+        "code": "311",
+        "description": "The document is corrupt on the primary disk and on the backup disk"
+      },
+      {
+        "code": "312",
+        "description": "The document is corrupt on the primary disk"
+      },
+      {
+        "code": "313",
+        "description": "The document is corrupt on the backup disk"
+      },
+      {
+        "code": "314",
+        "description": "The document is corrupt on the buffer"
+      }
+    ]
+  },
+  {
+    "section": "TheStorageFiles.Type",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Unknown"
+      },
+      {
+        "code": "1",
+        "description": "Thex files (.thex)"
+      },
+      {
+        "code": "2",
+        "description": "Content files (.thec)"
+      },
+      {
+        "code": "3",
+        "description": "Compressed content file (.zip)"
+      },
+      {
+        "code": "4",
+        "description": "ADOS file (.ados) Therefore DB Codes 15"
+      }
+    ]
+  },
+  {
+    "section": "TheString.MainObjType",
+    "entries": []
+  },
+  {
+    "section": "TheString.StringType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Category name"
+      },
+      {
+        "code": "2",
+        "description": "Category description"
+      },
+      {
+        "code": "3",
+        "description": "Category header"
+      },
+      {
+        "code": "4",
+        "description": "Category footer"
+      },
+      {
+        "code": "5",
+        "description": "Field caption"
+      },
+      {
+        "code": "6",
+        "description": "Tab caption"
+      },
+      {
+        "code": "7",
+        "description": "Regular expression: help text"
+      },
+      {
+        "code": "8",
+        "description": "Workflow process name"
+      },
+      {
+        "code": "9",
+        "description": "Workflow process description"
+      },
+      {
+        "code": "10",
+        "description": "Workflow task name"
+      },
+      {
+        "code": "11",
+        "description": "Workflow transition name"
+      },
+      {
+        "code": "12",
+        "description": "Workflow transition: description"
+      },
+      {
+        "code": "13",
+        "description": "Workflow transition: condition error text"
+      },
+      {
+        "code": "14",
+        "description": "Workflow task: checklist text"
+      },
+      {
+        "code": "15",
+        "description": "Keyword dictionary"
+      },
+      {
+        "code": "16",
+        "description": "Keyword"
+      },
+      {
+        "code": "17",
+        "description": "Folder name"
+      },
+      {
+        "code": "18",
+        "description": "Case definition name"
+      },
+      {
+        "code": "19",
+        "description": "Query template name"
+      },
+      {
+        "code": "20",
+        "description": "Label field caption"
+      }
+    ]
+  },
+  {
+    "section": "TheTask.TaskMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Complete"
+      },
+      {
+        "code": "2",
+        "description": "Complete / decline"
+      },
+      {
+        "code": "3",
+        "description": "Approve / reject"
+      },
+      {
+        "code": "4",
+        "description": "Yes / No"
+      }
+    ]
+  },
+  {
+    "section": "TheTaskUser.TaskState",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Not started 2 In progress"
+      },
+      {
+        "code": "3",
+        "description": "Waiting on someone else"
+      },
+      {
+        "code": "4",
+        "description": "Deferred"
+      },
+      {
+        "code": "5",
+        "description": "Completed"
+      },
+      {
+        "code": "6",
+        "description": "Revoked"
+      }
+    ]
+  },
+  {
+    "section": "TheTreeViewLevel.LevelFunction",
+    "entries": [
+      {
+        "code": "0",
+        "description": "No function"
+      },
+      {
+        "code": "1",
+        "description": "Month"
+      },
+      {
+        "code": "2",
+        "description": "Year"
+      },
+      {
+        "code": "3",
+        "description": "Month/Year"
+      },
+      {
+        "code": "4",
+        "description": "First character"
+      },
+      {
+        "code": "5",
+        "description": "First character grouped"
+      },
+      {
+        "code": "6",
+        "description": "Range Therefore DB Codes 16"
+      }
+    ]
+  },
+  {
+    "section": "TheTreeViewLevel.SortOrder",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Ascending"
+      },
+      {
+        "code": "2",
+        "description": "Descending"
+      }
+    ]
+  },
+  {
+    "section": "TheUCAction.ActionFlags",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Show index data"
+      },
+      {
+        "code": "2",
+        "description": "View document"
+      },
+      {
+        "code": "4",
+        "description": "Capture: auto-save"
+      },
+      {
+        "code": "8",
+        "description": "Select profile"
+      },
+      {
+        "code": "16",
+        "description": "Open on single hit"
+      }
+    ]
+  },
+  {
+    "section": "TheUCAction.ActionType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Search"
+      },
+      {
+        "code": "2",
+        "description": "Save"
+      },
+      {
+        "code": "3",
+        "description": "Scan with Capture client"
+      },
+      {
+        "code": "4",
+        "description": "Full-text search"
+      },
+      {
+        "code": "5",
+        "description": "Scan with Viewer"
+      },
+      {
+        "code": "6",
+        "description": "Cross-category search"
+      },
+      {
+        "code": "7",
+        "description": "Search case"
+      },
+      {
+        "code": "8",
+        "description": "Run executable"
+      }
+    ]
+  },
+  {
+    "section": "TheUCControl.CompProps",
+    "entries": [
+      {
+        "code": "2",
+        "description": "Class"
+      },
+      {
+        "code": "4",
+        "description": "Top"
+      },
+      {
+        "code": "8",
+        "description": "Left"
+      },
+      {
+        "code": "16",
+        "description": "Width"
+      },
+      {
+        "code": "32",
+        "description": "Height"
+      },
+      {
+        "code": "64",
+        "description": "Position"
+      },
+      {
+        "code": "128",
+        "description": "Caption"
+      }
+    ]
+  },
+  {
+    "section": "TheUCProfile.ClassCompMode",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Exact"
+      },
+      {
+        "code": "2",
+        "description": "Starts with"
+      },
+      {
+        "code": "3",
+        "description": "Ends with"
+      },
+      {
+        "code": "4",
+        "description": "Contains"
+      }
+    ]
+  },
+  {
+    "section": "TheUCProfile.CompMode",
+    "entries": []
+  },
+  {
+    "section": "TheUsageStats.StatType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Condition in category search"
+      },
+      {
+        "code": "2",
+        "description": "Condition in case search 3 4 Index field when saving into a category Index field when creating a new case"
+      }
+    ]
+  },
+  {
+    "section": "TheUser.UserType",
+    "entries": [
+      {
+        "code": "1",
+        "description": "User"
+      },
+      {
+        "code": "2",
+        "description": "Group Therefore DB Codes 17"
+      },
+      {
+        "code": "3",
+        "description": "System"
+      },
+      {
+        "code": "4",
+        "description": "Portal user"
+      }
+    ]
+  },
+  {
+    "section": "TheUserFavorites.ObjectType",
+    "entries": []
+  },
+  {
+    "section": "TheUserSync.UserType",
+    "entries": []
+  },
+  {
+    "section": "TheUserSync.SyncState",
+    "entries": [
+      {
+        "code": "0",
+        "description": "Synced \u2013 no action needed"
+      },
+      {
+        "code": "1",
+        "description": "Dirty \u2013 needs to be synced (new or changed)"
+      },
+      {
+        "code": "2",
+        "description": "Deleted"
+      },
+      {
+        "code": "3",
+        "description": "Error after trying to synchronize a dirty entry"
+      },
+      {
+        "code": "4",
+        "description": "Error after trying to synchronize a deleted entry"
+      }
+    ]
+  },
+  {
+    "section": "TheWFHistory.Type",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Started"
+      },
+      {
+        "code": "2",
+        "description": "Finished"
+      },
+      {
+        "code": "3",
+        "description": "Saved"
+      },
+      {
+        "code": "4",
+        "description": "Routed"
+      },
+      {
+        "code": "5",
+        "description": "Claimed"
+      },
+      {
+        "code": "6",
+        "description": "Unclaimed"
+      },
+      {
+        "code": "7",
+        "description": "Reclaimed"
+      },
+      {
+        "code": "8",
+        "description": "Delegated"
+      },
+      {
+        "code": "9",
+        "description": "Document linked to Instance"
+      },
+      {
+        "code": "10",
+        "description": "Document link removed from Instance"
+      },
+      {
+        "code": "11",
+        "description": "Overdue Mail sent for Instance"
+      },
+      {
+        "code": "12",
+        "description": "Overdue transition applied"
+      },
+      {
+        "code": "13",
+        "description": "Rerouted"
+      },
+      {
+        "code": "14",
+        "description": "Split"
+      },
+      {
+        "code": "15",
+        "description": "Merged"
+      },
+      {
+        "code": "16",
+        "description": "Exception merge"
+      },
+      {
+        "code": "17",
+        "description": "User split"
+      },
+      {
+        "code": "18",
+        "description": "Error"
+      },
+      {
+        "code": "99",
+        "description": "User defined Entry"
+      }
+    ]
+  },
+  {
+    "section": "TheWFInstAccess.EntryType",
+    "entries": []
+  },
+  {
+    "section": "TheWFTasks.Type",
+    "entries": [
+      {
+        "code": "1",
+        "description": "Start"
+      },
+      {
+        "code": "2",
+        "description": "End"
+      },
+      {
+        "code": "3",
+        "description": "Manual Task"
+      },
+      {
+        "code": "4",
+        "description": "Automatic Task"
+      }
+    ]
+  },
+  {
+    "section": "TheWFTasks.UserChoice",
+    "entries": [
+      {
+        "code": "1",
+        "description": "User has to choose one user/group from the specified list Notes Flags Some codes are marked as flags and it is stated that the column value can contain a combination of these flags. This is possible, because each code corresponds to exactly 1 bit in the binary representation of a number, e.g.: Decimal value  Binary value"
+      },
+      {
+        "code": "1",
+        "description": "00000001"
+      },
+      {
+        "code": "2",
+        "description": "00000010"
+      },
+      {
+        "code": "4",
+        "description": "00000100"
+      },
+      {
+        "code": "8",
+        "description": "00001000"
+      },
+      {
+        "code": "16",
+        "description": "00010000"
+      },
+      {
+        "code": "32",
+        "description": "00100000"
+      },
+      {
+        "code": "64",
+        "description": "01000000"
+      },
+      {
+        "code": "128",
+        "description": "10000000 To decode a specific value (e.g.: 99), convert the value into its binary representation (in this case: 01100011). In the binary value one can easily see that the value 99 is built from the flags 64+32+2+1. So, these four flags are combined in this one value. Therefore DB Codes 19"
+      }
+    ]
+  }
+]

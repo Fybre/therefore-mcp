@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "category_no": 31,
+      "category_path": "Group Company eForms/Application For General Expenditure",
+      "row_count": 0,
+      "amount_field": "Budget",
+      "amount_field_index": 8,
+      "sum": "0",
+      "used": 0,
+      "missing": 0
+    },
+    {
+      "category_no": 35,
+      "category_path": "Group Company eForms/Application for Entertainment/Gift",
+      "row_count": 0,
+      "amount_field": "Budget",
+      "amount_field_index": 12,
+      "sum": "0",
+      "used": 0,
+      "missing": 0
+    },
+    {
+      "category_no": 34,
+      "category_path": "Group Company eForms/Application for Travel",
+      "row_count": 2,
+      "amount_field": "Budget",
+      "amount_field_index": 15,
+      "sum": "1879.00",
+      "used": 2,
+      "missing": 0
+    }
+  ],
+  "grand_total": "1879.00"
+}

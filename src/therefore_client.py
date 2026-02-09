@@ -1,0 +1,1132 @@
+#!/usr/bin/env python3
+import base64
+import json
+import re
+import ssl
+import urllib.request
+import urllib.error
+import socket
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+
+@dataclass
+class ThereforeConfig:
+    base_url: str
+    auth_method: str
+    username: Optional[str] = None
+    password: Optional[str] = None
+    tenant_name: Optional[str] = None
+    timeout_seconds: int = 20
+    workflow_timeout_seconds: Optional[int] = None
+    workflow_max_rows: Optional[int] = None
+    workflow_retry_timeout_seconds: Optional[int] = None
+    workflow_retry_count: int = 0
+
+
+class ThereforeClient:
+    def __init__(self, config: ThereforeConfig):
+        self.config = config
+        self.base_url = config.base_url.rstrip('/')
+        self.ctx = ssl.create_default_context()
+
+    def _headers(self) -> Dict[str, str]:
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+        if self.config.auth_method.lower() == 'basic':
+            if not self.config.username or not self.config.password:
+                raise ValueError('Basic auth requires username/password')
+            token = base64.b64encode(
+                f"{self.config.username}:{self.config.password}".encode('utf-8')
+            ).decode('ascii')
+            headers['Authorization'] = f'Basic {token}'
+        if self.config.tenant_name:
+            headers['TenantName'] = self.config.tenant_name
+        return headers
+
+    @staticmethod
+    def _is_timeout_error(exc: Exception) -> bool:
+        if isinstance(exc, (TimeoutError, socket.timeout)):
+            return True
+        if isinstance(exc, urllib.error.URLError):
+            reason = getattr(exc, 'reason', '')
+            if reason and 'timed out' in str(reason).lower():
+                return True
+        return False
+
+    def _post(
+        self,
+        path: str,
+        payload: Dict[str, Any],
+        timeout_override: Optional[int] = None,
+        retry_timeout_override: Optional[int] = None,
+        retry_count: int = 0,
+    ) -> Dict[str, Any]:
+        url = f"{self.base_url}/{path}"
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, method='POST')
+        for k, v in self._headers().items():
+            req.add_header(k, v)
+
+        base_timeout = self.config.timeout_seconds
+        if timeout_override is not None:
+            try:
+                base_timeout = max(1, int(timeout_override))
+            except ValueError:
+                base_timeout = self.config.timeout_seconds
+
+        retry_timeout = retry_timeout_override
+        if retry_timeout is None and retry_count:
+            retry_timeout = max(base_timeout * 2, base_timeout + 30)
+        if retry_timeout is not None:
+            try:
+                retry_timeout = max(1, int(retry_timeout))
+            except ValueError:
+                retry_timeout = base_timeout
+
+        timeouts = [base_timeout]
+        for _ in range(max(0, int(retry_count))):
+            timeouts.append(retry_timeout or base_timeout)
+
+        last_exc: Optional[Exception] = None
+        for attempt, timeout in enumerate(timeouts, start=1):
+            try:
+                with urllib.request.urlopen(req, context=self.ctx, timeout=timeout) as r:
+                    body = r.read().decode('utf-8', errors='replace')
+                return json.loads(body) if body else {}
+            except Exception as exc:
+                last_exc = exc
+                if not self._is_timeout_error(exc) or attempt >= len(timeouts):
+                    raise
+                # retry on timeout
+                continue
+
+        if last_exc:
+            raise last_exc
+        return {}
+
+    def _get(self, path: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/{path}"
+        req = urllib.request.Request(url, method='GET')
+        for k, v in self._headers().items():
+            req.add_header(k, v)
+        with urllib.request.urlopen(req, context=self.ctx, timeout=self.config.timeout_seconds) as r:
+            body = r.read().decode('utf-8', errors='replace')
+        return json.loads(body) if body else {}
+
+    def get_category_info(self, category_no: int) -> Dict[str, Any]:
+        return self._post('GetCategoryInfo', {
+            'CategoryNo': category_no,
+            'IsSearchFieldOrderNeeded': True,
+            'IsAccessMaskNeeded': True,
+        })
+
+    def get_categories_tree(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # Default payload should be empty to return full tree.
+        return self._post('GetCategoriesTree', payload or {})
+
+    def get_document(
+        self,
+        doc_no: int,
+        include_index_data: bool = True,
+        include_streams_info: bool = False,
+        include_streams_data: bool = False,
+        include_checkout_status: bool = False,
+        include_access_mask: bool = False,
+    ) -> Dict[str, Any]:
+        return self._post('GetDocument', {
+            'DocNo': doc_no,
+            'IsCheckOutStatusNeeded': include_checkout_status,
+            'IsIndexDataValuesNeeded': include_index_data,
+            'IsStreamsInfoAndDataNeeded': include_streams_data,
+            'IsStreamsInfoNeeded': include_streams_info,
+            'IsAccessMaskNeeded': include_access_mask,
+            'TitleHideCategory': False,
+            'IsStreamDataBase64JSONNeeded': include_streams_data,
+            'TitleType': 0,
+            'RetrieveReason': '',
+        })
+
+    def preprocess_index_data(
+        self,
+        category_no: int,
+        index_data_items: List[Dict[str, Any]],
+        fill_dependent_fields: bool = True,
+        reset_to_defaults: bool = True,
+        do_calculate_fields: bool = True,
+        get_auto_append_ix_data: bool = False,
+        exclude_redundant: bool = True,
+    ) -> Dict[str, Any]:
+        return self._post('PreprocessIndexData', {
+            'CategoryNo': category_no,
+            'ExcludeReduntantForFillDependentFields': exclude_redundant,
+            'FillDependentFields': fill_dependent_fields,
+            'GetAutoAppendIxData': get_auto_append_ix_data,
+            'ResetToDefaults': reset_to_defaults,
+            'DoCalculateFields': do_calculate_fields,
+            'IndexData': {
+                'IndexDataItems': index_data_items,
+            },
+        })
+
+    def evaluate_conditional_properties(
+        self,
+        category_no: int,
+        index_data_items: List[Dict[str, Any]],
+        changed_field_nos: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
+        return self._post('EvaluateConditionalProperties', {
+            'IndexDataItems': index_data_items,
+            'CategoryNo': category_no,
+            'ChangedFieldNos': changed_field_nos or [],
+        })
+
+    def create_document(
+        self,
+        category_no: int,
+        streams: List[Dict[str, Any]],
+        index_data_items: Optional[List[Dict[str, Any]]] = None,
+        check_in_comments: str = '',
+        with_auto_append_mode: int = 0,
+        do_fill_dependent_fields: bool = True,
+        run_webclient_flow: bool = True,
+        persist_evaluate_response_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        # Web client flow: GetCategoryInfo -> PreprocessIndexData -> EvaluateConditionalProperties -> CreateDocument
+        category_info = None
+        preprocess_resp = None
+        evaluate_resp = None
+
+        effective_index_items = index_data_items or []
+        if run_webclient_flow:
+            category_info = self.get_category_info(category_no)
+            preprocess_resp = self.preprocess_index_data(
+                category_no=category_no,
+                index_data_items=effective_index_items,
+                fill_dependent_fields=True,
+                reset_to_defaults=True,
+                do_calculate_fields=True,
+                get_auto_append_ix_data=False,
+                exclude_redundant=True,
+            )
+            effective_index_items = (
+                (preprocess_resp.get('IndexData') or {}).get('IndexDataItems')
+            ) or []
+            evaluate_resp = self.evaluate_conditional_properties(
+                category_no=category_no,
+                index_data_items=effective_index_items,
+                changed_field_nos=[],
+            )
+            if persist_evaluate_response_path:
+                with open(persist_evaluate_response_path, 'w', encoding='utf-8') as f:
+                    json.dump(evaluate_resp, f, indent=2)
+
+        create_payload = {
+            'CategoryNo': category_no,
+            'CheckInComments': check_in_comments,
+            'IndexDataItems': effective_index_items,
+            'Streams': streams,
+            'DoFillDependentFields': do_fill_dependent_fields,
+            'WithAutoAppendMode': with_auto_append_mode,
+        }
+        create_resp = self._post('CreateDocument', create_payload)
+
+        return {
+            'category_info': category_info,
+            'preprocess_index_data': preprocess_resp,
+            'evaluate_conditional_properties': evaluate_resp,
+            'create_document': create_resp,
+        }
+
+    def delete_document(self, doc_no: int) -> Dict[str, Any]:
+        return self._post('DeleteDocument', {'DocNo': doc_no})
+
+    def get_document_index_data(self, doc_no: int) -> Dict[str, Any]:
+        return self._post('GetDocumentIndexData', {
+            'DocNo': doc_no,
+            'IsAccessMaskNeeded': False,
+            'TitleHideCategory': False,
+            'TitleType': 0,
+        })
+
+    def get_web_api_server_version(self) -> Dict[str, Any]:
+        return self._post('GetWebAPIServerVersion', {})
+
+    def get_connection_token(self) -> Dict[str, Any]:
+        return self._post('GetConnectionToken', {})
+
+    def get_domain_info(self) -> Dict[str, Any]:
+        return self._post('GetDomainInfo', {})
+
+    def get_client_discovery_info(self) -> Dict[str, Any]:
+        return self._post('GetClientDiscoveryInfo', {})
+
+    def get_connected_user(self, create: bool = False) -> Dict[str, Any]:
+        return self._post('GetConnectedUser', {'Create': bool(create)})
+
+    def get_system_customer_id(self) -> Dict[str, Any]:
+        return self._get('GetSystemCustomerId')
+
+    def get_permission_constants(self) -> Dict[str, Any]:
+        return self._post('GetPermissionConstants', {})
+
+    def get_role_permission_constants(self) -> Dict[str, Any]:
+        return self._post('GetRolePermissionConstants', {})
+
+    def get_document_properties(
+        self,
+        doc_no: int,
+        version_no: int = 0,
+        is_doc_title_needed: bool = False,
+    ) -> Dict[str, Any]:
+        return self._post('GetDocumentProperties', {
+            'DocNo': doc_no,
+            'VersionNo': version_no,
+            'IsDocTitleNeeded': is_doc_title_needed,
+        })
+
+    def get_document_history(self, doc_no: int) -> Dict[str, Any]:
+        return self._post('GetDocumentHistory', {'DocNo': doc_no})
+
+    def get_document_checkout_status(self, doc_no: int) -> Dict[str, Any]:
+        return self._post('GetDocumentCheckoutStatus', {'DocNo': doc_no})
+
+    def get_objects_list(self, load_items_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+        return self._post('GetObjectsList', {'LoadItemsList': load_items_list})
+
+    def get_objects(self, flags: int, obj_type: int) -> Dict[str, Any]:
+        return self._post('GetObjects', {
+            'Flags': int(flags),
+            'Type': int(obj_type),
+        })
+
+    def execute_users_query(
+        self,
+        query: str,
+        domain_names: Optional[List[str]] = None,
+        flags: int = 5,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'Query': query,
+            'Flags': int(flags),
+        }
+        if domain_names is not None:
+            payload['DomainNames'] = domain_names
+        return self._post('ExecuteUsersQuery', payload)
+
+    def get_users_from_group(
+        self,
+        group_id: Optional[int] = None,
+        group_name: Optional[str] = None,
+        domain_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {}
+        if group_id is not None:
+            payload['GroupId'] = int(group_id)
+        if group_name:
+            payload['GroupName'] = group_name
+        if domain_name:
+            payload['DomainName'] = domain_name
+        return self._post('GetUsersFromGroup', payload)
+
+    def get_user_details(self, user_or_group_id: int) -> Dict[str, Any]:
+        return self._post('GetUserDetails', {'UserOrGroupId': int(user_or_group_id)})
+
+    def get_keywords_by_field_no(
+        self,
+        field_no: int,
+        category_no: Optional[int] = None,
+        case_definition_no: Optional[int] = None,
+        dependent_field_filter_value: Optional[str] = None,
+        show_deactivated_keywords: Optional[bool] = None,
+        index_data_items: Optional[List[Dict[str, Any]]] = None,
+        skip_loading_keyword_nos: Optional[bool] = None,
+        max_rows: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'FieldNo': int(field_no),
+        }
+        if category_no is not None:
+            payload['CategoryNo'] = int(category_no)
+        if case_definition_no is not None:
+            payload['CaseDefinitionNo'] = int(case_definition_no)
+        if dependent_field_filter_value is not None:
+            payload['DependentFieldFilterValue'] = dependent_field_filter_value
+        if show_deactivated_keywords is not None:
+            payload['ShowDeactivatedKeywords'] = bool(show_deactivated_keywords)
+        if index_data_items is not None:
+            payload['IndexDataItems'] = index_data_items
+        if skip_loading_keyword_nos is not None:
+            payload['SkipLoadingKeywordNos'] = bool(skip_loading_keyword_nos)
+        if max_rows is not None:
+            payload['MaxRows'] = int(max_rows)
+        return self._post('GetKeywordsByFieldNo', payload)
+
+    def get_keywords_by_key_dic(
+        self,
+        key_dic_no: int,
+        filter_value: Optional[str] = None,
+        max_values: Optional[int] = None,
+        include_deactivated_keywords: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'KeyDicNo': int(key_dic_no),
+        }
+        if filter_value is not None:
+            payload['FilterValue'] = filter_value
+        if max_values is not None:
+            payload['MaxValues'] = int(max_values)
+        if include_deactivated_keywords is not None:
+            payload['IncludeDeactivatedKeywords'] = bool(include_deactivated_keywords)
+        return self._post('GetKeywordsByKeyDic', payload)
+
+    def validate_keywords(
+        self,
+        field_no: int,
+        keywords: List[str],
+        is_filter_mode: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'FieldNo': int(field_no),
+            'KeywordsToValidate': keywords,
+        }
+        if is_filter_mode is not None:
+            payload['IsFilterMode'] = bool(is_filter_mode)
+        return self._post('ValidateKeywords', payload)
+
+    def add_dictionary_keyword(
+        self,
+        dictionary_no: Optional[int],
+        keyword_name: str,
+        dictionary_type_no: Optional[int] = None,
+        is_keyword_deactivated: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'KeywordName': keyword_name,
+        }
+        if dictionary_no is not None:
+            payload['ByDictionaryID'] = int(dictionary_no)
+        if dictionary_type_no is not None:
+            payload['ByDictionaryTypeNo'] = int(dictionary_type_no)
+        if is_keyword_deactivated is not None:
+            payload['IsKeywordDeactivated'] = bool(is_keyword_deactivated)
+        return self._post('AddDictionaryKeyword', payload)
+
+    def update_dictionary_keyword(
+        self,
+        dictionary_no: Optional[int],
+        keyword_id: int,
+        keyword_name: Optional[str] = None,
+        dictionary_type_no: Optional[int] = None,
+        is_keyword_deactivated: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'KeywordID': int(keyword_id),
+        }
+        if dictionary_no is not None:
+            payload['ByDictionaryID'] = int(dictionary_no)
+        if dictionary_type_no is not None:
+            payload['ByDictionaryTypeNo'] = int(dictionary_type_no)
+        if keyword_name is not None:
+            payload['KeywordName'] = keyword_name
+        if is_keyword_deactivated is not None:
+            payload['IsKeywordDeactivated'] = bool(is_keyword_deactivated)
+        return self._post('UpdateDictionaryKeyword', payload)
+
+    def delete_dictionary_keyword(
+        self,
+        dictionary_no: Optional[int],
+        keyword_id: int,
+        dictionary_type_no: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'KeywordID': int(keyword_id),
+        }
+        if dictionary_no is not None:
+            payload['ByDictionaryID'] = int(dictionary_no)
+        if dictionary_type_no is not None:
+            payload['ByDictionaryTypeNo'] = int(dictionary_type_no)
+        return self._post('DeleteDictionaryKeyword', payload)
+
+    def execute_workflow_query_for_all(self, workflow_flags: int = 0, max_rows: int = 1000) -> Dict[str, Any]:
+        return self._post(
+            'ExecuteWorkflowQueryForAll',
+            {
+                'WorkflowFlags': int(workflow_flags),
+                'MaxRows': int(max_rows),
+            },
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def execute_workflow_query_for_process(
+        self,
+        process_no: int,
+        workflow_flags: int = 0,
+        max_rows: int = 1000,
+    ) -> Dict[str, Any]:
+        return self._post(
+            'ExecuteWorkflowQueryForProcess',
+            {
+                'ProcessNo': int(process_no),
+                'WorkflowFlags': int(workflow_flags),
+                'MaxRows': int(max_rows),
+            },
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def get_linked_workflows_for_doc(self, doc_no: int, wf_doc_link_type: int = 0) -> Dict[str, Any]:
+        return self._post(
+            'GetLinkedWorkflowsForDoc',
+            {
+                'DocNo': int(doc_no),
+                'WFDocLinkType': int(wf_doc_link_type),
+            },
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def get_workflow_history(
+        self,
+        instance_no: int,
+        block_size: int = 1000,
+        include_routing_info: bool = True,
+        max_creation_date: Optional[str] = None,
+        seq_pos: int = 0,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'BlockSize': int(block_size),
+            'IncludeRoutingInfo': bool(include_routing_info),
+            'InstanceNo': int(instance_no),
+            'SeqPos': int(seq_pos),
+        }
+        if max_creation_date:
+            payload['MaxCreationDate'] = max_creation_date
+        return self._post(
+            'GetWorkflowHistory',
+            payload,
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def get_workflow_instance(
+        self,
+        instance_no: int,
+        token_no: int = 0,
+        is_access_mask_needed: bool = False,
+        load_history: bool = False,
+    ) -> Dict[str, Any]:
+        return self._post(
+            'GetWorkflowInstance',
+            {
+                'InstanceNo': int(instance_no),
+                'TokenNo': int(token_no),
+                'IsAccessMaskNeeded': bool(is_access_mask_needed),
+                'LoadHistory': bool(load_history),
+            },
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def get_workflow_process(
+        self,
+        process_no: int,
+        version_no: int = 0,
+        load_tasks: bool = True,
+        is_access_mask_needed: bool = False,
+    ) -> Dict[str, Any]:
+        return self._post(
+            'GetWorkflowProcess',
+            {
+                'ProcessNo': int(process_no),
+                'VersionNo': int(version_no),
+                'LoadTasks': bool(load_tasks),
+                'IsAccessMaskNeeded': bool(is_access_mask_needed),
+            },
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def get_workflow_task_settings(
+        self,
+        task_no: int,
+        process_no: int,
+        version_no: int = 0,
+        setting_names: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'TaskNo': int(task_no),
+            'ProcessNo': int(process_no),
+            'VersionNo': int(version_no),
+            'SettingNames': setting_names or [],
+        }
+        return self._post(
+            'GetWorkflowTaskSettings',
+            payload,
+            timeout_override=self.config.workflow_timeout_seconds,
+            retry_timeout_override=self.config.workflow_retry_timeout_seconds,
+            retry_count=self.config.workflow_retry_count,
+        )
+
+    def execute_single_query(self, query: Dict[str, Any], full_text: Optional[str] = None) -> Dict[str, Any]:
+        query_payload = dict(query)
+        if int(query_payload.get('CaseDefinitionNo') or 0) == 0:
+            query_payload.pop('CaseDefinitionNo', None)
+        payload = {
+            'Query': query_payload,
+        }
+        if full_text is not None:
+            payload['FullText'] = full_text
+        return self._post('ExecuteSingleQuery', payload)
+
+    def execute_async_single_query(self, query: Dict[str, Any], full_text: Optional[str] = None) -> Dict[str, Any]:
+        query_payload = dict(query)
+        if int(query_payload.get('CaseDefinitionNo') or 0) == 0:
+            query_payload.pop('CaseDefinitionNo', None)
+        payload = {
+            'Query': query_payload,
+        }
+        if full_text is not None:
+            payload['FullText'] = full_text
+        return self._post('ExecuteAsyncSingleQuery', payload)
+
+    def get_next_single_query_rows(self, query_id: int, row_block_size: int) -> Dict[str, Any]:
+        return self._post('GetNextSingleQueryRows', {
+            'QueryID': query_id,
+            'RowBlockSize': row_block_size,
+        })
+
+    def release_single_query(self, query_id: int) -> Dict[str, Any]:
+        return self._post('ReleaseSingleQuery', {'QueryID': query_id})
+
+    def execute_async_single_query_all(
+        self,
+        query: Dict[str, Any],
+        full_text: Optional[str] = None,
+        row_block_size: int = 1000,
+        max_rows: int = 2147483647,
+    ) -> Dict[str, Any]:
+        query_payload = dict(query)
+        if int(query_payload.get('CaseDefinitionNo') or 0) == 0:
+            query_payload.pop('CaseDefinitionNo', None)
+        query_payload['MaxRows'] = int(max_rows)
+        query_payload['RowBlockSize'] = int(row_block_size)
+
+        query_id: Optional[int] = None
+        batches = 0
+        release_error: Optional[str] = None
+        result_payload: Dict[str, Any] = {}
+
+        try:
+            first = self.execute_async_single_query(query_payload, full_text=full_text)
+            query_id = first.get('QueryId') or first.get('QueryID')
+            batches += 1
+
+            has_remaining = bool(first.get('HasRemainingRows'))
+            result = first.get('QueryResult') or {}
+            rows = list(result.get('ResultRows') or [])
+            columns = result.get('Columns')
+
+            while has_remaining and query_id is not None:
+                next_resp = self.get_next_single_query_rows(int(query_id), int(row_block_size))
+                batches += 1
+                has_remaining = bool(next_resp.get('HasRemainingRows'))
+                next_result = next_resp.get('QueryResult') or {}
+                rows.extend(next_result.get('ResultRows') or [])
+                if columns is None and next_result.get('Columns'):
+                    columns = next_result.get('Columns')
+
+            merged_result = dict(result)
+            merged_result['ResultRows'] = rows
+            if columns is not None:
+                merged_result['Columns'] = columns
+
+            result_payload = {
+                'QueryId': query_id,
+                'QueryResult': merged_result,
+                'HasRemainingRows': False,
+                'Batches': batches,
+                'TotalRows': len(rows),
+            }
+        finally:
+            if query_id is not None:
+                try:
+                    self.release_single_query(int(query_id))
+                except Exception as exc:
+                    release_error = str(exc)
+            if release_error:
+                result_payload = result_payload or {
+                    'QueryId': query_id,
+                    'HasRemainingRows': False,
+                    'Batches': batches,
+                    'TotalRows': None,
+                }
+                result_payload['ReleaseError'] = release_error
+
+        return result_payload
+
+    def execute_full_text_query(
+        self,
+        search: str,
+        categories: Optional[List[int]] = None,
+        max_rows: int = 100,
+        include_index_data: bool = False,
+        case_no: int = 0,
+    ) -> Dict[str, Any]:
+        payload = {
+            'FullTextQuery': {
+                'Search': search,
+                'Categories': categories or [],
+                'MaxRows': max_rows,
+                'BlockSize': max_rows,
+                'CaseNo': case_no,
+                'ContextMaxSizeKB': 0,
+                'ContextMode': 0,
+                'FuzzySearchLevel': 0,
+                'LCID': 0,
+                'MaxContentChars': 0,
+                'SearchScope': 0,
+                'SortOrder': 0,
+                'UseThesaurus': False,
+            },
+            'IncludeIndexData': include_index_data,
+        }
+        return self._post('ExecuteFullTextQuery', payload)
+
+    def call_endpoint(self, endpoint: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if not endpoint:
+            raise ValueError('endpoint is required')
+        path = str(endpoint).strip()
+        if path.startswith(self.base_url):
+            path = path[len(self.base_url):]
+        path = path.lstrip('/')
+        return self._post(path, payload or {})
+
+    def execute_statistics_query(
+        self,
+        query_type: int,
+        restrict_to_obj_no: Optional[int] = None,
+        restrict_to_user: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'QueryType': int(query_type),
+        }
+        if restrict_to_obj_no is not None:
+            payload['RestrictToObjNo'] = int(restrict_to_obj_no)
+        if restrict_to_user is not None:
+            payload['RestrictToUser'] = bool(restrict_to_user)
+        return self._post('ExecuteStatisticsQuery', payload)
+
+    def execute_async_multi_query(self, queries: List[Dict[str, Any]], full_text: Optional[str] = None) -> Dict[str, Any]:
+        payload = {
+            'Queries': queries,
+        }
+        if full_text is not None:
+            payload['FullText'] = full_text
+        return self._post('ExecuteAsyncMultiQuery', payload)
+
+    def get_next_multi_query_rows(self, query_id: int, row_block_size: int) -> Dict[str, Any]:
+        return self._post('GetNextMultiQueryRows', {
+            'QueryID': query_id,
+            'RowBlockSize': row_block_size,
+        })
+
+    def release_multi_query(self, query_id: int) -> Dict[str, Any]:
+        return self._post('ReleaseMultiQuery', {'QueryID': query_id})
+
+    def execute_async_multi_query_all(
+        self,
+        queries: List[Dict[str, Any]],
+        full_text: Optional[str] = None,
+        row_block_size: int = 1000,
+        max_rows: int = 2147483647,
+    ) -> Dict[str, Any]:
+        queries_payload = []
+        for q in queries:
+            qp = dict(q)
+            if int(qp.get('CaseDefinitionNo') or 0) == 0:
+                qp.pop('CaseDefinitionNo', None)
+            qp['MaxRows'] = int(max_rows)
+            qp['RowBlockSize'] = int(row_block_size)
+            queries_payload.append(qp)
+
+        query_id: Optional[int] = None
+        batches = 0
+        release_error: Optional[str] = None
+        result_payload: Dict[str, Any] = {}
+
+        try:
+            first = self.execute_async_multi_query(queries_payload, full_text=full_text)
+            query_id = first.get('QueryId') or first.get('QueryID')
+            batches += 1
+
+            def group_key(res: Dict[str, Any]) -> tuple:
+                return (
+                    res.get('CaseDefinitionNo'),
+                    res.get('CategoryNo'),
+                    res.get('ProcessNo'),
+                )
+
+            has_remaining = bool(first.get('HasRemainingRows'))
+            results = list(first.get('QueryResults') or [])
+
+            merged_map: Dict[tuple, Dict[str, Any]] = {}
+            for res in results:
+                key = group_key(res)
+                merged = dict(res)
+                merged['ResultRows'] = list(res.get('ResultRows') or [])
+                merged_map[key] = merged
+
+            while has_remaining and query_id is not None:
+                next_resp = self.get_next_multi_query_rows(int(query_id), int(row_block_size))
+                batches += 1
+                has_remaining = bool(next_resp.get('HasRemainingRows'))
+                next_results = list(next_resp.get('QueryResults') or [])
+                for res in next_results:
+                    key = group_key(res)
+                    if key not in merged_map:
+                        merged = dict(res)
+                        merged['ResultRows'] = list(res.get('ResultRows') or [])
+                        merged_map[key] = merged
+                        continue
+                    merged_map[key]['ResultRows'].extend(res.get('ResultRows') or [])
+                    if not merged_map[key].get('Columns') and res.get('Columns'):
+                        merged_map[key]['Columns'] = res.get('Columns')
+
+            merged_results = list(merged_map.values())
+            result_payload = {
+                'QueryId': query_id,
+                'QueryResults': merged_results,
+                'HasRemainingRows': False,
+                'Batches': batches,
+                'TotalRows': [len(r.get('ResultRows') or []) for r in merged_results],
+            }
+        finally:
+            if query_id is not None:
+                try:
+                    self.release_multi_query(int(query_id))
+                except Exception as exc:
+                    release_error = str(exc)
+            if release_error:
+                result_payload = result_payload or {
+                    'QueryId': query_id,
+                    'HasRemainingRows': False,
+                    'Batches': batches,
+                    'TotalRows': None,
+                }
+                result_payload['ReleaseError'] = release_error
+
+        return result_payload
+
+    def update_document_index_data(
+        self,
+        doc_no: int,
+        index_data_items: List[Dict[str, Any]],
+        check_in_comments: str = '',
+        do_fill_dependent_fields: bool = True,
+        last_change_time: Optional[str] = None,
+        last_change_time_iso: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not last_change_time and not last_change_time_iso:
+            current = self.get_document_index_data(doc_no)
+            idx = current.get('IndexData') or {}
+            last_change_time = idx.get('LastChangeTime')
+            last_change_time_iso = idx.get('LastChangeTimeISO8601')
+        if not last_change_time and not last_change_time_iso:
+            raise ValueError('LastChangeTime or LastChangeTimeISO8601 is required for UpdateDocument2')
+
+        index_data_payload: Dict[str, Any] = {
+            'IndexDataItems': index_data_items,
+            'DoFillDependentFields': do_fill_dependent_fields,
+        }
+        if last_change_time:
+            index_data_payload['LastChangeTime'] = last_change_time
+        if last_change_time_iso:
+            index_data_payload['LastChangeTimeISO8601'] = last_change_time_iso
+
+        payload = {
+            'DocNo': doc_no,
+            'IndexData': index_data_payload,
+            'CheckInComments': check_in_comments,
+        }
+        return self._post('UpdateDocument2', payload)
+
+    def save_document_index_data(
+        self,
+        doc_no: int,
+        index_data_items: List[Dict[str, Any]],
+        check_in_comments: str = '',
+        do_fill_dependent_fields: bool = True,
+        last_change_time: Optional[str] = None,
+        last_change_time_iso: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not last_change_time and not last_change_time_iso:
+            current = self.get_document_index_data(doc_no)
+            idx = current.get('IndexData') or {}
+            last_change_time = idx.get('LastChangeTime')
+            last_change_time_iso = idx.get('LastChangeTimeISO8601')
+        if not last_change_time and not last_change_time_iso:
+            raise ValueError('LastChangeTime or LastChangeTimeISO8601 is required for SaveDocumentIndexData')
+
+        index_data_payload: Dict[str, Any] = {
+            'IndexDataItems': index_data_items,
+            'DoFillDependentFields': do_fill_dependent_fields,
+        }
+        if last_change_time:
+            index_data_payload['LastChangeTime'] = last_change_time
+        if last_change_time_iso:
+            index_data_payload['LastChangeTimeISO8601'] = last_change_time_iso
+
+        payload = {
+            'DocNo': doc_no,
+            'IndexData': index_data_payload,
+            'CheckInComments': check_in_comments,
+        }
+        return self._post('SaveDocumentIndexData', payload)
+
+    def update_document(
+        self,
+        doc_no: int,
+        index_data_items: Optional[List[Dict[str, Any]]] = None,
+        streams_to_update: Optional[List[Dict[str, Any]]] = None,
+        stream_nos_to_delete: Optional[List[int]] = None,
+        streams_to_rename: Optional[List[Dict[str, Any]]] = None,
+        conversion_options: Optional[Dict[str, Any]] = None,
+        check_in_comments: str = '',
+        do_fill_dependent_fields: bool = True,
+        last_change_time: Optional[str] = None,
+        last_change_time_iso: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not last_change_time and not last_change_time_iso:
+            current = self.get_document_index_data(doc_no)
+            idx = current.get('IndexData') or {}
+            last_change_time = idx.get('LastChangeTime')
+            last_change_time_iso = idx.get('LastChangeTimeISO8601')
+        if not last_change_time and not last_change_time_iso:
+            raise ValueError('LastChangeTime or LastChangeTimeISO8601 is required for UpdateDocument')
+
+        index_data_payload: Dict[str, Any] = {
+            'IndexDataItems': index_data_items or [],
+            'DoFillDependentFields': do_fill_dependent_fields,
+        }
+        if last_change_time:
+            index_data_payload['LastChangeTime'] = last_change_time
+        if last_change_time_iso:
+            index_data_payload['LastChangeTimeISO8601'] = last_change_time_iso
+
+        payload: Dict[str, Any] = {
+            'DocNo': doc_no,
+            'IndexData': index_data_payload,
+            'CheckInComments': check_in_comments,
+        }
+        if streams_to_update:
+            payload['StreamsToUpdate'] = streams_to_update
+        if stream_nos_to_delete:
+            payload['StreamNosToDelete'] = stream_nos_to_delete
+        if streams_to_rename:
+            payload['StreamsToRename'] = streams_to_rename
+        if conversion_options:
+            payload['ConversionOptions'] = conversion_options
+
+        return self._post('UpdateDocument', payload)
+
+    def add_streams_to_document(
+        self,
+        doc_no: int,
+        streams: List[Dict[str, Any]],
+        conversion_options: Optional[Dict[str, Any]] = None,
+        check_in_comments: str = '',
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'DocNo': doc_no,
+            'CheckInComments': check_in_comments,
+            'StreamsToUpload': streams,
+        }
+        if conversion_options:
+            payload['ConversionOptions'] = conversion_options
+        return self._post('AddStreamsToDocument', payload)
+
+    @staticmethod
+    def make_stream_from_text(filename: str, text: str) -> Dict[str, Any]:
+        data = base64.b64encode(text.encode('utf-8')).decode('ascii')
+        return {
+            'FileName': filename,
+            'FileDataBase64JSON': data,
+            'NewStreamInsertMode': 0,
+        }
+
+
+def load_env(path: str) -> Dict[str, str]:
+    values: Dict[str, str] = {}
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            k, v = line.split('=', 1)
+            values[k.strip()] = v.strip()
+    return values
+
+
+def build_config_from_env(env: Dict[str, str]) -> ThereforeConfig:
+    def clean(v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip()
+        if not v or v.upper().startswith('THIS IS NOT NEEDED'):
+            return None
+        return v
+
+    timeout_seconds = 20
+    workflow_timeout_seconds = None
+    workflow_max_rows = None
+    workflow_retry_timeout_seconds = None
+    workflow_retry_count = 0
+    workflow_timeout_raw = clean(env.get('THEREFORE_WORKFLOW_TIMEOUT_SECONDS'))
+    if workflow_timeout_raw:
+        try:
+            workflow_timeout_seconds = max(1, int(workflow_timeout_raw))
+        except ValueError:
+            workflow_timeout_seconds = None
+    workflow_max_rows_raw = clean(env.get('THEREFORE_WORKFLOW_MAX_ROWS'))
+    if workflow_max_rows_raw:
+        try:
+            workflow_max_rows = max(1, int(workflow_max_rows_raw))
+        except ValueError:
+            workflow_max_rows = None
+    workflow_retry_timeout_raw = clean(env.get('THEREFORE_WORKFLOW_RETRY_TIMEOUT_SECONDS'))
+    if workflow_retry_timeout_raw:
+        try:
+            workflow_retry_timeout_seconds = max(1, int(workflow_retry_timeout_raw))
+        except ValueError:
+            workflow_retry_timeout_seconds = None
+    workflow_retry_count_raw = clean(env.get('THEREFORE_WORKFLOW_RETRY_COUNT'))
+    if workflow_retry_count_raw:
+        try:
+            workflow_retry_count = max(0, int(workflow_retry_count_raw))
+        except ValueError:
+            workflow_retry_count = 0
+
+    return ThereforeConfig(
+        base_url=clean(env.get('THEREFORE_BASE_URL')) or '',
+        auth_method=clean(env.get('THEREFORE_AUTH_METHOD')) or 'Basic',
+        username=clean(env.get('THEREFORE_USERNAME')),
+        password=clean(env.get('THEREFORE_PASSWORD')),
+        tenant_name=clean(env.get('THEREFORE_TENANTNAME')),
+        timeout_seconds=timeout_seconds,
+        workflow_timeout_seconds=workflow_timeout_seconds,
+        workflow_max_rows=workflow_max_rows,
+        workflow_retry_timeout_seconds=workflow_retry_timeout_seconds,
+        workflow_retry_count=workflow_retry_count,
+    )
+
+
+def normalize_tenant_key(name: str) -> str:
+    key = re.sub(r'[^a-z0-9]+', '', str(name).lower())
+    return key
+
+
+def _build_tenant_env(env: Dict[str, str], tenant_key: str) -> Dict[str, str]:
+    prefix = f"THEREFORE_{tenant_key.upper()}_"
+
+    def pick(suffix: str) -> Optional[str]:
+        return env.get(prefix + suffix) or env.get('THEREFORE_' + suffix)
+
+    tenant_env = {
+        'THEREFORE_BASE_URL': pick('BASE_URL'),
+        'THEREFORE_AUTH_METHOD': pick('AUTH_METHOD'),
+        'THEREFORE_USERNAME': pick('USERNAME'),
+        'THEREFORE_PASSWORD': pick('PASSWORD'),
+        'THEREFORE_TENANTNAME': pick('TENANTNAME'),
+        'THEREFORE_SAFE_DOC_ID': pick('SAFE_DOC_ID'),
+        'THEREFORE_SAFE_CATEGORY_ID': pick('SAFE_CATEGORY_ID'),
+        'THEREFORE_ALLOW_WRITES': pick('ALLOW_WRITES'),
+        # global workflow settings (not tenant-specific)
+        'THEREFORE_WORKFLOW_TIMEOUT_SECONDS': env.get('THEREFORE_WORKFLOW_TIMEOUT_SECONDS'),
+        'THEREFORE_WORKFLOW_MAX_ROWS': env.get('THEREFORE_WORKFLOW_MAX_ROWS'),
+    }
+    # include any extra keys for potential use
+    return {k: v for k, v in tenant_env.items() if v is not None}
+
+
+def build_tenant_configs_from_env(env: Dict[str, str]) -> tuple[Dict[str, ThereforeConfig], Optional[str], Dict[str, str]]:
+    tenants_raw = (env.get('THEREFORE_TENANTS') or '').strip()
+    if not tenants_raw:
+        cfg = build_config_from_env(env)
+        return ({'default': cfg}, 'default', {'default': 'default'})
+
+    tenants = []
+    for part in tenants_raw.split(','):
+        name = part.strip()
+        if not name:
+            continue
+        tenants.append(name)
+
+    if not tenants:
+        cfg = build_config_from_env(env)
+        return ({'default': cfg}, 'default', {'default': 'default'})
+
+    default_name = (env.get('THEREFORE_DEFAULT_TENANT') or tenants[0]).strip()
+    default_key = normalize_tenant_key(default_name)
+
+    configs: Dict[str, ThereforeConfig] = {}
+    display_names: Dict[str, str] = {}
+    for name in tenants:
+        key = normalize_tenant_key(name)
+        if not key:
+            continue
+        tenant_env = _build_tenant_env(env, name)
+        cfg = build_config_from_env(tenant_env)
+        configs[key] = cfg
+        display_names[key] = name
+
+    if default_key not in configs and configs:
+        default_key = next(iter(configs.keys()))
+
+    return configs, default_key, display_names
+
+if __name__ == '__main__':
+    # simple manual test harness
+    env = load_env('/Volumes/DataSSD/source/therefore-mcp/docs/reference/user/.env.local')
+    cfg = build_config_from_env(env)
+    client = ThereforeClient(cfg)
+
+    category_no = int(env.get('THEREFORE_SAFE_CATEGORY_ID') or '0')
+    if category_no <= 0:
+        raise SystemExit('Missing THEREFORE_SAFE_CATEGORY_ID')
+
+    stream = client.make_stream_from_text(
+        'codex_validation.txt',
+        f"Codex validation {datetime.now(timezone.utc).isoformat()}"
+    )
+
+    result = client.create_document(
+        category_no=category_no,
+        streams=[stream],
+        check_in_comments='Codex validation create/delete test',
+        with_auto_append_mode=0,
+        do_fill_dependent_fields=True,
+        run_webclient_flow=True,
+        persist_evaluate_response_path='/Volumes/DataSSD/source/therefore-mcp/docs/notes/evaluate_conditional_properties.json',
+    )
+
+    created = result['create_document']
+    doc_no = created.get('DocNo')
+    print('Created DocNo:', doc_no)
+
+    if doc_no:
+        time_str = datetime.now(timezone.utc).isoformat()
+        print('Fetched index data keys:', (client.get_document_index_data(doc_no) or {}).keys())
+        # small delay before delete
+        import time
+        time.sleep(2)
+        print('Delete response:', client.delete_document(doc_no))
