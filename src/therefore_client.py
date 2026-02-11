@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import json
+import os
 import re
 import ssl
 import urllib.request
@@ -35,13 +36,18 @@ class ThereforeClient:
         headers = {
             'Content-Type': 'application/json; charset=utf-8'
         }
-        if self.config.auth_method.lower() == 'basic':
+        method = self.config.auth_method.lower()
+        if method == 'basic':
             if not self.config.username or not self.config.password:
                 raise ValueError('Basic auth requires username/password')
             token = base64.b64encode(
                 f"{self.config.username}:{self.config.password}".encode('utf-8')
             ).decode('ascii')
             headers['Authorization'] = f'Basic {token}'
+        elif method == 'bearer':
+            if not self.config.password:
+                raise ValueError('Bearer auth requires password (token)')
+            headers['Authorization'] = f'Bearer {self.config.password}'
         if self.config.tenant_name:
             headers['TenantName'] = self.config.tenant_name
         return headers
@@ -955,6 +961,45 @@ class ThereforeClient:
             payload['ConversionOptions'] = conversion_options
         return self._post('AddStreamsToDocument', payload)
 
+    def get_converted_doc_streams(
+        self,
+        doc_no: int,
+        conversion_options: Dict[str, Any],
+        stream_nos: Optional[List[int]] = None,
+        version_no: Optional[int] = None,
+        is_file_data_base64_json_needed: Optional[bool] = None,
+        retrieve_reason: Optional[str] = None,
+        archive_converted_files: Optional[bool] = None,
+        custom_archive_file_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            'DocNo': int(doc_no),
+            'ConversionOptions': conversion_options,
+        }
+        if stream_nos is not None:
+            payload['StreamNos'] = [int(s) for s in stream_nos]
+        if version_no is not None:
+            payload['VersionNo'] = int(version_no)
+        if is_file_data_base64_json_needed is not None:
+            payload['IsFileDataBase64JSONNeeded'] = bool(is_file_data_base64_json_needed)
+        if retrieve_reason is not None:
+            payload['RetrieveReason'] = retrieve_reason
+        if archive_converted_files is not None:
+            payload['ArchiveConvertedFiles'] = bool(archive_converted_files)
+        if custom_archive_file_name is not None:
+            payload['CustomArchiveFileName'] = custom_archive_file_name
+        return self._post('GetConvertedDocStreams', payload)
+
+    def get_login_history(self, max_entries: Optional[int] = None, timestamp_from: Optional[str] = None, user_no: Optional[int] = None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {}
+        if max_entries is not None:
+            payload['MaxEntries'] = int(max_entries)
+        if timestamp_from is not None:
+            payload['TimestampFrom'] = timestamp_from
+        if user_no is not None:
+            payload['UserNo'] = int(user_no)
+        return self._post('GetLoginHistory', payload)
+
     @staticmethod
     def make_stream_from_text(filename: str, text: str) -> Dict[str, Any]:
         data = base64.b64encode(text.encode('utf-8')).decode('ascii')
@@ -967,13 +1012,18 @@ class ThereforeClient:
 
 def load_env(path: str) -> Dict[str, str]:
     values: Dict[str, str] = {}
-    with open(path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#') or '=' not in line:
-                continue
-            k, v = line.split('=', 1)
-            values[k.strip()] = v.strip()
+    if os.path.isfile(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                values[k.strip()] = v.strip()
+    # Overlay with actual environment variables (takes precedence)
+    for k, v in os.environ.items():
+        if k.startswith('THEREFORE_'):
+            values[k] = v
     return values
 
 
@@ -1096,7 +1146,8 @@ def build_tenant_configs_from_env(env: Dict[str, str]) -> tuple[Dict[str, Theref
 
 if __name__ == '__main__':
     # simple manual test harness
-    env = load_env('/Volumes/DataSSD/source/therefore-mcp/docs/reference/user/.env.local')
+    default_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.local')
+    env = load_env(os.environ.get('THEREFORE_ENV_PATH', default_env_path))
     cfg = build_config_from_env(env)
     client = ThereforeClient(cfg)
 

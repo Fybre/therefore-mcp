@@ -1,0 +1,11 @@
+services:
+  therefore-mcp:
+    build: .
+    env_file:
+      - .env.local
+    volumes:
+      - cache:/app/cache
+    stdin_open: true
+
+volumes:
+  cache:

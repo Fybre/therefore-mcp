@@ -1,0 +1,17 @@
+.env.local
+.env
+cache/
+__pycache__/
+*.pyc
+.DS_Store
+.mcp.json
+
+# Runtime caches and debug output
+docs/notes/*_cache*.json
+docs/notes/workflow_debug.log
+
+# User-specific config
+docs/reference/user/.env.local
+
+# Tenant-specific baseline/export configs (may contain client data)
+tools/config_generator/examples/*-TheConfiguration.xml

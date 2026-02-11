@@ -1,0 +1,37 @@
+# Example description/spec (YAML)
+# This file is optional; the generator can also parse natural language.
+
+category:
+  name: "My New Category"
+  folder: "Testing for Codex"
+  description: "Created by generator"
+
+fields:
+  - name: "My text field 50"
+    type: text
+    length: 50
+
+  - name: "my number field"
+    type: number
+    length: 10
+
+  - name: "my decimal field"
+    type: decimal
+    length: 10
+    scale: 4
+
+  - name: "Codex Test Dictionary"
+    type: keyword_single
+    dictionary:
+      mode: create
+      name: "Codex Test Dictionary"
+      keywords:
+        - "Value 1"
+        - "Value 2"
+        - "Value 3"
+
+  - name: "Yes No Keyword Field - already existed"
+    type: keyword_single
+    dictionary:
+      mode: existing
+      name: "Yes No"

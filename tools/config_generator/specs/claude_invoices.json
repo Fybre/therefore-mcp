@@ -1,0 +1,60 @@
+{
+  "category": {
+    "name": "Claude Invoices",
+    "folder": "AI Classification",
+    "description": "Invoice category created by Claude Code",
+    "folder_conflict_policy": "use-existing",
+    "dictionary_conflict_policy": "unique"
+  },
+  "fields": [
+    {
+      "name": "Supplier",
+      "type": "text",
+      "length": 100
+    },
+    {
+      "name": "Supplier Contact",
+      "type": "text",
+      "length": 100
+    },
+    {
+      "name": "Invoice No",
+      "type": "text",
+      "length": 50
+    },
+    {
+      "name": "Purchase Order",
+      "type": "text",
+      "length": 50
+    },
+    {
+      "name": "Line Items",
+      "type": "table",
+      "columns": [
+        { "name": "Item Code", "type": "text", "length": 50 },
+        { "name": "Description", "type": "text", "length": 200 },
+        { "name": "Quantity", "type": "number", "length": 10 },
+        { "name": "Total Price", "type": "decimal", "length": 10, "scale": 2 }
+      ]
+    },
+    {
+      "name": "Invoice Total",
+      "type": "decimal",
+      "length": 10,
+      "scale": 2
+    },
+    {
+      "name": "Status",
+      "type": "keyword_single",
+      "dictionary": {
+        "mode": "create",
+        "name": "Status",
+        "keywords": [
+          "Needs Approval",
+          "Approval",
+          "Rejected"
+        ]
+      }
+    }
+  ]
+}

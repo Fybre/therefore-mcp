@@ -5,10 +5,25 @@ import os
 import re
 import sys
 import traceback
+
+# Ensure sibling modules (therefore_client) are importable regardless of cwd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Repo root for locating tools/config_generator
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(_REPO_ROOT, 'tools', 'config_generator'))
 import difflib
 import time
 import threading
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+
+try:
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover - fallback for older environments
+    ZoneInfo = None
 
 from therefore_client import (
     ThereforeClient,
@@ -19,33 +34,20 @@ from therefore_client import (
 
 
 def _read_message() -> Optional[Dict[str, Any]]:
-    """Read LSP-style framed JSON message from stdin."""
-    header_bytes = b""
-    while True:
-        line = sys.stdin.buffer.readline()
-        if not line:
-            return None
-        if line in (b"\r\n", b"\n"):
-            break
-        header_bytes += line
-    headers = header_bytes.decode('utf-8', errors='replace').splitlines()
-    content_length = None
-    for h in headers:
-        if h.lower().startswith('content-length:'):
-            content_length = int(h.split(':', 1)[1].strip())
-            break
-    if content_length is None:
+    """Read a newline-delimited JSON-RPC message from stdin (MCP stdio transport)."""
+    line = sys.stdin.buffer.readline()
+    if not line:
         return None
-    body = sys.stdin.buffer.read(content_length)
-    if not body:
+    line = line.strip()
+    if not line:
         return None
-    return json.loads(body.decode('utf-8', errors='replace'))
+    return json.loads(line.decode('utf-8', errors='replace'))
 
 
 def _write_message(payload: Dict[str, Any]) -> None:
-    data = json.dumps(payload).encode('utf-8')
-    sys.stdout.buffer.write(f"Content-Length: {len(data)}\r\n\r\n".encode('utf-8'))
-    sys.stdout.buffer.write(data)
+    """Write a newline-delimited JSON-RPC message to stdout (MCP stdio transport)."""
+    data = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+    sys.stdout.buffer.write(data + b'\n')
     sys.stdout.buffer.flush()
 
 
@@ -294,14 +296,14 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "execute_users_query",
-            "description": "Query users by name or other text.",
+            "description": "Query users by name or other text. Use an empty string to return all users.",
             "inputSchema": {
                 "type": "object",
                 "required": ["query"],
                 "properties": {
-                    "query": {"type": "string"},
+                    "query": {"type": "string", "description": "Search text to match against user names, display names, and email. Use empty string to return all users."},
                     "domain_names": {"type": "array", "items": {"type": "string"}},
-                    "flags": {"type": "integer", "default": 0}
+                    "flags": {"type": "integer", "default": 5}
                 }
             },
         },
@@ -402,9 +404,9 @@ def build_tools() -> List[Dict[str, Any]]:
                     "dictionary_name": {"type": "string"},
                     "dictionary_type_no": {"type": "integer"},
                     "is_keyword_deactivated": {"type": "boolean"},
-                    "check_existing": {"type": "boolean", "default": true},
-                    "ignore_if_exists": {"type": "boolean", "default": true},
-                    "include_deactivated_keywords": {"type": "boolean", "default": true}
+                    "check_existing": {"type": "boolean", "default": True},
+                    "ignore_if_exists": {"type": "boolean", "default": True},
+                    "include_deactivated_keywords": {"type": "boolean", "default": True}
                 }
             },
         },
@@ -422,9 +424,9 @@ def build_tools() -> List[Dict[str, Any]]:
                     "keyword_name": {"type": "string", "description": "Existing keyword to rename"},
                     "new_keyword_name": {"type": "string"},
                     "is_keyword_deactivated": {"type": "boolean"},
-                    "check_existing": {"type": "boolean", "default": true},
-                    "ignore_if_exists": {"type": "boolean", "default": true},
-                    "include_deactivated_keywords": {"type": "boolean", "default": true}
+                    "check_existing": {"type": "boolean", "default": True},
+                    "ignore_if_exists": {"type": "boolean", "default": True},
+                    "include_deactivated_keywords": {"type": "boolean", "default": True}
                 }
             },
         },
@@ -440,7 +442,7 @@ def build_tools() -> List[Dict[str, Any]]:
                     "dictionary_type_no": {"type": "integer"},
                     "keyword_id": {"type": "integer"},
                     "keyword_name": {"type": "string"},
-                    "include_deactivated_keywords": {"type": "boolean", "default": true}
+                    "include_deactivated_keywords": {"type": "boolean", "default": True}
                 }
             },
         },
@@ -456,7 +458,7 @@ def build_tools() -> List[Dict[str, Any]]:
                     "dictionary_type_no": {"type": "integer"},
                     "keyword_id": {"type": "integer"},
                     "keyword_name": {"type": "string"},
-                    "include_deactivated_keywords": {"type": "boolean", "default": true}
+                    "include_deactivated_keywords": {"type": "boolean", "default": True}
                 }
             },
         },
@@ -467,7 +469,15 @@ def build_tools() -> List[Dict[str, Any]]:
                 "type": "object",
                 "properties": {
                     "workflow_flags": {"type": "integer", "default": 0},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."}
+                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
+                    "include_instance_details": {"type": "boolean", "default": False},
+                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
+                    "max_instance_workers": {"type": "integer", "default": 4},
+                    "is_access_mask_needed": {"type": "boolean", "default": False},
+                    "load_history": {"type": "boolean", "default": False},
+                    "debug": {"type": "boolean", "default": False},
+                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
+                    "debug_progress_every": {"type": "integer", "default": 500}
                 }
             },
         },
@@ -480,7 +490,15 @@ def build_tools() -> List[Dict[str, Any]]:
                 "properties": {
                     "process_no": {"type": "integer"},
                     "workflow_flags": {"type": "integer", "default": 0},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."}
+                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
+                    "include_instance_details": {"type": "boolean", "default": False},
+                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
+                    "max_instance_workers": {"type": "integer", "default": 4},
+                    "is_access_mask_needed": {"type": "boolean", "default": False},
+                    "load_history": {"type": "boolean", "default": False},
+                    "debug": {"type": "boolean", "default": False},
+                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
+                    "debug_progress_every": {"type": "integer", "default": 500}
                 }
             },
         },
@@ -555,7 +573,7 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "get_my_workflow_tasks",
-            "description": "List workflow tasks for the connected user. Defaults to running instances.",
+            "description": "List workflow tasks for the connected user. Defaults to running instances. Uses GetWorkflowInstance for assignment/state.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -568,7 +586,89 @@ def build_tools() -> List[Dict[str, Any]]:
                     "assignee_values": {"type": "array", "items": {"type": "string"}, "description": "Optional extra assignee/group names to include when filtering."},
                     "resolve_group_membership": {"type": "boolean", "default": True},
                     "user_query": {"type": "string", "description": "Optional user search string (e.g., full name)."},
-                    "user_query_flags": {"type": "integer", "default": 5}
+                    "user_query_flags": {"type": "integer", "default": 5},
+                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
+                    "max_instance_workers": {"type": "integer", "default": 4},
+                    "is_access_mask_needed": {"type": "boolean", "default": False},
+                    "load_history": {"type": "boolean", "default": False},
+                    "debug": {"type": "boolean", "default": False},
+                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
+                    "debug_progress_every": {"type": "integer", "default": 500},
+                    "two_phase": {"type": "boolean", "default": False},
+                    "fetch_details": {"type": "boolean", "default": False}
+                }
+            },
+        },
+        {
+            "name": "get_my_workflow_instances",
+            "description": "List workflow instances for the connected user (assignment/state from GetWorkflowInstance).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
+                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
+                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
+                    "include_overdue_summary": {"type": "boolean", "default": True},
+                    "assignee_values": {"type": "array", "items": {"type": "string"}, "description": "Optional extra assignee/group names to include when filtering."},
+                    "resolve_group_membership": {"type": "boolean", "default": True},
+                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
+                    "max_instance_workers": {"type": "integer", "default": 4},
+                    "is_access_mask_needed": {"type": "boolean", "default": False},
+                    "load_history": {"type": "boolean", "default": False},
+                    "debug": {"type": "boolean", "default": False},
+                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
+                    "debug_progress_every": {"type": "integer", "default": 500},
+                    "two_phase": {"type": "boolean", "default": False},
+                    "fetch_details": {"type": "boolean", "default": False}
+                }
+            },
+        },
+        {
+            "name": "get_all_workflow_instances",
+            "description": "List workflow instances for all assignees (optionally enrich with GetWorkflowInstance).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
+                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
+                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
+                    "include_overdue_summary": {"type": "boolean", "default": True},
+                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
+                    "max_instance_workers": {"type": "integer", "default": 4},
+                    "is_access_mask_needed": {"type": "boolean", "default": False},
+                    "load_history": {"type": "boolean", "default": False},
+                    "debug": {"type": "boolean", "default": False},
+                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
+                    "debug_progress_every": {"type": "integer", "default": 500},
+                    "two_phase": {"type": "boolean", "default": False},
+                    "fetch_details": {"type": "boolean", "default": False}
+                }
+            },
+        },
+        {
+            "name": "get_workflow_instances_for_user",
+            "description": "List workflow instances for a resolved user (assignment/state from GetWorkflowInstance).",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_query"],
+                "properties": {
+                    "user_query": {"type": "string", "description": "User search string (e.g., full name or username)."},
+                    "user_query_flags": {"type": "integer", "default": 5},
+                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
+                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
+                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
+                    "include_overdue_summary": {"type": "boolean", "default": True},
+                    "assignee_values": {"type": "array", "items": {"type": "string"}, "description": "Optional extra assignee/group names to include when filtering."},
+                    "resolve_group_membership": {"type": "boolean", "default": True},
+                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
+                    "max_instance_workers": {"type": "integer", "default": 4},
+                    "is_access_mask_needed": {"type": "boolean", "default": False},
+                    "load_history": {"type": "boolean", "default": False},
+                    "debug": {"type": "boolean", "default": False},
+                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
+                    "debug_progress_every": {"type": "integer", "default": 500},
+                    "two_phase": {"type": "boolean", "default": False},
+                    "fetch_details": {"type": "boolean", "default": False}
                 }
             },
         },
@@ -871,6 +971,189 @@ def build_tools() -> List[Dict[str, Any]]:
                 }
             },
         },
+        {
+            "name": "get_converted_doc_streams",
+            "description": (
+                "Retrieve document streams converted server-side to a target format "
+                "(PDF, TIFF, JPEG, etc.) via the GetConvertedDocStreams WebAPI endpoint. "
+                "Returns the converted file data as base64-encoded streams."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no", "convert_to"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number"},
+                    "convert_to": {
+                        "description": (
+                            "Target conversion format. Accepts string names or numeric values: "
+                            "Original (0), SingleTIFF (1), SinglePDF (2), MultipageTIFF (3), "
+                            "MultipagePDF (4), SearchablePDF (5), SearchablePDFA (6), JPEG (50)"
+                        )
+                    },
+                    "annotation_mode": {
+                        "description": "Annotation handling: Default (0), Merge (1), Hide (2)"
+                    },
+                    "signature_mode": {
+                        "description": (
+                            "Signature handling: NoSignature (0), SignatureOnly (1), "
+                            "SignatureAndTimestamp (2)"
+                        )
+                    },
+                    "certificate_name": {"type": "string", "description": "Certificate name for signing"},
+                    "time_stamp_server": {"type": "string", "description": "Timestamp server URL"},
+                    "time_stamp_user": {"type": "string", "description": "Timestamp server username"},
+                    "time_stamp_pwd": {"type": "string", "description": "Timestamp server password"},
+                    "multipage_stream_name": {"type": "string", "description": "Output filename for multipage conversions"},
+                    "stream_nos": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Specific stream numbers to convert (omit for all streams)"
+                    },
+                    "version_no": {"type": "integer", "description": "Document version number (omit for latest)"},
+                    "retrieve_reason": {"type": "string", "description": "Reason for retrieval (audit trail)"},
+                    "archive_converted_files": {"type": "boolean", "description": "Archive converted files back to the document"},
+                    "custom_archive_file_name": {"type": "string", "description": "Custom filename when archiving converted files"},
+                }
+            },
+        },
+        {
+            "name": "get_logfiles",
+            "description": (
+                "Retrieve and parse Therefore server log files from the system "
+                "Logfiles category (ID 1). Fetches document streams, decodes base64, "
+                "and parses pipe-delimited entries into structured data."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "days_back": {
+                        "type": "integer",
+                        "description": "Number of days to look back (default: 7)",
+                    },
+                    "application_filter": {
+                        "type": "string",
+                        "description": "Filter by application name (e.g. 'Therefore Server')",
+                    },
+                    "max_docs": {
+                        "type": "integer",
+                        "description": "Maximum number of log documents to retrieve (default: 10)",
+                    },
+                    "include_raw": {
+                        "type": "boolean",
+                        "description": "Include raw stream text in response (default: false)",
+                    },
+                    "output_mode": {
+                        "type": "string",
+                        "enum": ["analysis", "summary", "full"],
+                        "description": (
+                            "Output mode: 'analysis' (default) returns compact statistics with "
+                            "grouped error summaries — fits in LLM context; 'summary' returns "
+                            "statistics plus every individual error entry; 'full' returns all "
+                            "individual entries per document."
+                        ),
+                    },
+                    "severity_filter": {
+                        "type": "string",
+                        "enum": ["all", "errors_only"],
+                        "description": "Filter entries: 'all' (default) processes everything; 'errors_only' skips non-error entries for faster processing.",
+                    },
+                }
+            },
+        },
+        {
+            "name": "get_login_history",
+            "description": (
+                "Retrieve and analyse Therefore login history. Shows authentication attempts "
+                "including successes, failures, client applications, IP addresses, and server nodes. "
+                "When username is provided, returns history for that single user (fuzzy-matched). "
+                "When username is omitted, enumerates all tenant users and fetches history for each, "
+                "providing a per-user breakdown. "
+                "Use 'analysis' mode for a compact summary with failure rates and breakdowns by "
+                "user, day, client, IP, node, and error code; 'full' mode returns all raw entries."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "days_back": {
+                        "type": "integer",
+                        "description": "Number of days of history to retrieve (default 7).",
+                    },
+                    "username": {
+                        "type": "string",
+                        "description": (
+                            "Optional username to filter by. Fuzzy-matched to resolve the user. "
+                            "Omit for tenant-wide login history."
+                        ),
+                    },
+                    "max_entries": {
+                        "type": "integer",
+                        "description": "Maximum number of login entries per user to retrieve (default 1000).",
+                    },
+                    "output_mode": {
+                        "type": "string",
+                        "enum": ["analysis", "full"],
+                        "description": (
+                            "Output format: 'analysis' (default) returns statistics with breakdowns "
+                            "by day, client, IP, node, and error code; 'full' returns all raw entries."
+                        ),
+                    },
+                },
+            },
+        },
+        {
+            "name": "generate_category_config",
+            "description": (
+                "Generate a Therefore category configuration delta XML from a structured spec or "
+                "natural language description. The generated XML can be imported into Therefore to "
+                "create a new category with fields, keyword dictionaries, folder, and auto-layout. "
+                "Provide EITHER 'spec' (structured JSON) OR 'description' (natural language/text), not both."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "spec": {
+                        "type": "object",
+                        "description": (
+                            "Structured category spec as JSON. Must contain 'category' (with 'name', optional "
+                            "'folder', 'description', 'force_new_folder', 'folder_conflict_policy', "
+                            "'dictionary_conflict_policy') and 'fields' array. Each field has 'name', 'type' "
+                            "(text|number|decimal|date|keyword_single|table), optional 'length', 'scale', "
+                            "'dictionary' (with 'mode', 'name', 'keywords'), or 'columns' (for table type)."
+                        ),
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": (
+                            "Natural language description of the category to create. Include category name, "
+                            "folder, and field definitions. Example: 'Create an Invoice category in folder "
+                            "\"Accounting\" with text field \"Invoice Number\", date field \"Invoice Date\", "
+                            "decimal field \"Total Amount\"'."
+                        ),
+                    },
+                    "baseline_path": {
+                        "type": "string",
+                        "description": (
+                            "Path to baseline TheConfiguration.xml export. If omitted, uses "
+                            "THEREFORE_CONFIG_BASELINE_PATH env var or default per-tenant path."
+                        ),
+                    },
+                    "api_check": {
+                        "type": "boolean",
+                        "description": (
+                            "Whether to use the Therefore API to check for existing folders and "
+                            "dictionaries. Defaults to true."
+                        ),
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": (
+                            "Optional output file path for the generated XML. If omitted, auto-generates "
+                            "a path under docs/notes/generated_configs/."
+                        ),
+                    },
+                },
+            },
+        },
     ]
 
     # Add optional tenant selection to all tools.
@@ -892,6 +1175,27 @@ def build_tools() -> List[Dict[str, Any]]:
     return tools
 
 
+def build_prompts() -> List[Dict[str, Any]]:
+    """Build the list of MCP prompts exposed by this server."""
+    return [
+        {
+            'name': 'create-category',
+            'description': (
+                'Interactive guide for creating a new Therefore category configuration. '
+                'Walks through gathering requirements, building a structured spec, and '
+                'generating the delta XML via the generate_category_config tool.'
+            ),
+            'arguments': [
+                {
+                    'name': 'description',
+                    'description': 'Optional starting description of the category to create.',
+                    'required': False,
+                },
+            ],
+        },
+    ]
+
+
 class MCPServer:
     def __init__(
         self,
@@ -906,18 +1210,21 @@ class MCPServer:
         self.tenant_labels = tenant_labels
         self.tenant_assignee_aliases = tenant_assignee_aliases or {}
         self.tools = build_tools()
+        self.prompts = build_prompts()
+        cache_dir = os.environ.get('THEREFORE_CACHE_DIR') or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cache')
+        os.makedirs(cache_dir, exist_ok=True)
         self._category_cache: Dict[str, Dict[str, Any]] = {}
         self._category_cache_ts: Dict[str, float] = {}
         self._category_cache_ttl: int = 300
-        self._category_cache_path = '/Volumes/DataSSD/source/therefore-mcp/docs/notes/category_cache_{tenant}.json'
+        self._category_cache_path = os.path.join(cache_dir, 'category_cache_{tenant}.json')
         self._field_cache: Dict[str, Dict[int, Dict[str, Any]]] = {}
         self._field_cache_ts: Dict[str, Dict[int, float]] = {}
         self._field_cache_ttl: int = 300
-        self._field_cache_path = '/Volumes/DataSSD/source/therefore-mcp/docs/notes/field_cache_{tenant}.json'
+        self._field_cache_path = os.path.join(cache_dir, 'field_cache_{tenant}.json')
         self._keyword_dict_cache: Dict[str, Dict[str, Any]] = {}
         self._keyword_dict_cache_ts: Dict[str, float] = {}
         self._keyword_dict_cache_ttl: int = 300
-        self._keyword_dict_cache_path = '/Volumes/DataSSD/source/therefore-mcp/docs/notes/keyword_dictionary_cache_{tenant}.json'
+        self._keyword_dict_cache_path = os.path.join(cache_dir, 'keyword_dictionary_cache_{tenant}.json')
 
     def handle(self, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         method = msg.get('method')
@@ -928,14 +1235,15 @@ class MCPServer:
             return _result_response(msg_id, {
                 'protocolVersion': '2024-11-05',
                 'capabilities': {
-                    'tools': {'listChanged': False}
+                    'tools': {'listChanged': False},
+                    'prompts': {'listChanged': False},
                 },
                 'serverInfo': {
                     'name': 'therefore-mcp',
                     'version': '0.1.0'
                 }
             })
-        if method == 'initialized':
+        if method in ('initialized', 'notifications/initialized'):
             return None
         if method == 'tools/list':
             return _result_response(msg_id, {'tools': self.tools})
@@ -953,8 +1261,113 @@ class MCPServer:
                     }],
                     'isError': True
                 })
+        if method == 'prompts/list':
+            return _result_response(msg_id, {'prompts': self.prompts})
+        if method == 'prompts/get':
+            try:
+                result = self._get_prompt(params)
+                return _result_response(msg_id, result)
+            except Exception as e:
+                return _error_response(msg_id, -32602, str(e))
+
+        # Silently ignore any other notifications (no id → no response expected).
+        if msg_id is None:
+            return None
 
         return _error_response(msg_id, -32601, f"Method not found: {method}")
+
+    def _get_prompt(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        name = params.get('name')
+        arguments = params.get('arguments') or {}
+        if name == 'create-category':
+            return self._prompt_create_category(arguments)
+        raise ValueError(f"Unknown prompt: {name}")
+
+    def _prompt_create_category(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        description = arguments.get('description', '')
+        prompt_text = """\
+You are helping the user create a new Therefore™ category configuration.
+
+## Supported Field Types
+- **text**: Free-text string field. Optional `length` (default 50).
+- **number**: Integer field. Optional `length` (default 10).
+- **decimal**: Decimal/currency field. Optional `length` (default 10), `scale` (default 2).
+- **date**: Date field.
+- **keyword_single**: Single-select keyword dropdown backed by a dictionary.
+- **table**: Table/grid with typed columns.
+
+## JSON Spec Format
+```json
+{
+  "category": {
+    "name": "Invoice",
+    "folder": "Accounting",
+    "description": "Supplier invoices",
+    "folder_conflict_policy": "use-existing",
+    "dictionary_conflict_policy": "use-existing"
+  },
+  "fields": [
+    {"name": "Invoice Number", "type": "text", "length": 30},
+    {"name": "Invoice Date", "type": "date"},
+    {"name": "Amount", "type": "decimal", "length": 12, "scale": 2},
+    {"name": "Quantity", "type": "number"},
+    {
+      "name": "Status",
+      "type": "keyword_single",
+      "dictionary": {
+        "mode": "create",
+        "name": "Invoice Status",
+        "keywords": ["Draft", "Pending", "Approved", "Paid"]
+      }
+    },
+    {
+      "name": "Line Items",
+      "type": "table",
+      "columns": [
+        {"name": "Description", "type": "text", "length": 100},
+        {"name": "Qty", "type": "number"},
+        {"name": "Unit Price", "type": "decimal", "scale": 2},
+        {"name": "Total", "type": "decimal", "scale": 2}
+      ]
+    }
+  ]
+}
+```
+
+## Dictionary Modes
+- `"create"`: Create a new keyword dictionary with the given keywords.
+- `"existing"`: Reference an existing dictionary by name (must exist in baseline or tenant).
+
+## Conflict Policies
+- `folder_conflict_policy`: What to do when a folder with the same name exists.
+  - `"use-existing"` (default): Reuse the existing folder.
+  - `"unique"`: Create with a unique suffix.
+  - `"error"`: Fail if exists.
+- `dictionary_conflict_policy`: Same options, for keyword dictionaries.
+
+## Workflow
+1. **Gather requirements**: Ask the user what category they want, what fields it needs, which folder it belongs in.
+2. **Build the spec**: Construct the JSON spec object with all fields, types, and dictionaries.
+3. **Generate**: Call the `generate_category_config` tool with the `spec` parameter.
+4. **Review**: Present the result to the user — the generated XML content and output file path.
+
+Keep it conversational. Ask clarifying questions if the user's requirements are ambiguous.
+"""
+        if description:
+            prompt_text += f"\n## Starting Point\nThe user provided this initial description:\n\n{description}\n"
+
+        return {
+            'description': 'Interactive guide for creating a Therefore category configuration.',
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': {
+                        'type': 'text',
+                        'text': prompt_text,
+                    },
+                },
+            ],
+        }
 
     def _call_tool(self, name: str, args: Dict[str, Any]) -> Any:
         tenant = self._resolve_tenant(args)
@@ -1009,14 +1422,24 @@ class MCPServer:
         if name == 'get_objects_list':
             return client.get_objects_list(args['load_items_list'])
         if name == 'get_objects':
-            return client.get_objects(
+            resp = client.get_objects(
                 flags=int(args['flags']),
                 obj_type=int(args['obj_type']),
             )
+            # Normalize items across GetObjects/GetObjectsList payload shapes.
+            resp['items'] = self._extract_object_items(resp)
+            return resp
         if name == 'execute_users_query':
+            domain_names = args.get('domain_names')
+            if domain_names is None:
+                try:
+                    domain_info = client.get_domain_info() or {}
+                    domain_names = domain_info.get('DomainNames') or []
+                except Exception:
+                    domain_names = None
             return client.execute_users_query(
                 query=args['query'],
-                domain_names=args.get('domain_names'),
+                domain_names=domain_names,
                 flags=int(args.get('flags', 5)),
             )
         if name == 'get_users_from_group':
@@ -1062,24 +1485,242 @@ class MCPServer:
         if name == 'deactivate_dictionary_keyword':
             return self._deactivate_dictionary_keyword(args, tenant, client)
         if name == 'execute_workflow_query_for_all':
+            debug_enabled = bool(args.get('debug', False))
+            debug_log_path = args.get('debug_log_path')
+            debug_progress_every = int(args.get('debug_progress_every') or 500)
+            debug_info: Dict[str, Any] = {
+                'workflow_query': {},
+                'instance_details': {},
+            } if debug_enabled else {}
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'start',
+                    'workflow_flags': args.get('workflow_flags'),
+                    'max_rows': args.get('max_rows'),
+                    'detail_mode': args.get('instance_detail_mode'),
+                })
             if args.get('max_rows') is None:
-                max_rows = int(client.config.workflow_max_rows or 1000)
+                max_rows = self._default_workflow_max_rows(client)
             else:
                 max_rows = int(args.get('max_rows', 1000))
-            return client.execute_workflow_query_for_all(
-                workflow_flags=self._normalize_workflow_flags(args.get('workflow_flags', 0)),
-                max_rows=max_rows,
+            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 0))
+            start = time.time()
+            try:
+                resp = client.execute_workflow_query_for_all(
+                    workflow_flags=workflow_flags,
+                    max_rows=max_rows,
+                )
+            except Exception as exc:
+                if debug_enabled:
+                    debug_info['workflow_query'] = {
+                        'workflow_flags': workflow_flags,
+                        'max_rows': max_rows,
+                        'duration_ms': int((time.time() - start) * 1000),
+                        'error': str(exc),
+                    }
+                    if debug_log_path:
+                        self._debug_log(debug_log_path, {
+                            'event': 'workflow_query_error',
+                            'workflow_flags': workflow_flags,
+                            'max_rows': max_rows,
+                            'error': str(exc),
+                        })
+                    return {'error': str(exc), 'debug': debug_info}
+                raise
+            if debug_enabled:
+                debug_info['workflow_query'] = {
+                    'workflow_flags': workflow_flags,
+                    'max_rows': max_rows,
+                    'duration_ms': int((time.time() - start) * 1000),
+                }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'workflow_query_done',
+                    'workflow_flags': workflow_flags,
+                    'max_rows': max_rows,
+                    'duration_ms': int((time.time() - start) * 1000),
+                })
+            if not args.get('include_instance_details'):
+                output = {'workflow_query': resp, 'debug': debug_info} if debug_enabled else resp
+                if debug_log_path:
+                    self._debug_log(debug_log_path, {'event': 'done'})
+                return output
+            detail_mode = str(args.get('instance_detail_mode') or 'summary').strip().lower()
+            if detail_mode == 'none':
+                detail_mode = 'summary'
+            tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
+            max_rows_reached = len(tasks) == max_rows
+            details_start = time.time()
+            details, detail_errors = self._fetch_workflow_instance_details(
+                client,
+                tasks,
+                max_workers=int(args.get('max_instance_workers') or 4),
+                is_access_mask_needed=bool(args.get('is_access_mask_needed', False)),
+                load_history=bool(args.get('load_history', False)),
+                debug_log_path=debug_log_path,
+                debug_progress_every=debug_progress_every,
             )
+            if debug_enabled:
+                debug_info['instance_details'] = {
+                    'mode': detail_mode,
+                    'requested': len(tasks),
+                    'loaded': len(details),
+                    'failed': len(detail_errors),
+                    'duration_ms': int((time.time() - details_start) * 1000),
+                    'errors_sample': detail_errors[:10],
+                }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'instance_details_done',
+                    'requested': len(tasks),
+                    'loaded': len(details),
+                    'failed': len(detail_errors),
+                    'duration_ms': int((time.time() - details_start) * 1000),
+                })
+            self._attach_instance_details(tasks, details, detail_errors, detail_mode)
+            output = {
+                'workflow_query': resp,
+                'instances': tasks,
+                'user_field_labels': user_field_labels,
+                'max_rows': max_rows,
+                'max_rows_reached': max_rows_reached,
+                'total_count': len(tasks),
+                'note': 'Reached max_rows; results may be truncated. Increase max_rows to fetch more.' if max_rows_reached else None,
+                'instance_detail_mode': detail_mode,
+                'instance_details_loaded': len(details),
+                'instance_details_failed': len(detail_errors),
+                'instance_detail_errors': detail_errors,
+                'debug': debug_info if debug_enabled else None,
+            }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'done',
+                    'total_count': len(tasks),
+                    'max_rows_reached': max_rows_reached,
+                })
+            return output
         if name == 'execute_workflow_query_for_process':
+            debug_enabled = bool(args.get('debug', False))
+            debug_log_path = args.get('debug_log_path')
+            debug_progress_every = int(args.get('debug_progress_every') or 500)
+            debug_info: Dict[str, Any] = {
+                'workflow_query': {},
+                'instance_details': {},
+            } if debug_enabled else {}
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'start',
+                    'process_no': args.get('process_no'),
+                    'workflow_flags': args.get('workflow_flags'),
+                    'max_rows': args.get('max_rows'),
+                    'detail_mode': args.get('instance_detail_mode'),
+                })
             if args.get('max_rows') is None:
-                max_rows = int(client.config.workflow_max_rows or 1000)
+                max_rows = self._default_workflow_max_rows(client)
             else:
                 max_rows = int(args.get('max_rows', 1000))
-            return client.execute_workflow_query_for_process(
-                process_no=int(args['process_no']),
-                workflow_flags=self._normalize_workflow_flags(args.get('workflow_flags', 0)),
-                max_rows=max_rows,
+            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 0))
+            process_no = int(args['process_no'])
+            start = time.time()
+            try:
+                resp = client.execute_workflow_query_for_process(
+                    process_no=process_no,
+                    workflow_flags=workflow_flags,
+                    max_rows=max_rows,
+                )
+            except Exception as exc:
+                if debug_enabled:
+                    debug_info['workflow_query'] = {
+                        'process_no': process_no,
+                        'workflow_flags': workflow_flags,
+                        'max_rows': max_rows,
+                        'duration_ms': int((time.time() - start) * 1000),
+                        'error': str(exc),
+                    }
+                    if debug_log_path:
+                        self._debug_log(debug_log_path, {
+                            'event': 'workflow_query_error',
+                            'process_no': process_no,
+                            'workflow_flags': workflow_flags,
+                            'max_rows': max_rows,
+                            'error': str(exc),
+                        })
+                    return {'error': str(exc), 'debug': debug_info}
+                raise
+            if debug_enabled:
+                debug_info['workflow_query'] = {
+                    'process_no': process_no,
+                    'workflow_flags': workflow_flags,
+                    'max_rows': max_rows,
+                    'duration_ms': int((time.time() - start) * 1000),
+                }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'workflow_query_done',
+                    'process_no': process_no,
+                    'workflow_flags': workflow_flags,
+                    'max_rows': max_rows,
+                    'duration_ms': int((time.time() - start) * 1000),
+                })
+            if not args.get('include_instance_details'):
+                output = {'workflow_query': resp, 'debug': debug_info} if debug_enabled else resp
+                if debug_log_path:
+                    self._debug_log(debug_log_path, {'event': 'done'})
+                return output
+            detail_mode = str(args.get('instance_detail_mode') or 'summary').strip().lower()
+            if detail_mode == 'none':
+                detail_mode = 'summary'
+            tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
+            max_rows_reached = len(tasks) == max_rows
+            details_start = time.time()
+            details, detail_errors = self._fetch_workflow_instance_details(
+                client,
+                tasks,
+                max_workers=int(args.get('max_instance_workers') or 4),
+                is_access_mask_needed=bool(args.get('is_access_mask_needed', False)),
+                load_history=bool(args.get('load_history', False)),
+                debug_log_path=debug_log_path,
+                debug_progress_every=debug_progress_every,
             )
+            if debug_enabled:
+                debug_info['instance_details'] = {
+                    'mode': detail_mode,
+                    'requested': len(tasks),
+                    'loaded': len(details),
+                    'failed': len(detail_errors),
+                    'duration_ms': int((time.time() - details_start) * 1000),
+                    'errors_sample': detail_errors[:10],
+                }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'instance_details_done',
+                    'requested': len(tasks),
+                    'loaded': len(details),
+                    'failed': len(detail_errors),
+                    'duration_ms': int((time.time() - details_start) * 1000),
+                })
+            self._attach_instance_details(tasks, details, detail_errors, detail_mode)
+            output = {
+                'workflow_query': resp,
+                'instances': tasks,
+                'user_field_labels': user_field_labels,
+                'max_rows': max_rows,
+                'max_rows_reached': max_rows_reached,
+                'total_count': len(tasks),
+                'note': 'Reached max_rows; results may be truncated. Increase max_rows to fetch more.' if max_rows_reached else None,
+                'instance_detail_mode': detail_mode,
+                'instance_details_loaded': len(details),
+                'instance_details_failed': len(detail_errors),
+                'instance_detail_errors': detail_errors,
+                'debug': debug_info if debug_enabled else None,
+            }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'done',
+                    'total_count': len(tasks),
+                    'max_rows_reached': max_rows_reached,
+                })
+            return output
         if name == 'get_linked_workflows_for_doc':
             return client.get_linked_workflows_for_doc(
                 doc_no=int(args['doc_no']),
@@ -1116,6 +1757,24 @@ class MCPServer:
             )
         if name == 'get_my_workflow_tasks':
             return self._get_my_workflow_tasks(args, tenant, client)
+        if name == 'get_my_workflow_instances':
+            args = dict(args or {})
+            args['filter_to_user'] = True
+            output = self._get_workflow_instances_core(args, tenant, client)
+            output['tasks'] = output.get('instances', [])
+            return output
+        if name == 'get_all_workflow_instances':
+            args = dict(args or {})
+            args['filter_to_user'] = False
+            output = self._get_workflow_instances_core(args, tenant, client)
+            output['tasks'] = output.get('instances', [])
+            return output
+        if name == 'get_workflow_instances_for_user':
+            args = dict(args or {})
+            args['filter_to_user'] = True
+            output = self._get_workflow_instances_core(args, tenant, client)
+            output['tasks'] = output.get('instances', [])
+            return output
         if name == 'execute_single_query':
             query = args['query']
             categories = self._extract_category_list(query)
@@ -1256,8 +1915,81 @@ class MCPServer:
             return self._add_streams_to_document(args, tenant, client)
         if name == 'delete_document':
             return client.delete_document(int(args['doc_no']))
+        if name == 'get_converted_doc_streams':
+            return self._get_converted_doc_streams(args, tenant, client)
+        if name == 'get_logfiles':
+            return self._get_logfiles(args, tenant, client)
+        if name == 'get_login_history':
+            return self._get_login_history(args, tenant, client)
+        if name == 'generate_category_config':
+            return self._generate_category_config(args, tenant, client)
 
         raise ValueError(f'Unknown tool: {name}')
+
+    def _generate_category_config(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+        import xml.etree.ElementTree as ET
+        from generate import spec_from_mapping, parse_description, build_delta_xml
+
+        spec_obj = args.get('spec')
+        description = args.get('description')
+        if spec_obj and description:
+            raise ValueError("Provide either 'spec' or 'description', not both.")
+        if not spec_obj and not description:
+            raise ValueError("Provide either 'spec' (structured JSON) or 'description' (natural language text).")
+
+        if spec_obj:
+            spec = spec_from_mapping(spec_obj)
+        else:
+            spec = parse_description(description)
+
+        # Resolve baseline path
+        baseline_path = args.get('baseline_path')
+        if not baseline_path:
+            baseline_path = os.environ.get('THEREFORE_CONFIG_BASELINE_PATH')
+        if not baseline_path:
+            baseline_path = os.path.join(
+                _REPO_ROOT, 'tools', 'config_generator', 'examples',
+                f'{tenant}-baseline-TheConfiguration.xml'
+            )
+        if not os.path.isfile(baseline_path):
+            raise ValueError(
+                f"Baseline file not found: {baseline_path}. "
+                f"Provide 'baseline_path', set THEREFORE_CONFIG_BASELINE_PATH env var, "
+                f"or place a baseline export at tools/config_generator/examples/{tenant}-baseline-TheConfiguration.xml"
+            )
+
+        # API check: reuse the existing authenticated client by default
+        api_check = args.get('api_check', True)
+        api_client = client if api_check else None
+
+        tree = build_delta_xml(spec, baseline_path, api_client=api_client, interactive=False)
+        xml_content = ET.tostring(tree.getroot(), encoding='unicode')
+
+        # Write output file
+        output_path = args.get('output_path')
+        if not output_path:
+            slug = re.sub(r'[^A-Za-z0-9]+', '_', spec.name).strip('_').lower()
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            output_dir = os.path.join(_REPO_ROOT, 'docs', 'notes', 'generated_configs')
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, f'{slug}-{timestamp}-delta.xml')
+
+        with open(output_path, 'w') as f:
+            f.write(xml_content)
+
+        field_names = [fld.name for fld in spec.fields]
+        return {
+            'xml_content': xml_content,
+            'category_name': spec.name,
+            'folder': spec.folder or '(auto-generated)',
+            'fields_count': len(spec.fields),
+            'field_names': field_names,
+            'output_file': output_path,
+            'note': (
+                'Delta XML generated successfully. Import this file into Therefore using '
+                'Administration > Configuration > Import to create the category.'
+            ),
+        }
 
     def _resolve_tenant(self, args: Dict[str, Any]) -> str:
         tenant_raw = (
@@ -2294,6 +3026,691 @@ class MCPServer:
             'updated_streams_info': updated.get('StreamsInfo'),
         }
 
+    def _get_converted_doc_streams(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+        doc_no = int(args['doc_no'])
+        conversion_options: Dict[str, Any] = {}
+        if args.get('convert_to') is not None:
+            conversion_options['ConvertTo'] = args['convert_to']
+        if args.get('annotation_mode') is not None:
+            conversion_options['AnnotationMode'] = args['annotation_mode']
+        if args.get('signature_mode') is not None:
+            conversion_options['SignatureMode'] = args['signature_mode']
+        if args.get('certificate_name') is not None:
+            conversion_options['CertificateName'] = args['certificate_name']
+        if args.get('time_stamp_server') is not None:
+            conversion_options['TimeStampServer'] = args['time_stamp_server']
+        if args.get('time_stamp_user') is not None:
+            conversion_options['TimeStampUser'] = args['time_stamp_user']
+        if args.get('time_stamp_pwd') is not None:
+            conversion_options['TimeStampPwd'] = args['time_stamp_pwd']
+        if args.get('multipage_stream_name') is not None:
+            conversion_options['MultipageStreamName'] = args['multipage_stream_name']
+        conversion_options = self._normalize_conversion_options(conversion_options) or {}
+        return client.get_converted_doc_streams(
+            doc_no=doc_no,
+            conversion_options=conversion_options,
+            stream_nos=args.get('stream_nos'),
+            version_no=args.get('version_no'),
+            is_file_data_base64_json_needed=True,
+            retrieve_reason=args.get('retrieve_reason'),
+            archive_converted_files=args.get('archive_converted_files'),
+            custom_archive_file_name=args.get('custom_archive_file_name'),
+        )
+
+    def _get_logfiles(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+        from datetime import timedelta
+
+        days_back = int(args.get('days_back', 7))
+        application_filter = args.get('application_filter')
+        max_docs = int(args.get('max_docs', 10))
+        include_raw = bool(args.get('include_raw', False))
+        output_mode = args.get('output_mode', 'analysis')
+        severity_filter = args.get('severity_filter', 'all')
+
+        # Validate category 1 is the Logfiles category
+        cat_info = client.get_category_info(1)
+        cat_name = (cat_info.get('Name') or '').strip()
+
+        # Discover field numbers from data fields (skip labels with TypeNo=4)
+        generated_field_no = None
+        application_field_no = None
+        data_field_types = {1, 2, 3, 7}  # text, number, date, datetime
+
+        for f in (cat_info.get('CategoryFields') or []):
+            type_no = f.get('TypeNo')
+            if type_no not in data_field_types:
+                continue
+            caption = (f.get('Caption') or '').lower()
+            fno = f.get('FieldNo')
+            if caption == 'generated' and type_no == 7:
+                generated_field_no = fno
+            elif caption == 'application' and type_no == 1:
+                application_field_no = fno
+
+        if generated_field_no is None:
+            raise ValueError(
+                f"Category 1 ('{cat_name}') does not have a 'Generated' datetime data field. "
+                "Expected the Logfiles category."
+            )
+
+        # Build query conditions
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=days_back)
+        cutoff_str = cutoff.strftime('%Y-%m-%dT00:00:00')
+
+        conditions = [
+            {'FieldNo': generated_field_no, 'Condition': f'>= {cutoff_str}'},
+        ]
+        if application_filter:
+            if application_field_no is None:
+                raise ValueError(
+                    "Cannot filter by application: 'Application' text field not found in category 1."
+                )
+            conditions.append({'FieldNo': application_field_no, 'Condition': application_filter})
+
+        query = {
+            'CategoryNo': 1,
+            'Condition': conditions,
+            'MaxRows': max_docs,
+        }
+
+        query_result = client.execute_single_query(query)
+        qr = query_result.get('QueryResult') or {}
+        rows = qr.get('ResultRows') or []
+
+        documents = []
+        fetch_errors = []
+        all_entries: List[Dict[str, Any]] = []
+        doc_meta: List[Dict[str, Any]] = []
+
+        for row in rows:
+            doc_no = row.get('DocNo')
+            if not doc_no:
+                continue
+            try:
+                doc = client.get_document(int(doc_no), include_streams_data=True, include_index_data=False)
+                streams_info = doc.get('StreamsInfo') or []
+                doc_entries: List[Dict[str, Any]] = []
+                raw_texts: List[str] = []
+                doc_application = ''
+                doc_server = ''
+
+                for stream in streams_info:
+                    b64_data = stream.get('StreamDataBase64JSON') or stream.get('FileDataBase64JSON')
+                    if not b64_data:
+                        continue
+                    raw_bytes = base64.b64decode(b64_data)
+                    if raw_bytes.startswith(b'\xef\xbb\xbf'):
+                        raw_bytes = raw_bytes[3:]
+                    text = raw_bytes.decode('utf-8', errors='replace')
+                    if include_raw:
+                        raw_texts.append(text)
+                    parsed = MCPServer._parse_log_text(text, include_raw=include_raw)
+                    header = parsed.get('header', {})
+                    if not doc_application and header.get('application'):
+                        doc_application = header['application']
+                    if not doc_server and header.get('server'):
+                        doc_server = header['server']
+                    doc_entries.extend(parsed.get('entries', []))
+
+                if severity_filter == 'errors_only':
+                    doc_entries = [
+                        e for e in doc_entries
+                        if e.get('error_code', '0').strip() not in ('', '0')
+                    ]
+                all_entries.extend(doc_entries)
+
+                # Extract first date from entries for doc metadata
+                doc_date = ''
+                for e in doc_entries:
+                    ts = e.get('timestamp', '')
+                    if ts:
+                        doc_date = ts.split(',')[0].split('T')[0].strip()
+                        break
+
+                doc_meta.append({
+                    'doc_no': int(doc_no),
+                    'application': doc_application,
+                    'server': doc_server,
+                    'date': doc_date,
+                    'entry_count': len(doc_entries),
+                })
+
+                if output_mode == 'full':
+                    doc_result: Dict[str, Any] = {
+                        'doc_no': doc_no,
+                        'metadata': {k: row.get(k) for k in row if k != 'DocNo'},
+                        'entry_count': len(doc_entries),
+                        'entries': doc_entries,
+                    }
+                    if include_raw:
+                        doc_result['raw_streams'] = raw_texts
+                    documents.append(doc_result)
+
+            except Exception as exc:
+                fetch_errors.append({'doc_no': doc_no, 'error': str(exc)})
+
+        # Branch on output mode
+        if output_mode == 'full':
+            result: Dict[str, Any] = {
+                'status': 'ok',
+                'documents': documents,
+                'summary': {
+                    'total_documents': len(documents),
+                    'total_entries': len(all_entries),
+                    'days_back': days_back,
+                    'query_rows_returned': len(rows),
+                },
+            }
+            if fetch_errors:
+                result['fetch_errors'] = fetch_errors
+            return result
+
+        # Summary or analysis mode
+        summary = MCPServer._summarize_log_entries(all_entries, doc_meta, compact=(output_mode == 'analysis'))
+        result = {
+            'status': 'ok',
+            **summary,
+        }
+        if fetch_errors:
+            result['fetch_errors'] = fetch_errors
+        return result
+
+    def _get_login_history(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+        days_back = int(args.get('days_back', 7))
+        username = args.get('username')
+        max_entries = int(args.get('max_entries', 1000))
+        output_mode = args.get('output_mode', 'analysis')
+
+        # Compute TimestampFrom
+        from datetime import datetime, timedelta, timezone
+        ts_from = datetime.now(timezone.utc) - timedelta(days=days_back)
+        timestamp_from = ts_from.strftime('%Y-%m-%dT%H:%M:%S')
+
+        if username:
+            # --- Single-user mode: resolve and fetch for one user ---
+            best_user, candidates, needs_confirmation = self._resolve_user_from_query(username, tenant, client)
+            if not best_user:
+                return {'status': 'error', 'error': f'No user found matching "{username}".'}
+            if needs_confirmation:
+                return {
+                    'status': 'needs_confirmation',
+                    'message': f'Ambiguous username "{username}". Please confirm or be more specific.',
+                    'candidates': candidates,
+                }
+            user_no = best_user.get('UserId')
+            resolved_user_info = {
+                'UserId': best_user.get('UserId'),
+                'UserName': best_user.get('UserName'),
+                'DisplayName': best_user.get('DisplayName'),
+                'SMTP': best_user.get('SMTP'),
+            }
+
+            # Domain/AD accounts resolve to UserId 0 — login history is not available for them
+            if user_no == 0:
+                return {
+                    'status': 'ok',
+                    'warning': (
+                        f'User "{resolved_user_info["DisplayName"]}" is a domain account (UserId=0). '
+                        'Login history is only available for native Therefore accounts, not domain/AD accounts.'
+                    ),
+                    'tenant': tenant,
+                    'days_back': days_back,
+                    'total_entries': 0,
+                    'resolved_user': resolved_user_info,
+                }
+
+            resp = client.get_login_history(max_entries=max_entries, timestamp_from=timestamp_from, user_no=user_no)
+            entries = resp.get('Entries') or []
+            # Tag entries with user identity
+            for entry in entries:
+                entry['_UserNo'] = user_no
+                entry['_DisplayName'] = resolved_user_info['DisplayName']
+                entry['_UserName'] = resolved_user_info['UserName']
+
+            result = self._build_login_history_result(entries, tenant, days_back, output_mode, all_users_mode=False)
+            result['resolved_user'] = resolved_user_info
+            return result
+        else:
+            # --- All-users mode: enumerate users and fetch per-user ---
+            users_resp = client.execute_users_query(query='', flags=5)
+            all_users = users_resp.get('Users') or []
+            # Filter out service accounts
+            active_users = [u for u in all_users if not u.get('ServiceAccount', False)]
+
+            entries: List[Dict[str, Any]] = []
+            users_queried = 0
+            users_with_logins = 0
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            def fetch_user_history(user: Dict[str, Any]) -> List[Dict[str, Any]]:
+                uid = user.get('UserId')
+                try:
+                    resp = client.get_login_history(
+                        max_entries=max_entries,
+                        timestamp_from=timestamp_from,
+                        user_no=uid,
+                    )
+                    user_entries = resp.get('Entries') or []
+                    for entry in user_entries:
+                        entry['_UserNo'] = uid
+                        entry['_DisplayName'] = user.get('DisplayName') or user.get('UserName') or str(uid)
+                        entry['_UserName'] = user.get('UserName') or str(uid)
+                    return user_entries
+                except Exception:
+                    return []
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(fetch_user_history, u): u for u in active_users}
+                for future in as_completed(futures):
+                    users_queried += 1
+                    user_entries = future.result()
+                    if user_entries:
+                        users_with_logins += 1
+                        entries.extend(user_entries)
+
+            # Sort combined entries by timestamp descending
+            entries.sort(key=lambda e: e.get('Timestamp', ''), reverse=True)
+
+            result = self._build_login_history_result(entries, tenant, days_back, output_mode, all_users_mode=True)
+            result['users_queried'] = users_queried
+            result['users_with_logins'] = users_with_logins
+            return result
+
+    def _build_login_history_result(
+        self,
+        entries: List[Dict[str, Any]],
+        tenant: str,
+        days_back: int,
+        output_mode: str,
+        all_users_mode: bool,
+    ) -> Dict[str, Any]:
+        result: Dict[str, Any] = {
+            'status': 'ok',
+            'tenant': tenant,
+            'days_back': days_back,
+            'total_entries': len(entries),
+        }
+
+        # Full mode — return raw entries
+        if output_mode == 'full':
+            result['entries'] = entries
+            return result
+
+        # Analysis mode
+        successes = 0
+        failures = 0
+        daily: Dict[str, Dict[str, int]] = {}       # date -> {success, failure}
+        by_client: Dict[str, int] = {}               # client+version -> count
+        by_ip: Dict[str, int] = {}                   # IP -> count
+        by_node: Dict[str, int] = {}                 # node -> count
+        by_error: Dict[int, Dict[str, Any]] = {}     # error_code -> {count, examples}
+        by_user: Dict[str, Dict[str, Any]] = {}      # display_name -> {user_no, username, success, failure}
+
+        for entry in entries:
+            error_code = entry.get('ErrorCode', 0)
+            is_success = (error_code == 0)
+            if is_success:
+                successes += 1
+            else:
+                failures += 1
+
+            # Daily breakdown
+            ts = entry.get('Timestamp') or ''
+            day = ts[:10] if len(ts) >= 10 else 'unknown'
+            if day not in daily:
+                daily[day] = {'success': 0, 'failure': 0}
+            daily[day]['success' if is_success else 'failure'] += 1
+
+            # Client breakdown
+            client_name = entry.get('Client') or 'unknown'
+            version_str = entry.get('ClientVersionString') or ''
+            client_key = f'{client_name} {version_str}'.strip() if version_str else client_name
+            by_client[client_key] = by_client.get(client_key, 0) + 1
+
+            # IP breakdown
+            ip = entry.get('IPAddress') or 'unknown'
+            by_ip[ip] = by_ip.get(ip, 0) + 1
+
+            # Node breakdown
+            node = entry.get('NodeName') or 'unknown'
+            by_node[node] = by_node.get(node, 0) + 1
+
+            # Per-user breakdown
+            display_name = entry.get('_DisplayName') or 'unknown'
+            if display_name not in by_user:
+                by_user[display_name] = {
+                    'user_no': entry.get('_UserNo'),
+                    'username': entry.get('_UserName') or '',
+                    'success': 0,
+                    'failure': 0,
+                }
+            by_user[display_name]['success' if is_success else 'failure'] += 1
+
+            # Error breakdown
+            if not is_success:
+                if error_code not in by_error:
+                    by_error[error_code] = {'count': 0, 'examples': []}
+                by_error[error_code]['count'] += 1
+                if len(by_error[error_code]['examples']) < 3:
+                    by_error[error_code]['examples'].append({
+                        'timestamp': ts,
+                        'client': client_key,
+                        'ip': ip,
+                        'node': node,
+                        'user': display_name,
+                    })
+
+        total = successes + failures
+        result['summary'] = {
+            'total_logins': total,
+            'successes': successes,
+            'failures': failures,
+            'failure_rate_pct': round(failures / total * 100, 1) if total else 0,
+        }
+
+        # Daily activity sorted by date
+        result['daily_activity'] = [
+            {'date': d, **counts}
+            for d, counts in sorted(daily.items())
+        ]
+
+        # Per-user breakdown sorted by total logins desc
+        if all_users_mode:
+            result['by_user'] = [
+                {
+                    'display_name': name,
+                    'user_no': info['user_no'],
+                    'username': info['username'],
+                    'success': info['success'],
+                    'failure': info['failure'],
+                    'total': info['success'] + info['failure'],
+                }
+                for name, info in sorted(
+                    by_user.items(),
+                    key=lambda x: x[1]['success'] + x[1]['failure'],
+                    reverse=True,
+                )
+            ]
+
+        # Client breakdown sorted by count desc
+        result['by_client'] = [
+            {'client': k, 'count': v}
+            for k, v in sorted(by_client.items(), key=lambda x: x[1], reverse=True)
+        ]
+
+        # IP breakdown top 20
+        result['by_ip'] = [
+            {'ip': k, 'count': v}
+            for k, v in sorted(by_ip.items(), key=lambda x: x[1], reverse=True)[:20]
+        ]
+
+        # Node breakdown sorted by count desc
+        result['by_node'] = [
+            {'node': k, 'count': v}
+            for k, v in sorted(by_node.items(), key=lambda x: x[1], reverse=True)
+        ]
+
+        # Error breakdown sorted by count desc
+        if by_error:
+            result['errors'] = [
+                {'error_code': code, 'count': info['count'], 'examples': info['examples']}
+                for code, info in sorted(by_error.items(), key=lambda x: x[1]['count'], reverse=True)
+            ]
+
+        return result
+
+    # Semantic names for pipe-delimited log fields (by positional index)
+    _LOG_FIELD_NAMES = {
+        0: 'timestamp',
+        1: 'user',
+        2: 'source',
+        3: 'action',
+        4: 'error_code',
+        5: 'doc_no',
+        6: 'version_no',
+        7: 'category',
+        # 8 is variable/unused — kept as f8
+        9: 'detail',
+        10: 'extra_info',
+    }
+
+    @staticmethod
+    def _parse_log_text(text: str, include_raw: bool = False) -> Dict[str, Any]:
+        lines = text.splitlines()
+
+        # Parse header block (lines before first blank line)
+        header: Dict[str, str] = {}
+        data_start = 0
+        found_blank = False
+        for i, line in enumerate(lines):
+            if not line.strip():
+                data_start = i + 1
+                found_blank = True
+                break
+            if ':' in line:
+                key, _, val = line.partition(':')
+                header[key.strip().lower()] = val.strip()
+        if not found_blank:
+            # No blank separator — treat everything as data, discard partial header
+            header = {}
+            data_start = 0
+
+        entries = []
+        for line in lines[data_start:]:
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = line.split('|')
+
+            # Pipe-delimited log line (6+ fields)
+            if len(parts) >= 6:
+                entry: Dict[str, Any] = {}
+                if include_raw:
+                    entry['raw'] = line
+                for idx, val in enumerate(parts):
+                    name = MCPServer._LOG_FIELD_NAMES.get(idx, f'f{idx}')
+                    entry[name] = val.strip()
+                if header:
+                    entry['application'] = header.get('application', '')
+                    entry['server'] = header.get('server', '')
+                entries.append(entry)
+
+            # Non-pipe line starting with a timestamp (e.g. Content Connector logs)
+            elif len(parts) <= 2:
+                match = re.match(r'^(\d{4}[-/]\d{2}[-/]\d{2}[,T]?\s*\d{2}:\d{2}:\d{2})\s+(.*)$', line)
+                if match:
+                    entries.append({
+                        'timestamp': match.group(1),
+                        'message': match.group(2),
+                    })
+                else:
+                    # Unparsed line — include raw so the calling LLM can still use it
+                    entries.append({'raw': line})
+
+        return {
+            'header': header,
+            'entries': entries,
+        }
+
+    @staticmethod
+    def _summarize_log_entries(
+        all_entries: List[Dict[str, Any]],
+        doc_metadata: List[Dict[str, Any]],
+        compact: bool = False,
+    ) -> Dict[str, Any]:
+        """Aggregate parsed log entries into an analysis summary.
+
+        When compact=True (analysis mode), errors are grouped by
+        (error_code, action) with counts and representative examples
+        instead of listing every individual error. User activity is
+        capped at top 20.
+        """
+        from collections import Counter, defaultdict
+
+        action_counts: Counter = Counter()
+        daily_events: Dict[str, int] = {}
+        daily_errors: Dict[str, int] = {}
+        error_entries: List[Dict[str, Any]] = []
+        error_by_code: Counter = Counter()
+        error_by_action: Counter = Counter()
+        user_counts: Counter = Counter()
+        service_events: List[Dict[str, Any]] = []
+
+        # For compact mode: group errors by (error_code, action)
+        error_groups: Dict[tuple, Dict[str, Any]] = defaultdict(lambda: {
+            'count': 0,
+            'users': set(),
+            'first_seen': '',
+            'last_seen': '',
+            'daily_distribution': Counter(),
+            'example_detail': '',
+        })
+
+        service_actions = {
+            'Server Start', 'Server Stop',
+            'Content Connector Start', 'Content Connector Stop',
+            'Migrate Start', 'Migrate Stop',
+        }
+
+        for entry in all_entries:
+            action = entry.get('action', '')
+            error_code = entry.get('error_code', '0')
+            timestamp = entry.get('timestamp', '')
+            user = entry.get('user', '')
+
+            # Count actions
+            if action:
+                action_counts[action] += 1
+
+            # Extract date from timestamp (format: "YYYY-MM-DD, HH:MM:SS" or similar)
+            date_str = ''
+            if timestamp:
+                date_str = timestamp.split(',')[0].split('T')[0].strip()
+            if date_str:
+                daily_events[date_str] = daily_events.get(date_str, 0) + 1
+
+            # Track errors (non-zero, non-empty error_code)
+            is_error = error_code and error_code.strip() and error_code.strip() != '0'
+            if is_error:
+                code = error_code.strip()
+                if date_str:
+                    daily_errors[date_str] = daily_errors.get(date_str, 0) + 1
+                error_by_code[code] += 1
+                if action:
+                    error_by_action[action] += 1
+
+                # Build detail string
+                detail_parts = []
+                if entry.get('detail'):
+                    detail_parts.append(entry['detail'])
+                if entry.get('extra_info'):
+                    detail_parts.append(entry['extra_info'])
+                detail = '; '.join(detail_parts) if detail_parts else ''
+
+                if compact:
+                    # Accumulate into group
+                    group_key = (code, action)
+                    grp = error_groups[group_key]
+                    grp['count'] += 1
+                    if user and user.strip():
+                        grp['users'].add(user.strip())
+                    if not grp['first_seen'] or timestamp < grp['first_seen']:
+                        grp['first_seen'] = timestamp
+                    if not grp['last_seen'] or timestamp > grp['last_seen']:
+                        grp['last_seen'] = timestamp
+                    if date_str:
+                        grp['daily_distribution'][date_str] += 1
+                    if detail and not grp['example_detail']:
+                        grp['example_detail'] = detail
+                else:
+                    error_entries.append({
+                        'timestamp': timestamp,
+                        'application': entry.get('application', ''),
+                        'action': action,
+                        'error_code': code,
+                        'user': user,
+                        'detail': detail,
+                    })
+
+            # Track user activity (skip empty/system users)
+            if user and user.strip():
+                user_counts[user.strip()] += 1
+
+            # Track service events
+            if action in service_actions:
+                service_events.append({
+                    'timestamp': timestamp,
+                    'application': entry.get('application', ''),
+                    'server': entry.get('server', ''),
+                    'event': action,
+                })
+
+        # Build daily_activity sorted descending by date
+        all_dates = sorted(set(list(daily_events.keys()) + list(daily_errors.keys())), reverse=True)
+        daily_activity = [
+            {'date': d, 'events': daily_events.get(d, 0), 'errors': daily_errors.get(d, 0)}
+            for d in all_dates
+        ]
+
+        # Determine period
+        period_from = all_dates[-1] if all_dates else ''
+        period_to = all_dates[0] if all_dates else ''
+
+        # User activity — capped at top 20 in compact mode
+        top_n = 20 if compact else None
+        user_activity = [
+            {'user': u, 'actions': c}
+            for u, c in user_counts.most_common(top_n)
+        ]
+
+        # Action counts — capped at top 20 in compact mode
+        action_counts_dict = dict(action_counts.most_common(20 if compact else None))
+
+        total_errors = sum(error_by_code.values())
+
+        result_analysis: Dict[str, Any] = {
+            'period': {'from': period_from, 'to': period_to},
+            'total_entries': len(all_entries),
+            'total_errors': total_errors,
+            'action_counts': action_counts_dict,
+            'daily_activity': daily_activity,
+            'error_summary': {
+                'by_code': dict(error_by_code.most_common()),
+                'by_action': dict(error_by_action.most_common()),
+            },
+            'user_activity': user_activity,
+            'service_events': service_events,
+        }
+
+        result: Dict[str, Any] = {
+            'analysis': result_analysis,
+            'documents': doc_metadata,
+        }
+
+        if compact:
+            # Build grouped error list sorted by count descending
+            grouped_errors = []
+            for (code, action), grp in sorted(
+                error_groups.items(), key=lambda x: x[1]['count'], reverse=True
+            ):
+                grouped_errors.append({
+                    'error_code': code,
+                    'action': action,
+                    'count': grp['count'],
+                    'example_detail': grp['example_detail'],
+                    'users': sorted(grp['users']) if grp['users'] else ['(none)'],
+                    'first_seen': grp['first_seen'],
+                    'last_seen': grp['last_seen'],
+                    'daily_distribution': dict(sorted(grp['daily_distribution'].items())),
+                })
+            result['grouped_errors'] = grouped_errors
+        else:
+            result['errors'] = error_entries
+
+        return result
+
     @staticmethod
     def _normalize_enum_value(value: Any, mapping: Dict[str, int], field_name: str) -> Optional[int]:
         if value is None:
@@ -2398,6 +3815,113 @@ class MCPServer:
         if normalized is None:
             return 0
         return int(normalized)
+
+    @staticmethod
+    def _default_workflow_max_rows(client: ThereforeClient) -> int:
+        try:
+            value = int(client.config.workflow_max_rows or 10000)
+        except (TypeError, ValueError):
+            value = 10000
+        return value if value >= 10000 else 10000
+
+    @staticmethod
+    def _get_local_tz() -> timezone:
+        tz_name = os.environ.get('THEREFORE_LOCAL_TZ')
+        if tz_name:
+            if ZoneInfo is not None:
+                try:
+                    return ZoneInfo(tz_name)
+                except Exception:
+                    return timezone.utc
+        return timezone.utc
+
+    @staticmethod
+    def _parse_datetime_value(value: Any) -> Optional[datetime]:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.startswith('/Date(') and text.endswith(')/'):
+            try:
+                ms = int(text[6:-2])
+            except ValueError:
+                return None
+            if ms == -2209161600000:
+                return None
+            try:
+                return datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
+            except (OSError, OverflowError):
+                return None
+        # ISO8601 variants
+        pattern = re.compile(
+            r'^(?P<date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})'
+            r'(?P<frac>\.\d+)?'
+            r'(?P<tz>Z|[+-]\d{2}:\d{2})?$'
+        )
+        match = pattern.match(text)
+        if not match:
+            return None
+        base = match.group('date')
+        frac = match.group('frac') or ''
+        tz = match.group('tz') or '+00:00'
+        if tz == 'Z':
+            tz = '+00:00'
+        if frac:
+            # trim to microseconds (6 digits)
+            frac_digits = frac[1:]
+            if len(frac_digits) > 6:
+                frac_digits = frac_digits[:6]
+            frac = '.' + frac_digits
+        iso = f"{base}{frac}{tz}"
+        try:
+            return datetime.fromisoformat(iso)
+        except ValueError:
+            return None
+
+    def _format_local_datetime(self, value: Any) -> Optional[str]:
+        dt = self._parse_datetime_value(value)
+        if not dt:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        local_tz = self._get_local_tz()
+        try:
+            local_dt = dt.astimezone(local_tz)
+        except Exception:
+            local_dt = dt.astimezone(timezone.utc)
+        tz_name = local_dt.tzname() or ''
+        if not tz_name:
+            offset = local_dt.utcoffset()
+            if offset is None:
+                tz_name = 'UTC'
+            else:
+                total_seconds = int(offset.total_seconds())
+                sign = '+' if total_seconds >= 0 else '-'
+                total_seconds = abs(total_seconds)
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                tz_name = f'UTC{sign}{hours:02d}:{minutes:02d}'
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S ') + tz_name
+
+    @staticmethod
+    def _debug_log(path: Optional[str], payload: Dict[str, Any]) -> None:
+        if not path:
+            return
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        except Exception:
+            pass
+        try:
+            payload = dict(payload)
+            payload.setdefault('ts', datetime.now(timezone.utc).isoformat())
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(payload, ensure_ascii=False) + '\n')
+        except Exception:
+            # best-effort logging only
+            return
 
     def _extract_user_values(self, user: Dict[str, Any]) -> List[str]:
         values = []
@@ -2509,6 +4033,623 @@ class MCPServer:
         return False
 
     @staticmethod
+    def _coerce_int_list(value: Any) -> List[int]:
+        if value is None:
+            return []
+        items: List[int] = []
+        if isinstance(value, (list, tuple, set)):
+            for v in value:
+                try:
+                    items.append(int(v))
+                except (TypeError, ValueError):
+                    continue
+            return items
+        try:
+            return [int(value)]
+        except (TypeError, ValueError):
+            return []
+
+    @staticmethod
+    def _group_name_candidates(name: str) -> List[str]:
+        if not name:
+            return []
+        candidates = [name]
+        if '\\' in name:
+            candidates.append(name.split('\\', 1)[1])
+        if '/' in name:
+            candidates.append(name.split('/', 1)[1])
+        # Deduplicate while preserving order.
+        seen = set()
+        result = []
+        for cand in candidates:
+            if cand and cand not in seen:
+                seen.add(cand)
+                result.append(cand)
+        return result
+
+    def _summarize_workflow_instance(self, resp: Dict[str, Any]) -> Dict[str, Any]:
+        summary: Dict[str, Any] = {}
+        wf = resp.get('WorkflowInstance') or {}
+        linked_docs = resp.get('LinkedDocuments') or []
+        current_task = wf.get('CurrentTask') or {}
+
+        summary['InstanceNo'] = wf.get('InstanceNo')
+        summary['TokenNo'] = wf.get('TokenNo')
+        summary['WorkflowNo'] = wf.get('WorkflowNo')
+        summary['ProcessNo'] = wf.get('ProcessNo')
+        summary['ProcessName'] = wf.get('ProcessName')
+        summary['VersionNo'] = wf.get('VersionNo')
+
+        summary['AssignedTo'] = wf.get('AssignedTo')
+        summary['AssignedToUsers'] = wf.get('AssignedToUsers')
+        summary['OriginallyAssignedToUsers'] = wf.get('OriginallyAssignedToUsers')
+        summary['Claimed'] = wf.get('Claimed')
+        summary['IsAssignedToUser'] = wf.get('IsAssignedToUser')
+        summary['IsProcessOwner'] = wf.get('IsProcessOwner')
+
+        summary['CurrTaskName'] = wf.get('CurrTaskName') or current_task.get('Name')
+        summary['CurrTaskNo'] = wf.get('CurrTaskNo') or current_task.get('TaskNo')
+        summary['CurrTaskType'] = wf.get('CurrTaskType') or current_task.get('Type')
+        summary['CurrTaskId'] = wf.get('CurrTaskId') or current_task.get('CurrTaskId')
+        summary['CurrTaskGUID'] = wf.get('CurrTaskGUID') or current_task.get('CurrTaskGUID')
+
+        summary['TaskStartDate'] = wf.get('TaskStartDateISO8601') or wf.get('TaskStartDate')
+        summary['TaskDueDate'] = wf.get('TaskDueDateISO8601') or wf.get('TaskDueDate')
+        summary['ProcessStartDate'] = wf.get('ProcessStartDateISO8601') or wf.get('ProcessStartDate')
+        summary['ProcessDueDate'] = wf.get('ProcessDueDateISO8601') or wf.get('ProcessDueDate')
+
+        summary['TaskStartLocal'] = self._format_local_datetime(summary['TaskStartDate'])
+        summary['TaskDueLocal'] = self._format_local_datetime(summary['TaskDueDate'])
+        summary['ProcessStartLocal'] = self._format_local_datetime(summary['ProcessStartDate'])
+        summary['ProcessDueLocal'] = self._format_local_datetime(summary['ProcessDueDate'])
+
+        summary['LinkedDocumentsCount'] = len(linked_docs)
+        summary['LinkedDocNos'] = [
+            doc.get('DocNo') for doc in linked_docs if isinstance(doc, dict) and doc.get('DocNo') is not None
+        ][:10]
+
+        summary['ErrorString'] = wf.get('ErrorString')
+        summary['ErrorInfo'] = wf.get('ErrorInfo')
+        summary['ErrorTimestamp'] = wf.get('ErrorTimestampISO8601') or wf.get('ErrorTimestamp')
+        summary['ErrorTimestampLocal'] = self._format_local_datetime(summary['ErrorTimestamp'])
+
+        return summary
+
+    def _fetch_workflow_instance_details(
+        self,
+        client: ThereforeClient,
+        tasks: List[Dict[str, Any]],
+        max_workers: int = 4,
+        is_access_mask_needed: bool = False,
+        load_history: bool = False,
+        debug_log_path: Optional[str] = None,
+        debug_progress_every: int = 500,
+    ) -> Tuple[Dict[Tuple[int, int], Dict[str, Any]], List[Dict[str, Any]]]:
+        thread_local = threading.local()
+
+        def get_worker_client() -> ThereforeClient:
+            worker = getattr(thread_local, 'client', None)
+            if worker is None:
+                # Reuse a client per thread to avoid repeated SSL/context setup.
+                worker = ThereforeClient(client.config)
+                thread_local.client = worker
+            return worker
+
+        def fetch_with_timing(key: Tuple[int, int]) -> Tuple[Tuple[int, int], Optional[Dict[str, Any]], float, Optional[Exception]]:
+            instance_no, token_no = key
+            worker = get_worker_client()
+            start = time.time()
+            try:
+                resp = worker.get_workflow_instance(
+                    instance_no=instance_no,
+                    token_no=token_no,
+                    is_access_mask_needed=is_access_mask_needed,
+                    load_history=load_history,
+                )
+                return key, resp, time.time() - start, None
+            except Exception as exc:
+                return key, None, time.time() - start, exc
+
+        keys = []
+        seen = set()
+        for task in tasks:
+            instance_no = task.get('InstanceNo')
+            if instance_no is None:
+                continue
+            token_no = int(task.get('TokenNo') or 0)
+            key = (int(instance_no), token_no)
+            if key in seen:
+                continue
+            seen.add(key)
+            keys.append(key)
+
+        details: Dict[Tuple[int, int], Dict[str, Any]] = {}
+        errors: List[Dict[str, Any]] = []
+        self._debug_log(debug_log_path, {
+            'event': 'instance_details_start',
+            'requested': len(keys),
+            'max_workers': max_workers,
+        })
+
+        if not keys:
+            return details, errors
+
+        use_workers = max(1, int(max_workers or 1))
+        if use_workers <= 1 or len(keys) == 1:
+            for key in keys:
+                k, resp, elapsed, err = fetch_with_timing(key)
+                if err:
+                    errors.append({'instance_no': key[0], 'token_no': key[1], 'error': str(err)})
+                elif resp is not None:
+                    details[k] = resp
+                if debug_log_path and len(details) % max(1, debug_progress_every) == 0:
+                    self._debug_log(debug_log_path, {
+                        'event': 'instance_details_progress',
+                        'completed': len(details) + len(errors),
+                        'loaded': len(details),
+                        'failed': len(errors),
+                    })
+            self._debug_log(debug_log_path, {
+                'event': 'instance_details_done',
+                'loaded': len(details),
+                'failed': len(errors),
+            })
+            return details, errors
+
+        max_cap = min(use_workers, len(keys))
+        current_workers = min(4, max_cap)
+        min_workers = 1 if current_workers == 1 else min(2, current_workers)
+        ramp_step = max(1, max_cap // 4)
+        window_size = max(current_workers * 5, 50)
+        ewma_latency: Optional[float] = None
+
+        if debug_log_path:
+            self._debug_log(debug_log_path, {
+                'event': 'instance_details_adaptive_start',
+                'max_workers_cap': max_cap,
+                'initial_workers': current_workers,
+                'min_workers': min_workers,
+                'ramp_step': ramp_step,
+            })
+
+        pending = deque(keys)
+        in_flight: Dict[Any, Tuple[int, int]] = {}
+        window_count = 0
+        window_errors = 0
+        window_latency = 0.0
+
+        with ThreadPoolExecutor(max_workers=max_cap) as executor:
+            def submit_one() -> bool:
+                if not pending:
+                    return False
+                key = pending.popleft()
+                future = executor.submit(fetch_with_timing, key)
+                in_flight[future] = key
+                return True
+
+            while len(in_flight) < current_workers and pending:
+                submit_one()
+
+            while in_flight:
+                done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                for future in done:
+                    key = in_flight.pop(future)
+                    k, resp, elapsed, err = future.result()
+                    if err:
+                        errors.append({'instance_no': key[0], 'token_no': key[1], 'error': str(err)})
+                        window_errors += 1
+                    elif resp is not None:
+                        details[k] = resp
+                    window_count += 1
+                    window_latency += float(elapsed or 0.0)
+
+                    if debug_log_path and (len(details) + len(errors)) % max(1, debug_progress_every) == 0:
+                        self._debug_log(debug_log_path, {
+                            'event': 'instance_details_progress',
+                            'completed': len(details) + len(errors),
+                            'loaded': len(details),
+                            'failed': len(errors),
+                            'current_workers': current_workers,
+                        })
+
+                should_adjust = window_count >= window_size or (not pending and not in_flight)
+                if should_adjust and window_count > 0:
+                    avg_latency = window_latency / max(1, window_count)
+                    error_rate = window_errors / max(1, window_count)
+
+                    if ewma_latency is None:
+                        ewma_latency = avg_latency
+                    else:
+                        ewma_latency = (ewma_latency * 0.7) + (avg_latency * 0.3)
+
+                    new_workers = current_workers
+                    if error_rate > 0.02:
+                        new_workers = max(min_workers, int(max(1, current_workers * 0.75)))
+                    elif ewma_latency and avg_latency > ewma_latency * 1.5 and current_workers > min_workers:
+                        new_workers = max(min_workers, current_workers - max(1, current_workers // 4))
+                    elif error_rate == 0 and ewma_latency and avg_latency <= ewma_latency * 1.1 and current_workers < max_cap:
+                        new_workers = min(max_cap, current_workers + ramp_step)
+
+                    if new_workers != current_workers:
+                        current_workers = new_workers
+                        window_size = max(current_workers * 5, 50)
+                        if debug_log_path:
+                            self._debug_log(debug_log_path, {
+                                'event': 'instance_details_throttle',
+                                'current_workers': current_workers,
+                                'error_rate': round(error_rate, 4),
+                                'avg_latency_ms': int(avg_latency * 1000),
+                                'ewma_latency_ms': int((ewma_latency or 0) * 1000),
+                                'pending': len(pending),
+                                'in_flight': len(in_flight),
+                            })
+
+                    window_count = 0
+                    window_errors = 0
+                    window_latency = 0.0
+
+                while len(in_flight) < current_workers and pending:
+                    submit_one()
+
+        self._debug_log(debug_log_path, {
+            'event': 'instance_details_done',
+            'loaded': len(details),
+            'failed': len(errors),
+        })
+        return details, errors
+
+    def _attach_instance_details(
+        self,
+        tasks: List[Dict[str, Any]],
+        details: Dict[Tuple[int, int], Dict[str, Any]],
+        errors: List[Dict[str, Any]],
+        detail_mode: str,
+    ) -> None:
+        if detail_mode not in ('summary', 'full'):
+            return
+        error_map = {(e.get('instance_no'), e.get('token_no')): e.get('error') for e in errors}
+        for task in tasks:
+            instance_no = task.get('InstanceNo')
+            if instance_no is None:
+                continue
+            token_no = int(task.get('TokenNo') or 0)
+            key = (int(instance_no), token_no)
+            if key in error_map:
+                task['WorkflowInstanceError'] = error_map.get(key)
+            detail = details.get(key)
+            if not detail:
+                continue
+            if detail_mode == 'full':
+                task['WorkflowInstance'] = detail.get('WorkflowInstance')
+                task['LinkedDocuments'] = detail.get('LinkedDocuments')
+            else:
+                task['WorkflowInstanceSummary'] = self._summarize_workflow_instance(detail)
+
+    def _get_workflow_instances_core(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+        debug_enabled = bool(args.get('debug', False))
+        debug_log_path = args.get('debug_log_path')
+        debug_progress_every = int(args.get('debug_progress_every') or 500)
+        two_phase = bool(args.get('two_phase', False))
+        fetch_details = bool(args.get('fetch_details', False))
+        debug_info: Dict[str, Any] = {
+            'workflow_query': {},
+            'instance_details': {},
+            'filtering': {},
+        } if debug_enabled else {}
+        if debug_log_path:
+            self._debug_log(debug_log_path, {
+                'event': 'start',
+                'workflow_flags': args.get('workflow_flags'),
+                'task_filter': args.get('task_filter'),
+                'max_rows': args.get('max_rows'),
+                'detail_mode': args.get('instance_detail_mode'),
+            })
+        task_filter = args.get('task_filter')
+        if isinstance(task_filter, str) and task_filter.strip():
+            workflow_flags = self._normalize_workflow_flags(task_filter)
+        else:
+            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 'RunningInstances'))
+        if args.get('max_rows') is None:
+            max_rows = self._default_workflow_max_rows(client)
+        else:
+            max_rows = int(args.get('max_rows'))
+        filter_to_user_requested = bool(args.get('filter_to_user', True))
+        filter_to_user = filter_to_user_requested
+        include_unfiltered = bool(args.get('include_unfiltered', False))
+        include_overdue_summary = bool(args.get('include_overdue_summary', True))
+        resolve_group_membership = bool(args.get('resolve_group_membership', True))
+        assignee_values = self._coerce_str_list(args.get('assignee_values')) or []
+        assignee_values.extend(self.tenant_assignee_aliases.get(tenant, []))
+
+        detail_mode = str(args.get('instance_detail_mode') or 'summary').strip().lower()
+        if detail_mode not in ('none', 'summary', 'full'):
+            detail_mode = 'summary'
+        max_instance_workers = args.get('max_instance_workers')
+        if max_instance_workers is None:
+            max_instance_workers = 8 if (two_phase and fetch_details) else 4
+        max_instance_workers = int(max_instance_workers)
+        is_access_mask_needed = bool(args.get('is_access_mask_needed', False))
+        load_history = bool(args.get('load_history', False))
+
+        if two_phase and not fetch_details:
+            detail_mode = 'none'
+            filter_to_user = False
+
+        user_query = args.get('user_query')
+        user_query_flags = int(args.get('user_query_flags', 5))
+        user_candidates = []
+        user_needs_confirmation = False
+        if isinstance(user_query, str) and user_query.strip():
+            user, user_candidates, user_needs_confirmation = self._resolve_user_from_query(
+                user_query, tenant, client, flags=user_query_flags
+            )
+            if user is None:
+                user = {}
+        else:
+            connected = client.get_connected_user(False) or {}
+            user = connected.get('User') or {}
+
+        user_values = self._extract_user_values(user)
+        match_values = []
+        if user_values:
+            match_values.extend(user_values)
+        if assignee_values:
+            for v in assignee_values:
+                if v not in match_values:
+                    match_values.append(v)
+
+        start = time.time()
+        try:
+            resp = client.execute_workflow_query_for_all(workflow_flags=workflow_flags, max_rows=max_rows)
+        except Exception as exc:
+            if debug_enabled:
+                debug_info['workflow_query'] = {
+                    'workflow_flags': workflow_flags,
+                    'max_rows': max_rows,
+                    'duration_ms': int((time.time() - start) * 1000),
+                    'error': str(exc),
+                }
+                self._debug_log(debug_log_path, {
+                    'event': 'workflow_query_error',
+                    'workflow_flags': workflow_flags,
+                    'max_rows': max_rows,
+                    'error': str(exc),
+                })
+                return {'error': str(exc), 'debug': debug_info}
+            raise
+        if debug_enabled:
+            debug_info['workflow_query'] = {
+                'workflow_flags': workflow_flags,
+                'max_rows': max_rows,
+                'duration_ms': int((time.time() - start) * 1000),
+            }
+        if debug_log_path:
+            self._debug_log(debug_log_path, {
+                'event': 'workflow_query_done',
+                'workflow_flags': workflow_flags,
+                'max_rows': max_rows,
+                'duration_ms': int((time.time() - start) * 1000),
+            })
+        tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
+        max_rows_reached = len(tasks) == max_rows
+
+        need_instance_details = detail_mode != 'none' or filter_to_user
+        details: Dict[Tuple[int, int], Dict[str, Any]] = {}
+        detail_errors: List[Dict[str, Any]] = []
+        if need_instance_details and tasks:
+            details_start = time.time()
+            details, detail_errors = self._fetch_workflow_instance_details(
+                client,
+                tasks,
+                max_workers=max_instance_workers,
+                is_access_mask_needed=is_access_mask_needed,
+                load_history=load_history,
+                debug_log_path=debug_log_path,
+                debug_progress_every=debug_progress_every,
+            )
+            if debug_enabled:
+                debug_info['instance_details'] = {
+                    'mode': detail_mode,
+                    'requested': len(tasks),
+                    'loaded': len(details),
+                    'failed': len(detail_errors),
+                    'duration_ms': int((time.time() - details_start) * 1000),
+                    'errors_sample': detail_errors[:10],
+                }
+            if debug_log_path:
+                self._debug_log(debug_log_path, {
+                    'event': 'instance_details_done',
+                    'requested': len(tasks),
+                    'loaded': len(details),
+                    'failed': len(detail_errors),
+                    'duration_ms': int((time.time() - details_start) * 1000),
+                })
+
+        # Precompute group membership for AssignedTo values.
+        group_membership: Dict[str, bool] = {}
+        group_candidates: List[str] = []
+        if filter_to_user and resolve_group_membership and user_values and details:
+            for key, detail in details.items():
+                wf = (detail or {}).get('WorkflowInstance') or {}
+                assigned_to = wf.get('AssignedTo')
+                if not assigned_to:
+                    continue
+                if self._match_user_value(assigned_to, match_values):
+                    continue
+                for cand in self._group_name_candidates(str(assigned_to)):
+                    if cand not in group_candidates:
+                        group_candidates.append(cand)
+            if group_candidates:
+                domain_name = user.get('DomainName') if isinstance(user, dict) else None
+                group_membership = self._resolve_group_membership(
+                    client, group_candidates, user_values, domain_name=domain_name
+                )
+
+        filtered_tasks = tasks
+        filter_applied = False
+        unresolved_instances: List[Dict[str, Any]] = []
+        if filter_to_user:
+            if not match_values and not user.get('UserId') and not user.get('UserNo'):
+                filtered_tasks = tasks
+                filter_applied = False
+            elif not details:
+                filtered_tasks = []
+                filter_applied = True
+            else:
+                user_id = user.get('UserId') or user.get('UserNo') or user.get('UserID')
+                try:
+                    user_id = int(user_id) if user_id is not None else None
+                except (TypeError, ValueError):
+                    user_id = None
+                filtered = []
+                for task in tasks:
+                    instance_no = task.get('InstanceNo')
+                    if instance_no is None:
+                        continue
+                    token_no = int(task.get('TokenNo') or 0)
+                    key = (int(instance_no), token_no)
+                    detail = details.get(key)
+                    if not detail:
+                        unresolved_instances.append({'instance_no': key[0], 'token_no': key[1]})
+                        continue
+                    wf = (detail or {}).get('WorkflowInstance') or {}
+                    matched = False
+                    if not user_query and wf.get('IsAssignedToUser') is True:
+                        matched = True
+                    if not matched and user_id is not None:
+                        assigned_users = self._coerce_int_list(wf.get('AssignedToUsers'))
+                        if user_id in assigned_users:
+                            matched = True
+                    if not matched:
+                        assigned_to = wf.get('AssignedTo')
+                        if assigned_to and self._match_user_value(assigned_to, match_values):
+                            matched = True
+                        elif assigned_to and resolve_group_membership and group_membership:
+                            if group_membership.get(assigned_to):
+                                matched = True
+                            else:
+                                for cand in self._group_name_candidates(str(assigned_to)):
+                                    if group_membership.get(cand):
+                                        matched = True
+                                        break
+                    if matched:
+                        filtered.append(task)
+                filtered_tasks = filtered
+                filter_applied = True
+        if debug_enabled:
+            debug_info['filtering'] = {
+                'filter_to_user': filter_to_user,
+                'filter_to_user_requested': filter_to_user_requested,
+                'filter_applied': filter_applied,
+                'total_tasks': len(tasks),
+                'filtered_tasks': len(filtered_tasks),
+                'user_id': user.get('UserId') or user.get('UserNo') or user.get('UserID'),
+                'match_values_count': len(match_values),
+                'group_candidates': len(group_candidates),
+                'group_matches': len([k for k, v in group_membership.items() if v]),
+                'unresolved_instances': len(unresolved_instances),
+            }
+        if debug_log_path:
+            self._debug_log(debug_log_path, {
+                'event': 'filtering_done',
+                'filter_to_user': filter_to_user,
+                'filter_applied': filter_applied,
+                'total_tasks': len(tasks),
+                'filtered_tasks': len(filtered_tasks),
+                'group_candidates': len(group_candidates),
+                'group_matches': len([k for k, v in group_membership.items() if v]),
+                'unresolved_instances': len(unresolved_instances),
+            })
+
+        if need_instance_details and detail_mode in ('summary', 'full'):
+            self._attach_instance_details(filtered_tasks, details, detail_errors, detail_mode)
+            if include_unfiltered and filtered_tasks != tasks:
+                self._attach_instance_details(tasks, details, detail_errors, detail_mode)
+
+        output: Dict[str, Any] = {
+            'user': user,
+            'user_query': user_query,
+            'user_candidates': user_candidates,
+            'user_needs_confirmation': user_needs_confirmation,
+            'workflow_flags': workflow_flags,
+            'task_filter': task_filter,
+            'max_rows': max_rows,
+            'max_rows_reached': max_rows_reached,
+            'total_count': len(tasks),
+            'filter_to_user': filter_to_user,
+            'filter_to_user_requested': filter_to_user_requested,
+            'filter_applied': filter_applied,
+            'assignee_values': assignee_values,
+            'user_field_labels': user_field_labels,
+            'group_membership_matches': [k for k, v in group_membership.items() if v],
+            'instance_detail_mode': detail_mode,
+            'instance_details_requested': need_instance_details,
+            'instance_details_loaded': len(details),
+            'instance_details_failed': len(detail_errors),
+            'instance_detail_errors': detail_errors,
+            'unresolved_instances': unresolved_instances,
+            'task_count': len(filtered_tasks),
+            'instances': filtered_tasks,
+            'two_phase': two_phase,
+            'fetch_details': fetch_details,
+            'suggested_max_instance_workers': 8 if two_phase and not fetch_details else None,
+            'debug': debug_info if debug_enabled else None,
+        }
+        if debug_log_path:
+            self._debug_log(debug_log_path, {
+                'event': 'done',
+                'task_count': len(filtered_tasks),
+                'max_rows_reached': max_rows_reached,
+                'note': output.get('note'),
+            })
+
+        overdue_keys = set()
+        if include_overdue_summary:
+            overdue_resp = client.execute_workflow_query_for_all(
+                workflow_flags=self._normalize_workflow_flags('overdue'),
+                max_rows=max_rows,
+            )
+            overdue_all, _, _ = self._extract_workflow_tasks(overdue_resp)
+            overdue_keys = {self._task_key(t) for t in overdue_all}
+
+            on_schedule = 0
+            overdue = 0
+            for task in filtered_tasks:
+                key = self._task_key(task)
+                is_overdue = key in overdue_keys
+                task['IsOverdue'] = is_overdue
+                task['ScheduleStatus'] = 'overdue' if is_overdue else 'on_schedule'
+                if is_overdue:
+                    overdue += 1
+                else:
+                    on_schedule += 1
+
+            output['overdue_count'] = overdue
+            output['on_schedule_count'] = on_schedule
+            output['overdue_tasks_count'] = overdue
+            if overdue > 0:
+                output['highlight'] = {
+                    'message': f'{overdue} overdue task(s) found.',
+                    'overdue_count': overdue,
+                    'on_schedule_count': on_schedule,
+                }
+
+        if include_unfiltered and filtered_tasks != tasks:
+            output['all_tasks_count'] = len(tasks)
+            output['all_tasks'] = tasks
+
+        if two_phase and not fetch_details:
+            output['note'] = 'Two-phase mode: returning overall counts only. Re-run with fetch_details=true to filter by assignment.'
+        elif filter_to_user and not match_values and not user.get('UserId') and not user.get('UserNo'):
+            output['note'] = 'No assignee values available for filtering.'
+        elif filter_to_user and filter_applied and not filtered_tasks and tasks:
+            output['note'] = 'No tasks matched the user assignment from GetWorkflowInstance.'
+        if max_rows_reached:
+            output['note'] = 'Reached max_rows; results may be truncated. Increase max_rows to fetch more.'
+
+        return output
+
+    @staticmethod
     def _task_key(task: Dict[str, Any]) -> Tuple[Any, Any, Any]:
         return (
             task.get('InstanceNo'),
@@ -2563,195 +4704,12 @@ class MCPServer:
         return tasks, user_field_labels, user_field_indexes
 
     def _get_my_workflow_tasks(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        task_filter = args.get('task_filter')
-        if isinstance(task_filter, str) and task_filter.strip():
-            workflow_flags = self._normalize_workflow_flags(task_filter)
-        else:
-            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 'RunningInstances'))
-        if args.get('max_rows') is None:
-            max_rows = int(client.config.workflow_max_rows or 1000)
-        else:
-            max_rows = int(args.get('max_rows'))
-        filter_to_user = bool(args.get('filter_to_user', True))
-        include_unfiltered = bool(args.get('include_unfiltered', False))
-        include_overdue_summary = bool(args.get('include_overdue_summary', True))
-        resolve_group_membership = bool(args.get('resolve_group_membership', True))
-        assignee_values = self._coerce_str_list(args.get('assignee_values')) or []
-        assignee_values.extend(self.tenant_assignee_aliases.get(tenant, []))
-
-        user_query = args.get('user_query')
-        user_query_flags = int(args.get('user_query_flags', 5))
-        user_candidates = []
-        user_needs_confirmation = False
-        if isinstance(user_query, str) and user_query.strip():
-            user, user_candidates, user_needs_confirmation = self._resolve_user_from_query(user_query, tenant, client, flags=user_query_flags)
-            if user is None:
-                user = {}
-        else:
-            connected = client.get_connected_user(False) or {}
-            user = connected.get('User') or {}
-
-        user_values = self._extract_user_values(user)
-        match_values = []
-        if user_values:
-            match_values.extend(user_values)
-        if assignee_values:
-            for v in assignee_values:
-                if v not in match_values:
-                    match_values.append(v)
-
-        resp = client.execute_workflow_query_for_all(workflow_flags=workflow_flags, max_rows=max_rows)
-        tasks, user_field_labels, user_field_indexes = self._extract_workflow_tasks(resp)
-
-        filtered_tasks = tasks
-        filter_applied = False
-        group_membership = {}
-        if filter_to_user and match_values and user_field_indexes:
-            # precompute group membership for any assignee values that don't directly match the user
-            if resolve_group_membership:
-                assignee_values_found = []
-                for task in tasks:
-                    values = list(task.get('IndexValues', {}).values())
-                    for idx in user_field_indexes:
-                        if idx < len(values):
-                            val = values[idx]
-                            if val is None:
-                                continue
-                            text = str(val).strip()
-                            if not text:
-                                continue
-                            if self._match_user_value(text, match_values):
-                                continue
-                            if text not in assignee_values_found:
-                                assignee_values_found.append(text)
-                if assignee_values_found:
-                    group_membership = self._resolve_group_membership(client, assignee_values_found, match_values)
-
-            filtered = []
-            for task in tasks:
-                values = list(task.get('IndexValues', {}).values())
-                matched = False
-                for idx in user_field_indexes:
-                    if idx < len(values) and self._match_user_value(values[idx], match_values):
-                        matched = True
-                        break
-                    if idx < len(values) and resolve_group_membership:
-                        val = values[idx]
-                        if val is not None:
-                            text = str(val).strip()
-                            if text and group_membership.get(text):
-                                matched = True
-                                break
-                if matched:
-                    filtered.append(task)
-            filtered_tasks = filtered
-            filter_applied = True
-
-        output = {
-            'user': user,
-            'user_query': user_query,
-            'user_candidates': user_candidates,
-            'user_needs_confirmation': user_needs_confirmation,
-            'workflow_flags': workflow_flags,
-            'task_filter': task_filter,
-            'max_rows': max_rows,
-            'filter_to_user': filter_to_user,
-            'filter_applied': filter_applied,
-            'assignee_values': assignee_values,
-            'user_field_labels': user_field_labels,
-            'group_membership_matches': [k for k, v in group_membership.items() if v],
-            'task_count': len(filtered_tasks),
-            'tasks': filtered_tasks,
-        }
-
-        overdue_tasks = None
-        overdue_keys = set()
-        if include_overdue_summary:
-            if workflow_flags == self._normalize_workflow_flags('overdue'):
-                overdue_tasks = filtered_tasks
-                overdue_keys = {self._task_key(t) for t in filtered_tasks}
-            else:
-                overdue_resp = client.execute_workflow_query_for_all(
-                    workflow_flags=self._normalize_workflow_flags('overdue'),
-                    max_rows=max_rows,
-                )
-                overdue_all, _, overdue_user_field_indexes = self._extract_workflow_tasks(overdue_resp)
-                overdue_filtered = overdue_all
-                if filter_to_user and match_values and overdue_user_field_indexes:
-                    group_membership_overdue = {}
-                    if resolve_group_membership:
-                        assignee_values_found = []
-                        for task in overdue_all:
-                            values = list(task.get('IndexValues', {}).values())
-                            for idx in overdue_user_field_indexes:
-                                if idx < len(values):
-                                    val = values[idx]
-                                    if val is None:
-                                        continue
-                                    text = str(val).strip()
-                                    if not text:
-                                        continue
-                                    if self._match_user_value(text, match_values):
-                                        continue
-                                    if text not in assignee_values_found:
-                                        assignee_values_found.append(text)
-                        if assignee_values_found:
-                            group_membership_overdue = self._resolve_group_membership(client, assignee_values_found, match_values)
-                    tmp = []
-                    for task in overdue_all:
-                        values = list(task.get('IndexValues', {}).values())
-                        matched = False
-                        for idx in overdue_user_field_indexes:
-                            if idx < len(values) and self._match_user_value(values[idx], match_values):
-                                matched = True
-                                break
-                            if idx < len(values) and resolve_group_membership:
-                                val = values[idx]
-                                if val is not None:
-                                    text = str(val).strip()
-                                    if text and group_membership_overdue.get(text):
-                                        matched = True
-                                        break
-                        if matched:
-                            tmp.append(task)
-                    overdue_filtered = tmp
-                overdue_tasks = overdue_filtered
-                overdue_keys = {self._task_key(t) for t in overdue_filtered}
-
-            on_schedule = 0
-            overdue = 0
-            for task in filtered_tasks:
-                key = self._task_key(task)
-                is_overdue = key in overdue_keys
-                task['IsOverdue'] = is_overdue
-                task['ScheduleStatus'] = 'overdue' if is_overdue else 'on_schedule'
-                if is_overdue:
-                    overdue += 1
-                else:
-                    on_schedule += 1
-
-            output['overdue_count'] = overdue
-            output['on_schedule_count'] = on_schedule
-            if overdue_tasks is not None:
-                output['overdue_tasks_count'] = len(overdue_tasks)
-            if overdue > 0:
-                output['highlight'] = {
-                    'message': f'{overdue} overdue task(s) found.',
-                    'overdue_count': overdue,
-                    'on_schedule_count': on_schedule,
-                }
-
-        if include_unfiltered and filtered_tasks != tasks:
-            output['all_tasks_count'] = len(tasks)
-            output['all_tasks'] = tasks
-
-        if filter_to_user and match_values and not user_field_indexes:
-            output['note'] = 'No user-related columns detected; returning unfiltered tasks.'
-        elif filter_to_user and not match_values:
-            output['note'] = 'No assignee values available for filtering.'
-        elif filter_to_user and user_field_indexes and filter_applied and not filtered_tasks and tasks:
-            output['note'] = 'No tasks matched the user/assignee values. Group membership was checked; consider verifying the assignee value or user selection.'
-
+        args = dict(args or {})
+        if args.get('filter_to_user') is None:
+            args['filter_to_user'] = True
+        output = self._get_workflow_instances_core(args, tenant, client)
+        # preserve legacy key
+        output['tasks'] = output.get('instances', [])
         return output
 
     def _normalize_statistics_query_type(self, value: Any) -> int:
@@ -2901,7 +4859,8 @@ def _parse_aliases(raw: Optional[str]) -> List[str]:
 
 
 def load_clients() -> Tuple[Dict[str, ThereforeClient], Optional[str], Dict[str, str], Dict[str, List[str]]]:
-    env_path = os.environ.get('THEREFORE_ENV_PATH', '/Volumes/DataSSD/source/therefore-mcp/docs/reference/user/.env.local')
+    default_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.local')
+    env_path = os.environ.get('THEREFORE_ENV_PATH', default_env_path)
     env_values = load_env(env_path)
     configs, default_tenant, tenant_labels = build_tenant_configs_from_env(env_values)
     clients: Dict[str, ThereforeClient] = {}
@@ -2926,74 +4885,17 @@ def main() -> None:
     clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
     server = MCPServer(clients, default_tenant, tenant_labels, tenant_aliases)
 
-    reload_flag = {'requested': False, 'reason': None}
-    reload_mode = str(os.environ.get('THEREFORE_MCP_HOT_RELOAD', '')).lower().strip()
-    if reload_mode in ('1', 'true', 'yes', 'restart', 'exit', 'quit'):
-        reload_mode = 'restart' if reload_mode in ('1', 'true', 'yes', 'restart') else 'exit'
-        watch_files = [
-            os.path.abspath(__file__),
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'therefore_client.py'),
-        ]
-
-        def watch_files_for_changes() -> None:
-            mtimes: Dict[str, Optional[float]] = {}
-            for path in watch_files:
-                try:
-                    mtimes[path] = os.path.getmtime(path)
-                except OSError:
-                    mtimes[path] = None
-            while True:
-                time.sleep(1.0)
-                for path in watch_files:
-                    try:
-                        current = os.path.getmtime(path)
-                    except OSError:
-                        current = None
-                    previous = mtimes.get(path)
-                    if previous is None and current is None:
-                        continue
-                    if previous is None and current is not None:
-                        reload_flag['requested'] = True
-                        reload_flag['reason'] = path
-                        return
-                    if current is None and previous is not None:
-                        reload_flag['requested'] = True
-                        reload_flag['reason'] = path
-                        return
-                    if current is not None and previous is not None and current > previous:
-                        reload_flag['requested'] = True
-                        reload_flag['reason'] = path
-                        return
-                    mtimes[path] = current
-
-        thread = threading.Thread(target=watch_files_for_changes, daemon=True)
-        thread.start()
-    else:
-        reload_mode = ''
-
     while True:
-        if reload_flag['requested'] and reload_mode:
-            reason = reload_flag.get('reason') or 'unknown file'
-            print(f'[therefore-mcp] Hot reload triggered by change: {reason}', file=sys.stderr)
-            if reload_mode == 'restart':
-                sys.stderr.flush()
-                sys.stdout.flush()
-                os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)] + sys.argv[1:])
-            break
-        msg = _read_message()
+        try:
+            msg = _read_message()
+        except json.JSONDecodeError as e:
+            _write_message(_error_response(None, -32700, f'Parse error: {e}'))
+            continue
         if msg is None:
             break
         response = server.handle(msg)
         if response is not None:
             _write_message(response)
-        if reload_flag['requested'] and reload_mode:
-            reason = reload_flag.get('reason') or 'unknown file'
-            print(f'[therefore-mcp] Hot reload triggered by change: {reason}', file=sys.stderr)
-            if reload_mode == 'restart':
-                sys.stderr.flush()
-                sys.stdout.flush()
-                os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)] + sys.argv[1:])
-            break
 
 
 if __name__ == '__main__':
