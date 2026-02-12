@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import base64
 import json
 import os
@@ -31,6 +32,16 @@ from therefore_client import (
     load_env,
     normalize_tenant_key,
 )
+
+try:
+    import asyncio
+    import uuid
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse, Response, StreamingResponse
+    import uvicorn
+    HAS_FASTAPI = True
+except ImportError:
+    HAS_FASTAPI = False
 
 
 def _read_message() -> Optional[Dict[str, Any]]:
@@ -4881,10 +4892,8 @@ def load_clients() -> Tuple[Dict[str, ThereforeClient], Optional[str], Dict[str,
     return clients, default_tenant, tenant_labels, tenant_aliases
 
 
-def main() -> None:
-    clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
-    server = MCPServer(clients, default_tenant, tenant_labels, tenant_aliases)
-
+def run_stdio_mode(server: 'MCPServer') -> None:
+    """Run the server in stdio mode (MCP standard)."""
     while True:
         try:
             msg = _read_message()
@@ -4896,6 +4905,232 @@ def main() -> None:
         response = server.handle(msg)
         if response is not None:
             _write_message(response)
+
+
+def _build_http_app(server: 'MCPServer') -> 'FastAPI':
+    """Build the FastAPI app for HTTP mode with MCP SSE transport."""
+    if not HAS_FASTAPI:
+        raise RuntimeError("FastAPI is required for HTTP mode. Install with: pip install fastapi uvicorn")
+
+    app = FastAPI(title="Therefore MCP HTTP Server")
+
+    # Session management: session_id -> asyncio.Queue
+    _sessions: Dict[str, asyncio.Queue] = {}
+
+    @app.get("/sse")
+    async def sse_endpoint(request: Request):
+        """MCP SSE transport: client connects here to receive events."""
+        session_id = str(uuid.uuid4())
+        queue = asyncio.Queue()
+        _sessions[session_id] = queue
+
+        # Build the messages endpoint URL from the incoming request
+        base_url = str(request.base_url).rstrip("/")
+        messages_url = f"{base_url}/messages?session_id={session_id}"
+
+        async def event_stream():
+            # First event: tell the client where to POST messages
+            yield f"event: endpoint\ndata: {messages_url}\n\n"
+            try:
+                while True:
+                    # Check if client disconnected
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        data = await asyncio.wait_for(queue.get(), timeout=30.0)
+                        yield f"event: message\ndata: {data}\n\n"
+                    except asyncio.TimeoutError:
+                        # Send keepalive comment to prevent connection timeout
+                        yield ": keepalive\n\n"
+            finally:
+                _sessions.pop(session_id, None)
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    @app.post("/messages")
+    async def messages_endpoint(request: Request, session_id: str):
+        """MCP SSE transport: client POSTs JSON-RPC messages here."""
+        queue = _sessions.get(session_id)
+        if queue is None:
+            return JSONResponse(
+                _error_response(None, -32000, "Unknown or expired session"),
+                status_code=400,
+            )
+
+        body = await request.json()
+        if not isinstance(body, dict):
+            return JSONResponse(
+                _error_response(None, -32700, "Request must be a JSON object"),
+                status_code=400,
+            )
+
+        response = server.handle(body)
+        if response is not None:
+            await queue.put(json.dumps(response, separators=(",", ":")))
+
+        return JSONResponse({"ok": True}, status_code=202)
+
+    # -- Streamable HTTP transport (MCP 2025-03-26) --
+    # Tracks sessions by Mcp-Session-Id header.
+    _mcp_sessions: Dict[str, bool] = {}  # session_id -> alive
+
+    @app.post("/mcp")
+    async def streamable_http_endpoint(request: Request):
+        """MCP Streamable HTTP transport endpoint."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(
+                _error_response(None, -32700, "Parse error"),
+                status_code=400,
+            )
+        if not isinstance(body, dict):
+            return JSONResponse(
+                _error_response(None, -32700, "Request must be a JSON object"),
+                status_code=400,
+            )
+
+        method = body.get("method")
+        msg_id = body.get("id")
+        is_notification = msg_id is None
+
+        # Session management
+        session_id = request.headers.get("mcp-session-id")
+        if method == "initialize":
+            # Create a new session
+            session_id = str(uuid.uuid4())
+        elif session_id not in _mcp_sessions:
+            return JSONResponse(
+                _error_response(msg_id, -32000, "Bad or missing Mcp-Session-Id"),
+                status_code=400,
+            )
+
+        response = server.handle(body)
+
+        if method == "initialize" and response is not None:
+            _mcp_sessions[session_id] = True
+            return JSONResponse(
+                response,
+                headers={"Mcp-Session-Id": session_id},
+            )
+
+        if is_notification:
+            return Response(status_code=204)
+
+        if response is not None:
+            return JSONResponse(
+                response,
+                headers={"Mcp-Session-Id": session_id} if session_id else {},
+            )
+        return Response(status_code=204)
+
+    @app.delete("/mcp")
+    async def streamable_http_delete(request: Request):
+        """Terminate a Streamable HTTP session."""
+        session_id = request.headers.get("mcp-session-id")
+        if session_id and session_id in _mcp_sessions:
+            del _mcp_sessions[session_id]
+        return Response(status_code=204)
+
+    # -- Direct JSON-RPC (non-MCP transport) --
+
+    @app.post("/")
+    async def rpc_handler(request: Request) -> JSONResponse:
+        """Direct JSON-RPC over HTTP."""
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                return JSONResponse(
+                    _error_response(None, -32700, "Request must be a JSON object"),
+                    status_code=400,
+                )
+
+            response = server.handle(body)
+            if response is not None:
+                return JSONResponse(response)
+            return JSONResponse({"jsonrpc": "2.0", "id": body.get("id")})
+        except Exception as e:
+            return JSONResponse(
+                _error_response(None, -32603, f"Internal server error: {str(e)}"),
+                status_code=500,
+            )
+
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint."""
+        return {"status": "ok", "mode": "http-mcp"}
+
+    return app
+
+
+def run_http_mode(server: 'MCPServer', host: str, port: int) -> None:
+    """Run the server in HTTP-only mode using FastAPI."""
+    app = _build_http_app(server)
+    print(f"Starting Therefore MCP server in HTTP mode on {host}:{port}", file=sys.stderr)
+    print(f"Access at: http://{host}:{port}", file=sys.stderr)
+    print(f"Health check: http://{host}:{port}/health", file=sys.stderr)
+    uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+def _start_http_background(server: 'MCPServer', host: str, port: int) -> None:
+    """Start the HTTP server in a daemon thread (for dual stdio+http mode)."""
+    app = _build_http_app(server)
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    uv_server = uvicorn.Server(config)
+    thread = threading.Thread(target=uv_server.run, daemon=True)
+    thread.start()
+    print(f"HTTP server started on {host}:{port}", file=sys.stderr)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Therefore MCP Server")
+    parser.add_argument(
+        "--stdio",
+        action="store_true",
+        default=False,
+        help="Run in stdio mode (default if no mode specified)"
+    )
+    parser.add_argument(
+        "--http",
+        type=int,
+        metavar="PORT",
+        help="Run in HTTP mode on specified port (e.g., --http 8000)"
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="HTTP host to bind to (default: 0.0.0.0)"
+    )
+
+    args = parser.parse_args()
+
+    # Load clients and create server
+    clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
+    server = MCPServer(clients, default_tenant, tenant_labels, tenant_aliases)
+
+    # Determine mode and run
+    use_stdio = args.stdio or args.http is None  # stdio is the default
+    use_http = args.http is not None
+
+    if use_stdio and use_http:
+        # Dual mode: HTTP in background thread, stdio on main thread
+        _start_http_background(server, args.host, args.http)
+        run_stdio_mode(server)
+    elif use_http:
+        # HTTP-only mode (--http without --stdio)
+        run_http_mode(server, args.host, args.http)
+    else:
+        # stdio-only mode (default)
+        run_stdio_mode(server)
 
 
 if __name__ == '__main__':

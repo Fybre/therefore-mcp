@@ -2,7 +2,7 @@
 
 A Python [MCP](https://modelcontextprotocol.io/) server that connects AI assistants to the [Therefore](https://therefore.net/) document management system via its WebAPI.
 
-Exposes 60+ tools covering document CRUD, querying, workflow management, keyword dictionaries, user administration, and system operations. Zero external dependencies -- pure Python standard library.
+Exposes 60+ tools covering document CRUD, querying, workflow management, keyword dictionaries, user administration, and system operations. Supports stdio and HTTP/SSE transports. Zero external dependencies for stdio mode -- pure Python standard library. HTTP mode requires `fastapi` and `uvicorn`.
 
 ## Quick Start
 
@@ -37,40 +37,66 @@ Multiple tenants are supported -- add additional `THEREFORE_<TENANT>_*` blocks a
 
 ### Running
 
+The server supports three transport modes:
+
 ```bash
+# stdio only (default) -- for MCP clients
 python3 src/mcp_server.py
+
+# HTTP only -- JSON-RPC over HTTP + SSE transport on port 8000
+python3 src/mcp_server.py --http 8000
+
+# Both -- stdio for MCP client, HTTP/SSE on port 8000 for other consumers
+python3 src/mcp_server.py --stdio --http 8000
 ```
 
-The server communicates over stdin/stdout using JSON-RPC (MCP protocol).
+HTTP mode requires `fastapi` and `uvicorn` (`pip install fastapi uvicorn`). The HTTP server exposes three transports:
+
+| Endpoint | Transport | Clients |
+|----------|-----------|---------|
+| `POST /mcp` | Streamable HTTP | Goose, newer MCP clients |
+| `GET /sse` + `POST /messages` | SSE | Older MCP clients with `"url"` config |
+| `POST /` | Direct JSON-RPC | curl, custom integrations |
+
+Additionally:
+- `GET /health` -- health check
+- `DELETE /mcp` -- terminate a Streamable HTTP session
 
 ### Docker
 
 ```bash
-# Run from Docker Hub (recommended):
+# stdio only (default):
 docker run --rm -i --env-file /path/to/.env.local fybre/therefore-mcp
 
-# Or build locally:
+# HTTP only:
+docker run --rm -p 8000:8000 --env-file /path/to/.env.local fybre/therefore-mcp --http 8000
+
+# Both stdio + HTTP:
+docker run --rm -i -p 8000:8000 --env-file /path/to/.env.local fybre/therefore-mcp --stdio --http 8000
+
+# Build locally:
 docker build -t therefore-mcp /path/to/therefore-mcp
 docker run --rm -i --env-file /path/to/.env.local therefore-mcp
 
-# Or using Docker Compose:
-docker compose -f /path/to/therefore-mcp/docker-compose.yml up --build
+# Build multi-platform and push to registry:
+docker buildx create --name multiplatform --driver docker-container --use  # first time only
+docker buildx build --platform linux/amd64,linux/arm64 -t fybre/therefore-mcp --push .
 ```
 
 ## MCP Host Configuration
 
 Below are example configurations for popular MCP-compatible clients. Replace `/path/to/therefore-mcp` with the actual path to your clone.
 
-All examples use Python directly. To run via Docker instead, substitute the command and args in any example:
+All examples below use Python directly. To run via Docker instead, substitute the command and args in any example:
 
 ```json
-// Docker Hub (recommended):
+// Docker Hub -- stdio only (recommended for MCP clients):
 "command": "docker",
 "args": ["run", "--rm", "-i", "--env-file", "/path/to/.env.local", "fybre/therefore-mcp"]
 
-// or local build:
+// Docker Hub -- stdio + HTTP on port 8000:
 "command": "docker",
-"args": ["run", "--rm", "-i", "--env-file", "/path/to/.env.local", "therefore-mcp"]
+"args": ["run", "--rm", "-i", "-p", "8000:8000", "--env-file", "/path/to/.env.local", "fybre/therefore-mcp", "--stdio", "--http", "8000"]
 ```
 
 ### Claude Code (CLI)
@@ -87,13 +113,16 @@ Or add to `.claude/settings.json`:
     "therefore": {
       "type": "stdio",
       "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
+      "env": {
+        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
+      }
     }
   }
 }
 ```
 
-### Claude Desktop
+### Claude Desktop / Claude for Mac
 
 Add to `claude_desktop_config.json`:
 
@@ -102,10 +131,54 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "therefore": {
       "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
+      "env": {
+        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
+      }
     }
   }
 }
+```
+
+With Docker (stdio + HTTP):
+
+```json
+{
+  "mcpServers": {
+    "therefore": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i", "-p", "8000:8000",
+        "--env-file", "/path/to/.env.local",
+        "fybre/therefore-mcp",
+        "--stdio", "--http", "8000"
+      ]
+    }
+  }
+}
+```
+
+> **Note:** Claude Desktop only supports stdio transport (`"command"`). The `--http` flag adds an HTTP/SSE endpoint on the side for other consumers but is not required.
+
+### Goose
+
+Goose uses Streamable HTTP transport. Start the server with `--http` (Docker or Python), then configure:
+
+```yaml
+# ~/.config/goose/config.yaml
+extensions:
+  therefore:
+    type: sse
+    uri: http://localhost:8000/mcp
+```
+
+Or for a remote server:
+
+```yaml
+extensions:
+  therefore:
+    type: sse
+    uri: http://192.168.x.x:8000/mcp
 ```
 
 ### Cursor
@@ -117,7 +190,10 @@ Add to `.cursor/mcp.json` in your project root:
   "mcpServers": {
     "therefore": {
       "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
+      "env": {
+        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
+      }
     }
   }
 }
@@ -133,7 +209,10 @@ Add to `.vscode/mcp.json` in your workspace:
     "therefore": {
       "type": "stdio",
       "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
+      "env": {
+        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
+      }
     }
   }
 }
@@ -148,7 +227,10 @@ Add to your Kimi Code MCP settings:
   "mcpServers": {
     "therefore": {
       "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
+      "env": {
+        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
+      }
     }
   }
 }
