@@ -46,8 +46,15 @@ The server communicates over stdin/stdout using JSON-RPC (MCP protocol).
 ### Docker
 
 ```bash
-# Copy your .env.local to the project root, then:
-docker compose up --build
+# Run from Docker Hub (recommended):
+docker run --rm -i --env-file /path/to/.env.local fybre/therefore-mcp
+
+# Or build locally:
+docker build -t therefore-mcp /path/to/therefore-mcp
+docker run --rm -i --env-file /path/to/.env.local therefore-mcp
+
+# Or using Docker Compose:
+docker compose -f /path/to/therefore-mcp/docker-compose.yml up --build
 ```
 
 ## MCP Host Configuration
@@ -57,8 +64,13 @@ Below are example configurations for popular MCP-compatible clients. Replace `/p
 All examples use Python directly. To run via Docker instead, substitute the command and args in any example:
 
 ```json
+// Docker Hub (recommended):
 "command": "docker",
-"args": ["compose", "-f", "/path/to/therefore-mcp/docker-compose.yml", "run", "--rm", "-T", "therefore-mcp"]
+"args": ["run", "--rm", "-i", "--env-file", "/path/to/.env.local", "fybre/therefore-mcp"]
+
+// or local build:
+"command": "docker",
+"args": ["run", "--rm", "-i", "--env-file", "/path/to/.env.local", "therefore-mcp"]
 ```
 
 ### Claude Code (CLI)
