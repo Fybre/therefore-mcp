@@ -50,6 +50,98 @@ The server communicates over stdin/stdout using JSON-RPC (MCP protocol).
 docker compose up --build
 ```
 
+## MCP Host Configuration
+
+Below are example configurations for popular MCP-compatible clients. Replace `/path/to/therefore-mcp` with the actual path to your clone.
+
+All examples use Python directly. To run via Docker instead, substitute the command and args in any example:
+
+```json
+"command": "docker",
+"args": ["compose", "-f", "/path/to/therefore-mcp/docker-compose.yml", "run", "--rm", "-T", "therefore-mcp"]
+```
+
+### Claude Code (CLI)
+
+```bash
+claude mcp add therefore -- python3 /path/to/therefore-mcp/src/mcp_server.py
+```
+
+Or add to `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "therefore": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "therefore": {
+      "command": "python3",
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "therefore": {
+      "command": "python3",
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+    }
+  }
+}
+```
+
+### VS Code (Copilot)
+
+Add to `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "therefore": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+    }
+  }
+}
+```
+
+### Kimi Code (Moonshot)
+
+Add to your Kimi Code MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "therefore": {
+      "command": "python3",
+      "args": ["/path/to/therefore-mcp/src/mcp_server.py"]
+    }
+  }
+}
+```
+
 ## Tools
 
 Tools are grouped into the following areas:
