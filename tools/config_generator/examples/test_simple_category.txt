@@ -1,0 +1,4 @@
+Create a TestDoc category in folder "Test" with these fields:
+
+- text field "Title" length 200
+- date field "Date" with default value date

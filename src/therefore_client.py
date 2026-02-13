@@ -571,6 +571,16 @@ class ThereforeClient:
     def get_document_versions(self, doc_no: int) -> Dict[str, Any]:
         return self._post('GetDocumentVersions', {'DocNo': doc_no})
 
+    def get_referenced_table_info(self, data_type_no: int) -> Dict[str, Any]:
+        return self._post('GetReferencedTableInfo', {'DataTypeNo': data_type_no})
+
+    def get_objects(self, flags: int, obj_type: int, role_access_mask: int = 18446744073709551615) -> Dict[str, Any]:
+        return self._post('GetObjects', {
+            'Flags': flags,
+            'Type': obj_type,
+            'RoleAccessMask': role_access_mask,
+        })
+
     def get_document_index_data(self, doc_no: int) -> Dict[str, Any]:
         return self._post('GetDocumentIndexData', {
             'DocNo': doc_no,

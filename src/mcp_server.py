@@ -295,13 +295,24 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "get_objects",
-            "description": "Get objects using the GetObjects endpoint (Flags + Type).",
+            "description": "Get objects using the GetObjects endpoint (Flags + Type). Use Type=5 to list all referenced tables (categories that can be used in reference fields).",
             "inputSchema": {
                 "type": "object",
                 "required": ["flags", "obj_type"],
                 "properties": {
                     "flags": {"type": "integer"},
-                    "obj_type": {"type": "integer"}
+                    "obj_type": {"type": "integer", "description": "Object type to query. Use 5 for referenced tables, 22 for keyword dictionaries."}
+                }
+            },
+        },
+        {
+            "name": "get_referenced_table_info",
+            "description": "Get column information for a referenced table. Returns details about columns that can be used as dependent fields in reference table fields. The data_type_no is the category ID of the referenced table.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["data_type_no"],
+                "properties": {
+                    "data_type_no": {"type": "integer", "description": "The category ID (TypeNo) of the referenced table. Use get_objects with Type=5 to find available referenced tables."}
                 }
             },
         },
@@ -1585,8 +1596,8 @@ def build_tools() -> List[Dict[str, Any]]:
                     "baseline_path": {
                         "type": "string",
                         "description": (
-                            "Path to baseline TheConfiguration.xml export. If omitted, uses "
-                            "THEREFORE_CONFIG_BASELINE_PATH env var or default per-tenant path."
+                            "Optional path to a baseline TheConfiguration.xml export for diff-mode "
+                            "collision checks. Not required for normal generation."
                         ),
                     },
                     "api_check": {
@@ -1883,6 +1894,8 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             # Normalize items across GetObjects/GetObjectsList payload shapes.
             resp['items'] = self._extract_object_items(resp)
             return resp
+        if name == 'get_referenced_table_info':
+            return client.get_referenced_table_info(int(args['data_type_no']))
         if name == 'execute_users_query':
             domain_names = args.get('domain_names')
             if domain_names is None:
@@ -2520,21 +2533,10 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         else:
             spec = parse_description(description)
 
-        # Resolve baseline path
+        # Baseline is only used when explicitly provided for diff-mode collision checks
         baseline_path = args.get('baseline_path')
-        if not baseline_path:
-            baseline_path = os.environ.get('THEREFORE_CONFIG_BASELINE_PATH')
-        if not baseline_path:
-            baseline_path = os.path.join(
-                _REPO_ROOT, 'tools', 'config_generator', 'examples',
-                f'{tenant}-baseline-TheConfiguration.xml'
-            )
-        if not os.path.isfile(baseline_path):
-            raise ValueError(
-                f"Baseline file not found: {baseline_path}. "
-                f"Provide 'baseline_path', set THEREFORE_CONFIG_BASELINE_PATH env var, "
-                f"or place a baseline export at tools/config_generator/examples/{tenant}-baseline-TheConfiguration.xml"
-            )
+        if baseline_path and not os.path.isfile(baseline_path):
+            raise ValueError(f"Baseline file not found: {baseline_path}")
 
         # API check: reuse the existing authenticated client by default
         api_check = args.get('api_check', True)

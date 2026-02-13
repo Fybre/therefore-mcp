@@ -1,0 +1,8 @@
+Create an Invoice category in folder "Finance" with these fields:
+
+- reference table "Supplier" from category "Suppliers" with synchronized redundant columns "Name", "ABN"
+- reference table "Approver" from category "Staff" with editable columns "Fullname", "Role"
+- reference table "Customer" from category "Customers" with columns "Company", "Email"
+- text field "Invoice Number" with unique index
+- decimal field "Total Amount" length 10 scale 2
+- date field "Invoice Date" with default value date

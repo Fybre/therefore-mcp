@@ -28,6 +28,53 @@ except Exception:  # pragma: no cover
 
 LCID_DEFAULT = "1033"
 
+# Therefore configuration XML format version.  Taken from a known-good export;
+# the importing server uses this to verify structural compatibility.
+CONFIG_XML_VERSION = "570425345"
+CONFIG_XML_NEW_IMPORT_EXPORT = "1"
+
+# Therefore field size limits
+TEXT_FIELD_MAX_LENGTH = 4000
+
+# Therefore field type numbers
+FIELD_TYPE_MULTI_KEYWORD = 193  # Multi-select keyword field TypeNo
+
+# Therefore field index types
+INDEX_TYPE_NONE = None  # No index (default) - element omitted
+INDEX_TYPE_NORMAL = "1"  # Normal index - speeds up searching
+INDEX_TYPE_UNIQUE = "2"  # Unique index - enforces uniqueness, makes field mandatory
+
+# Therefore dependency modes for referenced table dependent fields
+DEPENDENCY_MODE_REFERENCED = "0"  # Default - data pulled from source, not stored locally
+DEPENDENCY_MODE_SYNCHRONIZED = "1"  # Synchronized redundant - copied locally, kept in sync (read-only)
+DEPENDENCY_MODE_EDITABLE = "2"  # Editable redundant - copied locally, can be edited independently
+
+# Therefore dynamic default values (run-time variables)
+# Text field defaults
+DEFAULT_USER = "<User>"
+DEFAULT_USER_DISPLAY_NAME = "<User Display Name>"
+DEFAULT_DOMAIN_USER = "<Domain\\User>"
+DEFAULT_USER_EMAIL = "<User E-mail Address>"
+DEFAULT_FILE_NAME = "<File Name>"
+DEFAULT_FILE_TITLE = "<File Title>"
+DEFAULT_FILE_EXTENSION = "<File Extension>"
+DEFAULT_FILE_PATH = "<File Path>"
+DEFAULT_FOLDER_PATH = "<Folder Path>"
+DEFAULT_GUID = "<Guid>"
+
+# Date field defaults
+DEFAULT_DATE = "<Date>"
+DEFAULT_FILE_CREATED = "<File Created>"
+DEFAULT_FILE_MODIFIED = "<File Modified>"
+
+# Date and Time field defaults (same as date plus timestamp)
+DEFAULT_TIMESTAMP = "<Timestamp>"
+
+# Checkbox defaults
+DEFAULT_CHECKBOX_FALSE = "0"
+DEFAULT_CHECKBOX_TRUE = "1"
+# Empty/omitted = undefined
+
 
 @dataclass
 class DictionarySpec:
@@ -45,13 +92,25 @@ class TableColumnSpec:
 
 
 @dataclass
+class ReferenceTableSpec:
+    category_name: Optional[str] = None  # Referenced category name (resolved via API)
+    category_no: Optional[int] = None     # Or explicit category number
+    dependent_fields: List[str] = field(default_factory=list)  # Column names to include
+    dependency_mode: str = DEPENDENCY_MODE_REFERENCED  # "0" (referenced), "1" (synchronized), "2" (editable)
+
+
+@dataclass
 class FieldSpec:
     name: str
-    type: str  # text | number | decimal | date | keyword_single | table
+    type: str  # text | number | decimal | date | keyword_single | keyword_multiple | table | reference_table
     length: Optional[int] = None
     scale: Optional[int] = None
     dictionary: Optional[DictionarySpec] = None
     columns: List[TableColumnSpec] = field(default_factory=list)
+    index_type: Optional[str] = None  # None (no index), "1" (normal), "2" (unique)
+    default_value: Optional[str] = None  # Static value or dynamic variable like "<User>". For keyword_multiple: comma-separated names
+    mandatory: bool = False  # Required field (auto-set to True when index_type="2")
+    reference_table: Optional[ReferenceTableSpec] = None  # For reference_table type
 
 
 @dataclass
@@ -90,7 +149,9 @@ class Layout:
             "decimal": 80,
             "date": 120,
             "keyword_single": 200,
+            "keyword_multiple": 200,
             "table": 240,
+            "reference_table": 200,
         }
         self.table_height = 43
         self.half_width = 120
@@ -134,13 +195,15 @@ def parse_natural_language(text: str) -> CategorySpec:
         cat_name = m.group(1).strip()
         if cat_name:
             cat_name = cat_name[:1].upper() + cat_name[1:]
-    m = re.search(r"\bcategory\b\s+\"([^\"]+)\"", joined, re.IGNORECASE)
-    if m:
-        cat_name = m.group(1)
-    else:
-        m = re.search(r"\bcategory\b\s+'([^']+)'", joined, re.IGNORECASE)
+    # Only check for quoted category names if we haven't found one yet
+    if not cat_name:
+        m = re.search(r"\bcategory\b\s+\"([^\"]+)\"", joined, re.IGNORECASE)
         if m:
             cat_name = m.group(1)
+        else:
+            m = re.search(r"\bcategory\b\s+'([^']+)'", joined, re.IGNORECASE)
+            if m:
+                cat_name = m.group(1)
     if not cat_name:
         m = re.search(r"\bcategory\b\s+([^\.\n]+)", joined, re.IGNORECASE)
         if m:
@@ -150,6 +213,16 @@ def parse_natural_language(text: str) -> CategorySpec:
             cat_name = cat_name.strip()
     if not cat_name:
         raise ValueError("Could not determine category name from description.")
+
+    # Category description (optional)
+    cat_description = ""
+    m = re.search(r"\bdescription\s*[:\-]\s*\"([^\"]+)\"", joined, re.IGNORECASE)
+    if m:
+        cat_description = m.group(1)
+    else:
+        m = re.search(r"\bdescription\s*[:\-]\s*'([^']+)'", joined, re.IGNORECASE)
+        if m:
+            cat_description = m.group(1)
 
     # Folder name (optional)
     folder = None
@@ -203,7 +276,11 @@ def parse_natural_language(text: str) -> CategorySpec:
         lower = ln_clean.lower()
 
         ftype = None
-        if "keyword dictionary" in lower:
+        if "reference table" in lower or "referenced table" in lower or "lookup field" in lower or "lookup table" in lower:
+            ftype = "reference_table"
+        elif "multiple keyword" in lower or "multi-select keyword" in lower or "multi keyword" in lower:
+            ftype = "keyword_multiple"
+        elif "keyword dictionary" in lower or "single keyword" in lower or "keyword" in lower:
             ftype = "keyword_single"
         elif "decimal" in lower:
             ftype = "decimal"
@@ -237,7 +314,7 @@ def parse_natural_language(text: str) -> CategorySpec:
             scale = int(m.group(1))
 
         dict_spec = None
-        if ftype == "keyword_single":
+        if ftype in ("keyword_single", "keyword_multiple"):
             mode = "existing"
             if "keyword dictionary" in lower:
                 mode = "create"
@@ -273,6 +350,54 @@ def parse_natural_language(text: str) -> CategorySpec:
 
             dict_spec = DictionarySpec(mode=mode, name=dict_name, keywords=keywords)
 
+        # Parse index type
+        index_type = None
+        if "unique index" in lower or "uniquely indexed" in lower:
+            index_type = INDEX_TYPE_UNIQUE
+        elif "normal index" in lower or " indexed" in lower or "with index" in lower:
+            index_type = INDEX_TYPE_NORMAL
+
+        # Parse mandatory
+        mandatory = "mandatory" in lower or "required" in lower
+
+        # Parse default value
+        default_value = None
+        # Check for dynamic variables
+        if "default" in lower or "default value" in lower:
+            if "user display name" in lower or "display name" in lower:
+                default_value = DEFAULT_USER_DISPLAY_NAME
+            elif "domain\\user" in lower or "domain user" in lower:
+                default_value = DEFAULT_DOMAIN_USER
+            elif "user email" in lower or "user e-mail" in lower or "email address" in lower:
+                default_value = DEFAULT_USER_EMAIL
+            elif "file name" in lower or "filename" in lower:
+                default_value = DEFAULT_FILE_NAME
+            elif "file title" in lower:
+                default_value = DEFAULT_FILE_TITLE
+            elif "file extension" in lower:
+                default_value = DEFAULT_FILE_EXTENSION
+            elif "file path" in lower:
+                default_value = DEFAULT_FILE_PATH
+            elif "folder path" in lower:
+                default_value = DEFAULT_FOLDER_PATH
+            elif "guid" in lower:
+                default_value = DEFAULT_GUID
+            elif "timestamp" in lower:
+                default_value = DEFAULT_TIMESTAMP
+            elif "file created" in lower:
+                default_value = DEFAULT_FILE_CREATED
+            elif "file modified" in lower:
+                default_value = DEFAULT_FILE_MODIFIED
+            elif ftype == "date" and ("date" in lower or "today" in lower):
+                default_value = DEFAULT_DATE
+            elif "user" in lower and "default" in lower:
+                default_value = DEFAULT_USER
+            else:
+                # Try to extract a quoted default value
+                m = re.search(r"default\s+(?:value\s+)?['\"]([^'\"]+)['\"]", lower)
+                if m:
+                    default_value = m.group(1)
+
         columns: List[TableColumnSpec] = []
         if ftype == "table":
             # Extract column names from quoted strings after 'rows'/'columns'
@@ -298,7 +423,54 @@ def parse_natural_language(text: str) -> CategorySpec:
                     col_type = "text"
                 columns.append(TableColumnSpec(name=col, type=col_type))
 
-        fields.append(FieldSpec(name=name, type=ftype, length=length, scale=scale, dictionary=dict_spec, columns=columns))
+        # Parse reference_table
+        ref_table_spec = None
+        if ftype == "reference_table":
+            # Extract referenced category name: "reference table 'User' from category 'Users' with columns 'Name', 'Email'"
+            # Or: "lookup field 'Supplier' from 'Suppliers' with 'Name', 'ABN'"
+            ref_category_name = None
+            dependent_fields = []
+
+            # Try to find "from category 'X'" or "from 'X'"
+            m = re.search(r"from\s+category\s+['\"]([^'\"]+)['\"]", ln_clean, re.IGNORECASE)
+            if m:
+                ref_category_name = m.group(1)
+            else:
+                m = re.search(r"from\s+['\"]([^'\"]+)['\"]", ln_clean, re.IGNORECASE)
+                if m:
+                    ref_category_name = m.group(1)
+
+            # Try to find dependent fields in quotes after "with columns" or "columns"
+            # Extract all quoted strings after "with" or "columns"
+            after_with = None
+            m = re.search(r"with\s+(?:columns?\s+)?(.+)", ln_clean, re.IGNORECASE)
+            if m:
+                after_with = m.group(1)
+            elif "columns" in lower:
+                m = re.search(r"columns?\s+(.+)", ln_clean, re.IGNORECASE)
+                if m:
+                    after_with = m.group(1)
+
+            if after_with:
+                quoted = re.findall(r"['\"]([^'\"]+)['\"]", after_with)
+                if quoted:
+                    dependent_fields = quoted
+
+            # Parse dependency mode
+            dependency_mode = DEPENDENCY_MODE_REFERENCED  # Default
+            if "synchronized redundant" in lower or "synchronized" in lower:
+                dependency_mode = DEPENDENCY_MODE_SYNCHRONIZED
+            elif "editable redundant" in lower or "editable" in lower:
+                dependency_mode = DEPENDENCY_MODE_EDITABLE
+
+            if ref_category_name:
+                ref_table_spec = ReferenceTableSpec(
+                    category_name=ref_category_name,
+                    dependent_fields=dependent_fields,
+                    dependency_mode=dependency_mode
+                )
+
+        fields.append(FieldSpec(name=name, type=ftype, length=length, scale=scale, dictionary=dict_spec, columns=columns, index_type=index_type, default_value=default_value, mandatory=mandatory, reference_table=ref_table_spec))
 
     if not fields:
         raise ValueError("No fields detected in description. Include lines with 'text field', 'number field', etc.")
@@ -306,6 +478,7 @@ def parse_natural_language(text: str) -> CategorySpec:
     return CategorySpec(
         name=cat_name,
         folder=folder,
+        description=cat_description,
         fields=fields,
         force_new_folder=force_new_folder,
         folder_conflict_policy=folder_conflict_policy,
@@ -352,13 +525,16 @@ def spec_from_mapping(data: Dict[str, Any]) -> CategorySpec:
         if not ftype:
             raise ValueError("Field missing type")
         dict_spec = None
-        if ftype in ("keyword_single", "keyword"):
+        if ftype in ("keyword_single", "keyword", "keyword_multiple", "multi_keyword"):
             d = f.get("dictionary") or {}
             mode = d.get("mode", "existing")
             dname = d.get("name") or f.get("name")
             keywords = d.get("keywords", []) or []
             dict_spec = DictionarySpec(mode=mode, name=dname, keywords=keywords)
-            ftype = "keyword_single"
+            if ftype in ("keyword_multiple", "multi_keyword"):
+                ftype = "keyword_multiple"
+            else:
+                ftype = "keyword_single"
         columns = []
         if ftype == "table":
             cols_in = f.get("columns", []) or []
@@ -369,6 +545,27 @@ def spec_from_mapping(data: Dict[str, Any]) -> CategorySpec:
                     length=c.get("length"),
                     scale=c.get("scale"),
                 ))
+
+        ref_table_spec = None
+        if ftype == "reference_table":
+            ref_in = f.get("reference_table") or {}
+            # Parse dependency_mode - accept string name or numeric value
+            dep_mode_raw = ref_in.get("dependency_mode") or ref_in.get("mode")
+            dependency_mode = DEPENDENCY_MODE_REFERENCED  # Default
+            if dep_mode_raw:
+                if str(dep_mode_raw).lower() in ("synchronized", "synchronized redundant", "sync", "1"):
+                    dependency_mode = DEPENDENCY_MODE_SYNCHRONIZED
+                elif str(dep_mode_raw).lower() in ("editable", "editable redundant", "edit", "2"):
+                    dependency_mode = DEPENDENCY_MODE_EDITABLE
+                elif str(dep_mode_raw) in ("0", "referenced"):
+                    dependency_mode = DEPENDENCY_MODE_REFERENCED
+            ref_table_spec = ReferenceTableSpec(
+                category_name=ref_in.get("category_name"),
+                category_no=ref_in.get("category_no") or ref_in.get("category_id"),
+                dependent_fields=ref_in.get("dependent_fields") or ref_in.get("columns") or [],
+                dependency_mode=dependency_mode
+            )
+
         fields.append(FieldSpec(
             name=f.get("name"),
             type=ftype,
@@ -376,6 +573,10 @@ def spec_from_mapping(data: Dict[str, Any]) -> CategorySpec:
             scale=f.get("scale"),
             dictionary=dict_spec,
             columns=columns,
+            reference_table=ref_table_spec,
+            index_type=f.get("index_type") or f.get("index"),
+            default_value=f.get("default_value") or f.get("default"),
+            mandatory=bool(f.get("mandatory") or f.get("required")),
         ))
 
     return CategorySpec(
@@ -434,7 +635,7 @@ def _is_half_width_text(name: str) -> bool:
 def _field_width_for(name: str, ftype: str, layout: Layout) -> int:
     if ftype in ("number", "decimal", "date"):
         return layout.half_width
-    if ftype == "keyword_single":
+    if ftype in ("keyword_single", "keyword_multiple", "reference_table"):
         if "status" in name.lower() or "state" in name.lower():
             return layout.half_width + 10
         return layout.full_width
@@ -511,18 +712,22 @@ def _make_label_field(field_no: int, caption: str, field_id: str, pos_x: int, po
     return f
 
 
-def _make_text_field(field_no: int, name: str, length: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None) -> ET.Element:
+def _make_text_field(field_no: int, name: str, length: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
     f = ET.Element("Field")
     ET.SubElement(f, "FieldNo").text = str(field_no)
     ET.SubElement(f, "ColName").text = _slugify(name)
     f.append(_tstr_element("Caption", name))
     ET.SubElement(f, "TypeNo").text = "1"
+    if index_type:
+        ET.SubElement(f, "IndexType").text = index_type
     ET.SubElement(f, "Length").text = str(length)
     ET.SubElement(f, "Width").text = str(width)
     ET.SubElement(f, "Height").text = str(height)
     ET.SubElement(f, "PosX").text = str(pos_x)
     ET.SubElement(f, "PosY").text = str(pos_y)
     ET.SubElement(f, "TabOrderPos").text = str(tab_order)
+    if mandatory or index_type == INDEX_TYPE_UNIQUE:
+        ET.SubElement(f, "Mandatory").text = "1"
     ET.SubElement(f, "DontLoadValues").text = "1"
     if default_val:
         ET.SubElement(f, "DefaultVal").text = default_val
@@ -532,38 +737,50 @@ def _make_text_field(field_no: int, name: str, length: int, pos_x: int, pos_y: i
     return f
 
 
-def _make_number_field(field_no: int, name: str, length: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int) -> ET.Element:
+def _make_number_field(field_no: int, name: str, length: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
     f = ET.Element("Field")
     ET.SubElement(f, "FieldNo").text = str(field_no)
     ET.SubElement(f, "ColName").text = _slugify(name)
     f.append(_tstr_element("Caption", name))
     ET.SubElement(f, "TypeNo").text = "2"
+    if index_type:
+        ET.SubElement(f, "IndexType").text = index_type
     ET.SubElement(f, "Length").text = str(length)
     ET.SubElement(f, "Width").text = str(width)
     ET.SubElement(f, "Height").text = str(height)
     ET.SubElement(f, "PosX").text = str(pos_x)
     ET.SubElement(f, "PosY").text = str(pos_y)
     ET.SubElement(f, "TabOrderPos").text = str(tab_order)
+    if mandatory or index_type == INDEX_TYPE_UNIQUE:
+        ET.SubElement(f, "Mandatory").text = "1"
     ET.SubElement(f, "DontLoadValues").text = "1"
+    if default_val:
+        ET.SubElement(f, "DefaultVal").text = default_val
     ET.SubElement(f, "DispOrderPos").text = str(disp_order)
     _add_common_tail(f)
     _insert_field_id(f, _slugify(name))
     return f
 
 
-def _make_decimal_field(field_no: int, name: str, length: int, scale: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int) -> ET.Element:
+def _make_decimal_field(field_no: int, name: str, length: int, scale: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
     f = ET.Element("Field")
     ET.SubElement(f, "FieldNo").text = str(field_no)
     ET.SubElement(f, "ColName").text = _slugify(name)
     f.append(_tstr_element("Caption", name))
     ET.SubElement(f, "TypeNo").text = "5"
+    if index_type:
+        ET.SubElement(f, "IndexType").text = index_type
     ET.SubElement(f, "Length").text = str(length)
     ET.SubElement(f, "Width").text = str(width)
     ET.SubElement(f, "Height").text = str(height)
     ET.SubElement(f, "PosX").text = str(pos_x)
     ET.SubElement(f, "PosY").text = str(pos_y)
     ET.SubElement(f, "TabOrderPos").text = str(tab_order)
+    if mandatory or index_type == INDEX_TYPE_UNIQUE:
+        ET.SubElement(f, "Mandatory").text = "1"
     ET.SubElement(f, "DontLoadValues").text = "1"
+    if default_val:
+        ET.SubElement(f, "DefaultVal").text = default_val
     ET.SubElement(f, "DispOrderPos").text = str(disp_order)
     _add_common_tail(f)
     ET.SubElement(f, "Scale").text = str(scale)
@@ -571,18 +788,22 @@ def _make_decimal_field(field_no: int, name: str, length: int, scale: int, pos_x
     return f
 
 
-def _make_date_field(field_no: int, name: str, length: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None) -> ET.Element:
+def _make_date_field(field_no: int, name: str, length: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
     f = ET.Element("Field")
     ET.SubElement(f, "FieldNo").text = str(field_no)
     ET.SubElement(f, "ColName").text = _slugify(name)
     f.append(_tstr_element("Caption", name))
     ET.SubElement(f, "TypeNo").text = "3"
+    if index_type:
+        ET.SubElement(f, "IndexType").text = index_type
     ET.SubElement(f, "Length").text = str(length)
     ET.SubElement(f, "Width").text = str(width)
     ET.SubElement(f, "Height").text = str(height)
     ET.SubElement(f, "PosX").text = str(pos_x)
     ET.SubElement(f, "PosY").text = str(pos_y)
     ET.SubElement(f, "TabOrderPos").text = str(tab_order)
+    if mandatory or index_type == INDEX_TYPE_UNIQUE:
+        ET.SubElement(f, "Mandatory").text = "1"
     ET.SubElement(f, "DontLoadValues").text = "1"
     if default_val:
         ET.SubElement(f, "DefaultVal").text = default_val
@@ -642,6 +863,32 @@ def _make_keyword_text_field(field_no: int, name: str, belongs_to: int, pos_x: i
     return f
 
 
+def _make_multi_keyword_field(field_no: int, name: str, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, default_val: Optional[str] = None, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
+    """Create a multi-select keyword field (TypeNo 193)."""
+    f = ET.Element("Field")
+    ET.SubElement(f, "FieldNo").text = str(field_no)
+    ET.SubElement(f, "ColName").text = _slugify(name)
+    f.append(_tstr_element("Caption", name))
+    ET.SubElement(f, "TypeNo").text = str(FIELD_TYPE_MULTI_KEYWORD)
+    if index_type:
+        ET.SubElement(f, "IndexType").text = index_type
+    ET.SubElement(f, "Length").text = "250"
+    ET.SubElement(f, "Width").text = str(width)
+    ET.SubElement(f, "Height").text = str(height)
+    ET.SubElement(f, "PosX").text = str(pos_x)
+    ET.SubElement(f, "PosY").text = str(pos_y)
+    ET.SubElement(f, "TabOrderPos").text = str(tab_order)
+    if mandatory or index_type == INDEX_TYPE_UNIQUE:
+        ET.SubElement(f, "Mandatory").text = "1"
+    ET.SubElement(f, "DontLoadValues").text = "1"
+    if default_val:
+        ET.SubElement(f, "DefaultVal").text = default_val
+    ET.SubElement(f, "DispOrderPos").text = str(disp_order)
+    _add_common_tail(f)
+    _insert_field_id(f, _slugify(name))
+    return f
+
+
 def _make_table_field(field_no: int, name: str, foreign_table: str, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int) -> ET.Element:
     f = ET.Element("Field")
     ET.SubElement(f, "FieldNo").text = str(field_no)
@@ -657,6 +904,63 @@ def _make_table_field(field_no: int, name: str, foreign_table: str, pos_x: int, 
     ET.SubElement(f, "ForeignTable").text = foreign_table
     _add_common_tail(f)
     _insert_field_id(f, _slugify(name))
+    return f
+
+
+def _make_primary_reference_field(field_no: int, name: str, ref_category_id: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
+    """Create a primary reference field (TypeNo = referenced category ID)."""
+    f = ET.Element("Field")
+    ET.SubElement(f, "FieldNo").text = str(field_no)
+    ET.SubElement(f, "ColName").text = _slugify(name) + "No"
+    f.append(_tstr_element("Caption", name + "No"))
+    ET.SubElement(f, "TypeNo").text = str(ref_category_id)
+    if index_type:
+        ET.SubElement(f, "IndexType").text = index_type
+    ET.SubElement(f, "Length").text = "250"
+    ET.SubElement(f, "Width").text = "0"
+    ET.SubElement(f, "Height").text = "0"
+    ET.SubElement(f, "PosX").text = "0"
+    ET.SubElement(f, "PosY").text = "0"
+    ET.SubElement(f, "Visible").text = "0"  # Hidden field
+    if mandatory or index_type == INDEX_TYPE_UNIQUE:
+        ET.SubElement(f, "Mandatory").text = "1"
+    f.append(_empty_tstr("RegExHelp"))
+    ET.SubElement(f, "Links")
+    ET.SubElement(f, "Id").text = _guid()
+    ET.SubElement(f, "DisplayProp")
+    ET.SubElement(f, "TabInfo", {"FactoryType": "0"})
+    ET.SubElement(f, "FieldID").text = _slugify(name) + "No"
+    ET.SubElement(f, "DisplayPropCond")
+    ET.SubElement(f, "Filter")
+    return f
+
+
+def _make_dependent_reference_field(field_no: int, name: str, column_name: str, belongs_to: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, dependency_mode: str = DEPENDENCY_MODE_REFERENCED) -> ET.Element:
+    """Create a dependent field that pulls data from the referenced table."""
+    f = ET.Element("Field")
+    ET.SubElement(f, "FieldNo").text = str(field_no)
+    f.append(_tstr_element("Caption", name))
+    ET.SubElement(f, "TypeNo").text = "1"  # Text field
+    ET.SubElement(f, "Length").text = "250"
+    ET.SubElement(f, "Width").text = str(width)
+    ET.SubElement(f, "Height").text = str(height)
+    ET.SubElement(f, "PosX").text = str(pos_x)
+    ET.SubElement(f, "PosY").text = str(pos_y)
+    ET.SubElement(f, "BelongsTo").text = str(belongs_to)
+    ET.SubElement(f, "TabOrderPos").text = str(tab_order)
+    ET.SubElement(f, "ForeignCol").text = column_name
+    # Add DependencyMode if not default (0 = Referenced)
+    if dependency_mode != DEPENDENCY_MODE_REFERENCED:
+        ET.SubElement(f, "DependencyMode").text = dependency_mode
+    ET.SubElement(f, "DispOrderPos").text = str(disp_order)
+    f.append(_empty_tstr("RegExHelp"))
+    ET.SubElement(f, "Links")
+    ET.SubElement(f, "Id").text = _guid()
+    ET.SubElement(f, "DisplayProp")
+    ET.SubElement(f, "TabInfo", {"FactoryType": "0"})
+    ET.SubElement(f, "FieldID").text = _slugify(name)
+    ET.SubElement(f, "DisplayPropCond")
+    ET.SubElement(f, "Filter")
     return f
 
 
@@ -686,7 +990,12 @@ def _make_table_column_field(
             default_len = 50
         else:
             default_len = 10
-        ET.SubElement(f, "Length").text = str(length or default_len)
+        final_len = length or default_len
+        if type_no == "1" and final_len > TEXT_FIELD_MAX_LENGTH:
+            raise ValueError(
+                f"Table column '{name}' length {final_len} exceeds Therefore maximum of {TEXT_FIELD_MAX_LENGTH}"
+            )
+        ET.SubElement(f, "Length").text = str(final_len)
     ET.SubElement(f, "Width").text = str(width)
     ET.SubElement(f, "Height").text = "0"
     ET.SubElement(f, "PosX").text = "0"
@@ -862,6 +1171,29 @@ def _find_dictionary_by_name(root: ET.Element, name: str) -> Optional[Dict[str, 
     return None
 
 
+def _find_referenced_table_by_name_api(client: Any, name: str) -> Optional[int]:
+    """Find a referenced table (Type 5) by name and return its ID."""
+    try:
+        resp = client.get_objects(flags=0, obj_type=5)
+    except Exception:
+        return None
+
+    item_list = resp.get("ItemList") or []
+    for item in item_list:
+        iname = item.get("Name") or ""
+        if iname.lower() == name.lower():
+            return item.get("ID")
+    return None
+
+
+def _get_referenced_table_info_api(client: Any, data_type_no: int) -> Optional[Dict[str, Any]]:
+    """Get column information for a referenced table."""
+    try:
+        return client.get_referenced_table_info(data_type_no)
+    except Exception:
+        return None
+
+
 def _find_dictionary_by_name_api(client: Any, name: str) -> Optional[Dict[str, str]]:
     try:
         # Type=22 corresponds to keyword dictionaries (KeyDict)
@@ -937,16 +1269,17 @@ def _next_table_suffix(root: ET.Element, prefix: str) -> int:
 
 def build_delta_xml(
     spec: CategorySpec,
-    baseline_path: str,
+    baseline_path: Optional[str] = None,
     api_client: Optional[Any] = None,
     interactive: bool = False,
 ) -> ET.ElementTree:
-    base_root = ET.fromstring(Path(baseline_path).read_text(errors="ignore"))
-
-    if _find_category_by_name(base_root, spec.name):
-        raise ValueError(f"Category '{spec.name}' already exists in baseline export.")
-
-    version_info = _find_baseline_version(base_root)
+    # When a baseline is provided, use it for collision checks and suffix numbering.
+    # Otherwise generate a fully self-contained delta XML.
+    base_root = None
+    if baseline_path:
+        base_root = ET.fromstring(Path(baseline_path).read_text(errors="ignore"))
+        if _find_category_by_name(base_root, spec.name):
+            raise ValueError(f"Category '{spec.name}' already exists in baseline export.")
 
     # ID pools (separate ranges to avoid collisions across object types)
     cat_ids = NegativeIdPool(-100)
@@ -963,7 +1296,7 @@ def build_delta_xml(
         existing_folder_no = _find_folder_by_name_api(api_client, spec.folder)
         if existing_folder_no:
             folder_found_via_api = True
-    if spec.folder and not existing_folder_no:
+    if spec.folder and not existing_folder_no and base_root is not None:
         existing_folder_no = _find_folder_by_name(base_root, spec.folder)
 
     if spec.folder and not spec.force_new_folder and existing_folder_no:
@@ -972,7 +1305,7 @@ def build_delta_xml(
     if spec.force_new_folder and existing_folder_no:
         if spec.folder_conflict_policy == "use-existing":
             folder_no = existing_folder_no
-        elif spec.folder_conflict_policy == "unique":
+        elif spec.folder_conflict_policy == "unique" and base_root is not None:
             spec.folder = _unique_folder_name(base_root, spec.folder)
         else:
             if interactive and folder_found_via_api and sys.stdin.isatty():
@@ -983,11 +1316,11 @@ def build_delta_xml(
                 choice = input(prompt).strip().lower()
                 if choice in ("u", "use", "existing"):
                     folder_no = existing_folder_no
-                elif choice in ("n", "new", "unique"):
+                elif choice in ("n", "new", "unique") and base_root is not None:
                     spec.folder = _unique_folder_name(base_root, spec.folder)
                 else:
                     raise ValueError("Aborted by user.")
-            else:
+            elif base_root is not None:
                 raise ValueError(
                     f"Folder '{spec.folder}' already exists in baseline export. "
                     "Specify 'use existing folder' or 'create unique folder name' in the description, "
@@ -1004,14 +1337,15 @@ def build_delta_xml(
         new_folder_elem.append(_tstr_element("Name", folder_name))
         ET.SubElement(new_folder_elem, "Id").text = _guid()
 
-
     # Build keyword dictionaries (new only)
     new_dicts: List[ET.Element] = []
     dict_type_map: Dict[str, int] = {}
-    next_keywords_suffix = _next_table_suffix(base_root, "TheKeywords")
+    next_keywords_suffix = _next_table_suffix(base_root, "TheKeywords") if base_root is not None else 1
 
     def ensure_dictionary(dspec: DictionarySpec) -> int:
-        existing_info = _find_dictionary_by_name(base_root, dspec.name)
+        existing_info = None
+        if base_root is not None:
+            existing_info = _find_dictionary_by_name(base_root, dspec.name)
         existing_found_via_api = False
         if not existing_info and api_client is not None:
             existing_info = _find_dictionary_by_name_api(api_client, dspec.name)
@@ -1019,19 +1353,18 @@ def build_delta_xml(
                 existing_found_via_api = True
 
         if dspec.mode == "existing":
-            info = existing_info
-            if not info:
-                raise ValueError(
-                    f"Dictionary '{dspec.name}' not found in baseline export. "
-                    "Use --api-check to query the tenant, or provide a baseline export that includes it."
-                )
-            return int(info["SingleTypeNo"])
+            if existing_info:
+                return int(existing_info["SingleTypeNo"])
+            raise ValueError(
+                f"Dictionary '{dspec.name}' not found. "
+                "Use --api-check to query the tenant, or provide a --baseline export that includes it."
+            )
 
         # create new dictionary
         if existing_info:
             if spec.dictionary_conflict_policy == "use-existing":
                 return int(existing_info["SingleTypeNo"])
-            if spec.dictionary_conflict_policy == "unique":
+            if spec.dictionary_conflict_policy == "unique" and base_root is not None:
                 dspec.name = _unique_dictionary_name(base_root, dspec.name)
             elif interactive and existing_found_via_api and sys.stdin.isatty():
                 prompt = (
@@ -1041,11 +1374,11 @@ def build_delta_xml(
                 choice = input(prompt).strip().lower()
                 if choice in ("u", "use", "existing"):
                     return int(existing_info["SingleTypeNo"])
-                if choice in ("n", "new", "unique"):
+                if choice in ("n", "new", "unique") and base_root is not None:
                     dspec.name = _unique_dictionary_name(base_root, dspec.name)
                 else:
                     raise ValueError("Aborted by user.")
-            else:
+            elif base_root is not None:
                 raise ValueError(
                     f"Dictionary '{dspec.name}' already exists. Use 'existing dictionary' in the description "
                     "or choose a different name. (Or run with --api-check --interactive for a prompt.)"
@@ -1102,10 +1435,10 @@ def build_delta_xml(
         if max_y is None or (y + h) > max_y:
             max_y = y + h
 
-    next_table_suffix = _next_table_suffix(base_root, "TheIxTable")
+    next_table_suffix = _next_table_suffix(base_root, "TheIxTable") if base_root is not None else 1
 
     for f in spec.fields:
-        if f.type not in ("text", "number", "decimal", "date", "keyword_single", "table"):
+        if f.type not in ("text", "number", "decimal", "date", "keyword_single", "keyword_multiple", "table", "reference_table"):
             raise ValueError(f"Unsupported field type: {f.type}")
 
         # determine widths
@@ -1119,8 +1452,12 @@ def build_delta_xml(
         label_w = 63
         if f.type == "text":
             length = f.length or 50
+            if length > TEXT_FIELD_MAX_LENGTH:
+                raise ValueError(
+                    f"Text field '{f.name}' length {length} exceeds Therefore maximum of {TEXT_FIELD_MAX_LENGTH}"
+                )
             field_no = field_ids.take()
-            data_field = _make_text_field(field_no, f.name, length, pos_x, pos_y, tab_order, disp_order, width, height)
+            data_field = _make_text_field(field_no, f.name, length, pos_x, pos_y, tab_order, disp_order, width, height, f.default_value, f.index_type, f.mandatory)
             label_field = _make_label_field(field_ids.take(), f.name, f"Label_{_slugify(f.name)}", label_x, label_y, 63, layout.label_h)
             field_elems.extend([data_field, label_field])
             update_bounds(pos_x, pos_y, width, height)
@@ -1128,7 +1465,7 @@ def build_delta_xml(
         elif f.type == "number":
             length = f.length or 10
             field_no = field_ids.take()
-            data_field = _make_number_field(field_no, f.name, length, pos_x, pos_y, tab_order, disp_order, width, height)
+            data_field = _make_number_field(field_no, f.name, length, pos_x, pos_y, tab_order, disp_order, width, height, f.default_value, f.index_type, f.mandatory)
             label_field = _make_label_field(field_ids.take(), f.name, f"Label_{_slugify(f.name)}", label_x, label_y, 63, layout.label_h)
             field_elems.extend([data_field, label_field])
             update_bounds(pos_x, pos_y, width, height)
@@ -1137,7 +1474,7 @@ def build_delta_xml(
             length = f.length or 10
             scale = f.scale or 2
             field_no = field_ids.take()
-            data_field = _make_decimal_field(field_no, f.name, length, scale, pos_x, pos_y, tab_order, disp_order, width, height)
+            data_field = _make_decimal_field(field_no, f.name, length, scale, pos_x, pos_y, tab_order, disp_order, width, height, f.default_value, f.index_type, f.mandatory)
             label_field = _make_label_field(field_ids.take(), f.name, f"Label_{_slugify(f.name)}", label_x, label_y, 63, layout.label_h)
             field_elems.extend([data_field, label_field])
             update_bounds(pos_x, pos_y, width, height)
@@ -1145,7 +1482,7 @@ def build_delta_xml(
         elif f.type == "date":
             length = f.length or 4
             field_no = field_ids.take()
-            data_field = _make_date_field(field_no, f.name, length, pos_x, pos_y, tab_order, disp_order, width, height)
+            data_field = _make_date_field(field_no, f.name, length, pos_x, pos_y, tab_order, disp_order, width, height, f.default_value, f.index_type, f.mandatory)
             label_field = _make_label_field(field_ids.take(), f.name, f"Label_{_slugify(f.name)}", label_x, label_y, 63, layout.label_h)
             field_elems.extend([data_field, label_field])
             update_bounds(pos_x, pos_y, width, height)
@@ -1162,6 +1499,72 @@ def build_delta_xml(
             field_elems.extend([visible_field, label_field, hidden_field])
             update_bounds(pos_x, pos_y, width, height)
             update_bounds(label_x, label_y, label_w, layout.label_h)
+        elif f.type == "keyword_multiple":
+            if not f.dictionary:
+                raise ValueError(f"Multiple keyword field '{f.name}' missing dictionary spec")
+            ensure_dictionary(f.dictionary)  # Ensure dictionary exists but don't use TypeNo
+            field_no = field_ids.take()
+            data_field = _make_multi_keyword_field(field_no, f.name, pos_x, pos_y, tab_order, disp_order, width, height, f.default_value, f.index_type, f.mandatory)
+            label_field = _make_label_field(field_ids.take(), f.name, f"Label_{_slugify(f.name)}", label_x, label_y, 63, layout.label_h)
+            field_elems.extend([data_field, label_field])
+            update_bounds(pos_x, pos_y, width, height)
+            update_bounds(label_x, label_y, label_w, layout.label_h)
+        elif f.type == "reference_table":
+            if not f.reference_table:
+                raise ValueError(f"Reference table field '{f.name}' missing reference_table spec")
+
+            # Resolve referenced category
+            ref_cat_id = f.reference_table.category_no
+            ref_table_info = None
+
+            if not ref_cat_id and f.reference_table.category_name:
+                if api_client is not None:
+                    ref_cat_id = _find_referenced_table_by_name_api(api_client, f.reference_table.category_name)
+                    if not ref_cat_id:
+                        raise ValueError(
+                            f"Referenced table '{f.reference_table.category_name}' not found. "
+                            "Provide category_no explicitly or ensure --api-check is enabled."
+                        )
+                else:
+                    raise ValueError(
+                        f"Referenced table '{f.reference_table.category_name}' requires API access to resolve. "
+                        "Provide category_no explicitly or use --api-check."
+                    )
+
+            if not ref_cat_id:
+                raise ValueError(f"Reference table field '{f.name}' requires either category_name or category_no")
+
+            # Get table info if API available
+            if api_client is not None:
+                ref_table_info = _get_referenced_table_info_api(api_client, ref_cat_id)
+
+            # Create primary (hidden) field
+            primary_no = field_ids.take()
+            primary_field = _make_primary_reference_field(primary_no, f.name, ref_cat_id, pos_x, pos_y, tab_order, disp_order, width, height, f.index_type, f.mandatory)
+            field_elems.append(primary_field)
+
+            # Create dependent fields
+            if f.reference_table.dependent_fields:
+                for dep_field_name in f.reference_table.dependent_fields:
+                    # Try to get column name from table info if available
+                    column_name = dep_field_name
+                    if ref_table_info:
+                        columns = ref_table_info.get("Columns") or []
+                        # Match by name (case-insensitive)
+                        for col in columns:
+                            if col.get("ColumnName", "").lower() == dep_field_name.lower():
+                                column_name = col["ColumnName"]
+                                break
+
+                    dep_no = field_ids.take()
+                    dep_field = _make_dependent_reference_field(dep_no, dep_field_name, column_name, primary_no, pos_x, pos_y, tab_order, disp_order, width, height, f.reference_table.dependency_mode)
+                    label_field = _make_label_field(field_ids.take(), dep_field_name, f"Label_{_slugify(dep_field_name)}", label_x, label_y, 63, layout.label_h)
+                    field_elems.extend([dep_field, label_field])
+                    update_bounds(pos_x, pos_y, width, height)
+                    update_bounds(label_x, label_y, label_w, layout.label_h)
+                    y += layout.row_height
+                    tab_order += 1
+                    disp_order += 1
         elif f.type == "table":
             table_name = f.name or "Line Items"
             if not f.columns:
@@ -1190,12 +1593,14 @@ def build_delta_xml(
                 field_elems.append(col_field)
                 col_disp += 1
 
-        row_step = layout.row_height
-        if f.type == "table":
-            row_step = max(row_step, layout.table_height + 8)
-        y += row_step
-        tab_order += 1
-        disp_order += 1
+        # Skip position increment for reference_table (already handled in dependent field loop)
+        if f.type != "reference_table":
+            row_step = layout.row_height
+            if f.type == "table":
+                row_step = max(row_step, layout.table_height + 8)
+            y += row_step
+            tab_order += 1
+            disp_order += 1
 
     # Category element
     cat_no = cat_ids.take()
@@ -1244,8 +1649,13 @@ def build_delta_xml(
 
     # Root configuration
     cfg = ET.Element("Configuration")
-    ET.SubElement(cfg, "Version").text = version_info["Version"]
-    ET.SubElement(cfg, "NewImportExport").text = version_info["NewImportExport"]
+    if base_root is not None:
+        version_info = _find_baseline_version(base_root)
+        ET.SubElement(cfg, "Version").text = version_info["Version"]
+        ET.SubElement(cfg, "NewImportExport").text = version_info["NewImportExport"]
+    else:
+        ET.SubElement(cfg, "Version").text = CONFIG_XML_VERSION
+        ET.SubElement(cfg, "NewImportExport").text = CONFIG_XML_NEW_IMPORT_EXPORT
 
     if new_folder_elem is not None:
         folders_el = ET.SubElement(cfg, "Folders")
@@ -1267,7 +1677,7 @@ def build_delta_xml(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate Therefore config delta XML for a new category.")
-    parser.add_argument("--baseline", required=True, help="Baseline TheConfiguration.xml export")
+    parser.add_argument("--baseline", help="Optional baseline TheConfiguration.xml export for diff-mode collision checks")
     parser.add_argument("--description", required=True, help="Natural language description or YAML/JSON spec path")
     parser.add_argument("--output", required=True, help="Output delta XML path")
     parser.add_argument(

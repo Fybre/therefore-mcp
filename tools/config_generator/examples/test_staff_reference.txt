@@ -1,0 +1,5 @@
+Create a Document category in folder "Test" with these fields:
+
+- text field "Document Title" length 200
+- reference table "Employee" from category "Staff" with columns "Firstname", "Surname", "Date_Of_Birth"
+- date field "Document Date" with default value date

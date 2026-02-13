@@ -1,0 +1,52 @@
+{
+  "category": {
+    "name": "Invoice",
+    "folder": "Finance",
+    "description": "Invoice tracking with reference tables demonstrating all dependency modes"
+  },
+  "fields": [
+    {
+      "name": "Supplier",
+      "type": "reference_table",
+      "reference_table": {
+        "category_name": "Suppliers",
+        "dependent_fields": ["Name", "ABN"],
+        "dependency_mode": "synchronized"
+      }
+    },
+    {
+      "name": "Approver",
+      "type": "reference_table",
+      "reference_table": {
+        "category_name": "Staff",
+        "dependent_fields": ["Fullname", "Role"],
+        "dependency_mode": "editable"
+      }
+    },
+    {
+      "name": "Customer",
+      "type": "reference_table",
+      "reference_table": {
+        "category_name": "Customers",
+        "dependent_fields": ["Company", "Email"]
+      }
+    },
+    {
+      "name": "Invoice Number",
+      "type": "text",
+      "length": 50,
+      "index_type": "2"
+    },
+    {
+      "name": "Total Amount",
+      "type": "decimal",
+      "length": 10,
+      "scale": 2
+    },
+    {
+      "name": "Invoice Date",
+      "type": "date",
+      "default_value": "<Date>"
+    }
+  ]
+}
