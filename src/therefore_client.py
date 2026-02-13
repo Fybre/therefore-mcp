@@ -7,6 +7,8 @@ import ssl
 import urllib.request
 import urllib.error
 import socket
+import sys
+import time as _time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -24,6 +26,19 @@ class ThereforeConfig:
     workflow_max_rows: Optional[int] = None
     workflow_retry_timeout_seconds: Optional[int] = None
     workflow_retry_count: int = 0
+    debug: bool = False
+
+
+class _DebugRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Redirect handler that logs each hop when debug is enabled."""
+
+    def __init__(self, log_fn):
+        super().__init__()
+        self._log = log_fn
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        self._log(f" -> {code} {msg} -> {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class ThereforeClient:
@@ -31,6 +46,19 @@ class ThereforeClient:
         self.config = config
         self.base_url = config.base_url.rstrip('/')
         self.ctx = ssl.create_default_context()
+        # Build a custom opener that tracks redirects when debug is on
+        if config.debug:
+            self._opener = urllib.request.build_opener(
+                urllib.request.HTTPSHandler(context=self.ctx),
+                _DebugRedirectHandler(self._log),
+            )
+        else:
+            self._opener = None
+
+    def _log(self, message: str) -> None:
+        """Print a debug message to stderr, guarded by config.debug."""
+        if self.config.debug:
+            print(f"[THEREFORE] {message}", file=sys.stderr, flush=True)
 
     def _headers(self) -> Dict[str, str]:
         headers = {
@@ -62,6 +90,12 @@ class ThereforeClient:
                 return True
         return False
 
+    def _open(self, req, timeout):
+        """Open a request using the debug opener (redirect-tracking) or default."""
+        if self._opener:
+            return self._opener.open(req, timeout=timeout)
+        return urllib.request.urlopen(req, context=self.ctx, timeout=timeout)
+
     def _post(
         self,
         path: str,
@@ -75,6 +109,8 @@ class ThereforeClient:
         req = urllib.request.Request(url, data=data, method='POST')
         for k, v in self._headers().items():
             req.add_header(k, v)
+
+        self._log(f"POST {url} ({len(data)} bytes)")
 
         base_timeout = self.config.timeout_seconds
         if timeout_override is not None:
@@ -98,11 +134,37 @@ class ThereforeClient:
 
         last_exc: Optional[Exception] = None
         for attempt, timeout in enumerate(timeouts, start=1):
+            if attempt > 1:
+                self._log(f" retry {attempt}/{len(timeouts)} (timeout={timeout}s)")
+            t0 = _time.monotonic()
             try:
-                with urllib.request.urlopen(req, context=self.ctx, timeout=timeout) as r:
+                with self._open(req, timeout=timeout) as r:
                     body = r.read().decode('utf-8', errors='replace')
+                elapsed_ms = (_time.monotonic() - t0) * 1000
+                self._log(f" <- {r.status} {r.reason} ({len(body)} bytes, {elapsed_ms:.0f}ms)")
                 return json.loads(body) if body else {}
+            except urllib.error.HTTPError as exc:
+                elapsed_ms = (_time.monotonic() - t0) * 1000
+                # Read the API response body for a more useful error message
+                try:
+                    body = exc.read().decode('utf-8', errors='replace')
+                except Exception:
+                    body = ''
+                detail = ''
+                if body:
+                    try:
+                        err_json = json.loads(body)
+                        detail = err_json.get('Message') or err_json.get('message') or err_json.get('error') or body
+                    except (json.JSONDecodeError, AttributeError):
+                        detail = body
+                self._log(f" <- {exc.code} {detail!r} ({len(body)} bytes, {elapsed_ms:.0f}ms)")
+                msg = f"HTTP {exc.code} from {path}"
+                if detail:
+                    msg += f": {detail}"
+                raise type(exc)(exc.url, exc.code, msg, exc.headers, None) from None
             except Exception as exc:
+                elapsed_ms = (_time.monotonic() - t0) * 1000
+                self._log(f" <- ERROR {type(exc).__name__}: {exc} ({elapsed_ms:.0f}ms)")
                 last_exc = exc
                 if not self._is_timeout_error(exc) or attempt >= len(timeouts):
                     raise
@@ -118,9 +180,32 @@ class ThereforeClient:
         req = urllib.request.Request(url, method='GET')
         for k, v in self._headers().items():
             req.add_header(k, v)
-        with urllib.request.urlopen(req, context=self.ctx, timeout=self.config.timeout_seconds) as r:
-            body = r.read().decode('utf-8', errors='replace')
-        return json.loads(body) if body else {}
+        self._log(f"GET {url}")
+        t0 = _time.monotonic()
+        try:
+            with self._open(req, timeout=self.config.timeout_seconds) as r:
+                body = r.read().decode('utf-8', errors='replace')
+            elapsed_ms = (_time.monotonic() - t0) * 1000
+            self._log(f" <- {r.status} {r.reason} ({len(body)} bytes, {elapsed_ms:.0f}ms)")
+            return json.loads(body) if body else {}
+        except urllib.error.HTTPError as exc:
+            elapsed_ms = (_time.monotonic() - t0) * 1000
+            try:
+                body = exc.read().decode('utf-8', errors='replace')
+            except Exception:
+                body = ''
+            detail = ''
+            if body:
+                try:
+                    err_json = json.loads(body)
+                    detail = err_json.get('Message') or err_json.get('message') or err_json.get('error') or body
+                except (json.JSONDecodeError, AttributeError):
+                    detail = body
+            self._log(f" <- {exc.code} {detail!r} ({len(body)} bytes, {elapsed_ms:.0f}ms)")
+            msg = f"HTTP {exc.code} from {path}"
+            if detail:
+                msg += f": {detail}"
+            raise type(exc)(exc.url, exc.code, msg, exc.headers, None) from None
 
     def get_category_info(self, category_no: int) -> Dict[str, Any]:
         return self._post('GetCategoryInfo', {
@@ -248,6 +333,243 @@ class ThereforeClient:
 
     def delete_document(self, doc_no: int) -> Dict[str, Any]:
         return self._post('DeleteDocument', {'DocNo': doc_no})
+
+    def check_out_document(self, doc_no: int, version_no: int = 0) -> Dict[str, Any]:
+        return self._post('CheckOutDocument', {
+            'DocNo': doc_no,
+            'VersionNo': version_no,
+        })
+
+    def check_in_document(
+        self,
+        doc_no: int,
+        check_in_comments: Optional[str] = None,
+        version_no: int = 0,
+    ) -> Dict[str, Any]:
+        payload = {'DocNo': doc_no, 'VersionNo': version_no}
+        if check_in_comments is not None:
+            payload['CheckInComments'] = check_in_comments
+        return self._post('CheckInDocument', payload)
+
+    def undo_check_out_document(self, doc_no: int, version_no: int = 0) -> Dict[str, Any]:
+        return self._post('UndoCheckOutDocument', {
+            'DocNo': doc_no,
+            'VersionNo': version_no,
+        })
+
+    def add_comment(
+        self,
+        doc_no: int,
+        comment_text: str,
+        version_no: int = 0,
+    ) -> Dict[str, Any]:
+        return self._post('AddComment', {
+            'DocNo': doc_no,
+            'VersionNo': version_no,
+            'CommentText': comment_text,
+        })
+
+    def get_comments(self, doc_no: int, version_no: int = 0) -> Dict[str, Any]:
+        return self._post('GetComments', {
+            'DocNo': doc_no,
+            'VersionNo': version_no,
+        })
+
+    def complete_task(
+        self,
+        workflow_instance_token: str,
+        task_no: int,
+        user_decision: Optional[str] = None,
+        index_data_items: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        payload = {
+            'WorkflowInstanceToken': workflow_instance_token,
+            'TaskNo': task_no,
+        }
+        if user_decision is not None:
+            payload['UserDecision'] = user_decision
+        if index_data_items is not None:
+            payload['IndexDataItems'] = index_data_items
+        return self._post('CompleteTask', payload)
+
+    def claim_workflow_instance(
+        self,
+        workflow_instance_token: str,
+        task_no: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        payload = {'WorkflowInstanceToken': workflow_instance_token}
+        if task_no is not None:
+            payload['TaskNo'] = task_no
+        return self._post('ClaimWorkflowInstance', payload)
+
+    def disclaim_workflow_instance(
+        self,
+        workflow_instance_token: str,
+        task_no: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        payload = {'WorkflowInstanceToken': workflow_instance_token}
+        if task_no is not None:
+            payload['TaskNo'] = task_no
+        return self._post('DisclaimWorkflowInstance', payload)
+
+    def delegate_workflow_instance(
+        self,
+        workflow_instance_token: str,
+        user_id: int,
+        task_no: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        payload = {
+            'WorkflowInstanceToken': workflow_instance_token,
+            'UserId': user_id,
+        }
+        if task_no is not None:
+            payload['TaskNo'] = task_no
+        return self._post('DelegateWorkflowInstance', payload)
+
+    def create_case(
+        self,
+        case_definition_no: int,
+        index_data_items: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        payload = {'CaseDefinitionNo': case_definition_no}
+        if index_data_items is not None:
+            payload['IndexDataItems'] = index_data_items
+        return self._post('CreateCase', payload)
+
+    def get_case(self, case_no: int) -> Dict[str, Any]:
+        return self._post('GetCase', {'CaseNo': case_no})
+
+    def get_case_documents(self, case_no: int, max_rows: int = 1000) -> Dict[str, Any]:
+        return self._post('GetCaseDocuments', {
+            'CaseNo': case_no,
+            'MaxRows': max_rows,
+        })
+
+    def get_case_history(self, case_no: int) -> Dict[str, Any]:
+        return self._post('GetCaseHistory', {'CaseNo': case_no})
+
+    def create_user(
+        self,
+        user_name: str,
+        full_name: str,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        domain_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        payload = {
+            'UserName': user_name,
+            'FullName': full_name,
+        }
+        if email is not None:
+            payload['EMail'] = email
+        if password is not None:
+            payload['Password'] = password
+        if domain_name is not None:
+            payload['DomainName'] = domain_name
+        return self._post('CreateUser', payload)
+
+    def update_user_group_assignment(
+        self,
+        user_id: int,
+        group_ids: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
+        payload = {'UserId': user_id}
+        if group_ids is not None:
+            payload['GroupIds'] = group_ids
+        return self._post('UpdateUserGroupAssignment', payload)
+
+    def get_user_group_assignment(self, user_id: int) -> Dict[str, Any]:
+        return self._post('GetUserGroupNo', {'UserId': user_id})
+
+    def set_user_password(
+        self,
+        user_id: int,
+        new_password: str,
+    ) -> Dict[str, Any]:
+        return self._post('SetUserPassword', {
+            'UserId': user_id,
+            'NewPassword': new_password,
+        })
+
+    def change_user_password(
+        self,
+        old_password: str,
+        new_password: str,
+    ) -> Dict[str, Any]:
+        return self._post('ChangeUserPassword', {
+            'OldPassword': old_password,
+            'NewPassword': new_password,
+        })
+
+    def reset_user_password(
+        self,
+        user_id: int,
+        send_email: bool = True,
+    ) -> Dict[str, Any]:
+        return self._post('ResetUserPwd', {
+            'UserId': user_id,
+            'SendEmail': send_email,
+        })
+
+    def delete_portal_user(self, user_id: int) -> Dict[str, Any]:
+        return self._post('DeletePortalUser', {'UserId': user_id})
+
+    def save_portal_user(
+        self,
+        user_id: int,
+        user_name: Optional[str] = None,
+        full_name: Optional[str] = None,
+        email: Optional[str] = None,
+        is_active: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        payload = {'UserId': user_id}
+        if user_name is not None:
+            payload['UserName'] = user_name
+        if full_name is not None:
+            payload['FullName'] = full_name
+        if email is not None:
+            payload['EMail'] = email
+        if is_active is not None:
+            payload['IsActive'] = is_active
+        return self._post('SavePortalUser', payload)
+
+    def move_user_license(
+        self,
+        source_user_id: int,
+        target_user_id: int,
+    ) -> Dict[str, Any]:
+        return self._post('MoveUserLicense', {
+            'SourceUserId': source_user_id,
+            'TargetUserId': target_user_id,
+        })
+
+    def get_user_settings(self, user_id: int) -> Dict[str, Any]:
+        return self._post('GetUserSettings', {'UserId': user_id})
+
+    def set_user_settings(
+        self,
+        user_id: int,
+        settings: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        payload = {'UserId': user_id}
+        payload.update(settings)
+        return self._post('SetUserSettings', payload)
+
+    def copy_document(
+        self,
+        doc_no: int,
+        target_category_no: Optional[int] = None,
+        index_data_items: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        payload = {'DocNo': doc_no}
+        if target_category_no is not None:
+            payload['TargetCategoryNo'] = target_category_no
+        if index_data_items is not None:
+            payload['IndexDataItems'] = index_data_items
+        return self._post('CopyDocument', payload)
+
+    def get_document_versions(self, doc_no: int) -> Dict[str, Any]:
+        return self._post('GetDocumentVersions', {'DocNo': doc_no})
 
     def get_document_index_data(self, doc_no: int) -> Dict[str, Any]:
         return self._post('GetDocumentIndexData', {
@@ -1066,6 +1388,9 @@ def build_config_from_env(env: Dict[str, str]) -> ThereforeConfig:
         except ValueError:
             workflow_retry_count = 0
 
+    debug_raw = clean(env.get('THEREFORE_DEBUG'))
+    debug = debug_raw is not None and debug_raw.lower() in ('1', 'true', 'yes')
+
     return ThereforeConfig(
         base_url=clean(env.get('THEREFORE_BASE_URL')) or '',
         auth_method=clean(env.get('THEREFORE_AUTH_METHOD')) or 'Basic',
@@ -1077,6 +1402,7 @@ def build_config_from_env(env: Dict[str, str]) -> ThereforeConfig:
         workflow_max_rows=workflow_max_rows,
         workflow_retry_timeout_seconds=workflow_retry_timeout_seconds,
         workflow_retry_count=workflow_retry_count,
+        debug=debug,
     )
 
 

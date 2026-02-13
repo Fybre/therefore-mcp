@@ -108,12 +108,12 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "list_category_fields",
-            "description": "List fields for a category with key metadata (FieldNo, Caption, FieldID, etc.).",
+            "description": "List fields for a category with key metadata (FieldNo, Caption, FieldID, etc.). Use resolve_category to find category_no.",
             "inputSchema": {
                 "type": "object",
                 "required": ["category_no"],
                 "properties": {
-                    "category_no": {"type": "integer"}
+                    "category_no": {"type": "integer", "description": "Category number. Use resolve_category to find this."}
                 }
             },
         },
@@ -145,12 +145,12 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "get_category_info",
-            "description": "Get category definition and field metadata by category number.",
+            "description": "Get category definition and field metadata by category number. Use resolve_category to find category_no.",
             "inputSchema": {
                 "type": "object",
                 "required": ["category_no"],
                 "properties": {
-                    "category_no": {"type": "integer"}
+                    "category_no": {"type": "integer", "description": "Category number. Use resolve_category to find this."}
                 }
             },
         },
@@ -343,13 +343,13 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "get_keywords_by_field_no",
-            "description": "List keywords for a keyword field (dictionary) by field number.",
+            "description": "List keywords for a keyword field (dictionary) by field number. Use resolve_field to find field_no.",
             "inputSchema": {
                 "type": "object",
                 "required": ["field_no"],
                 "properties": {
-                    "field_no": {"type": "integer"},
-                    "category_no": {"type": "integer"},
+                    "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
+                    "category_no": {"type": "integer", "description": "Category number. Use resolve_category to find this."},
                     "case_definition_no": {"type": "integer"},
                     "dependent_field_filter_value": {"type": "string"},
                     "show_deactivated_keywords": {"type": "boolean"},
@@ -375,12 +375,12 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "validate_keywords",
-            "description": "Validate keywords for a keyword field; returns invalid keywords.",
+            "description": "Validate keywords for a keyword field; returns invalid keywords. Use resolve_field to find field_no.",
             "inputSchema": {
                 "type": "object",
                 "required": ["field_no", "keywords"],
                 "properties": {
-                    "field_no": {"type": "integer"},
+                    "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
                     "keywords": {"type": "array", "items": {"type": "string"}},
                     "is_filter_mode": {"type": "boolean"}
                 }
@@ -685,24 +685,104 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "execute_single_query",
-            "description": "Execute a single query. If the query contains multiple category numbers, automatically runs an async multi-query and returns merged results.",
+            "description": "Execute a single query. Use resolve_category to find CategoryNo and resolve_field to find field numbers before building the query. If the query contains multiple category numbers, automatically runs an async multi-query and returns merged results.",
             "inputSchema": {
                 "type": "object",
                 "required": ["query"],
                 "properties": {
-                    "query": {"type": "object"},
+                    "query": {
+                        "type": "object",
+                        "description": "Query definition object. Use resolve_category to find CategoryNo and resolve_field to find field numbers.",
+                        "required": ["CategoryNo"],
+                        "properties": {
+                            "CategoryNo": {"type": "integer", "description": "Category number to query. Use resolve_category to find this."},
+                            "Conditions": {
+                                "type": "array",
+                                "description": "Filter conditions. Each condition uses FieldNoOrName (field number or name) and a Condition string. Operators: '= value', '>= value', '<= value', '<> value', 'LIKE value' (% wildcard), 'BETWEEN val1 AND val2'. Date format: YYYY-MM-DDThh:mm:ss. Use resolve_field to find field numbers.",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["FieldNoOrName", "Condition"],
+                                    "properties": {
+                                        "FieldNoOrName": {"type": "string", "description": "Field number (as string) or field name."},
+                                        "Condition": {"type": "string", "description": "Condition expression, e.g. '= John', '>= 2024-01-01T00:00:00', 'LIKE %invoice%'."},
+                                        "TimeZone": {"type": "integer", "description": "0 = UTC (default), 1 = ServerLocal.", "default": 0}
+                                    }
+                                }
+                            },
+                            "SelectedFieldsNoOrNames": {
+                                "type": "array",
+                                "description": "Field numbers or names to return as columns. If omitted, returns default fields.",
+                                "items": {"type": "string"}
+                            },
+                            "OrderByFieldsNoOrNames": {
+                                "type": "array",
+                                "description": "Field numbers or names to sort results by.",
+                                "items": {"type": "string"}
+                            },
+                            "GroupByFieldsNoOrNames": {
+                                "type": "array",
+                                "description": "Field numbers or names to group results by.",
+                                "items": {"type": "string"}
+                            },
+                            "MaxRows": {"type": "integer", "description": "Maximum number of rows to return.", "default": 2147483647},
+                            "Mode": {"type": "integer", "description": "Query mode: 0 = NormalQuery (default), 1 = FileQuery, 4 = WorkflowQuery, 5 = CaseQuery.", "default": 0},
+                            "CaseDefinitionNo": {"type": "integer", "description": "Case definition number for case queries. Omit or 0 if not applicable."},
+                            "QueryNo": {"type": "integer", "description": "Saved query number. If provided, executes a saved query instead of building one from Conditions."},
+                            "IsPersonalQuery": {"type": "boolean", "description": "Whether QueryNo refers to a personal (true) or public (false) saved query."}
+                        }
+                    },
                     "full_text": {"type": "string"}
                 }
             },
         },
         {
             "name": "execute_async_single_query",
-            "description": "Execute an async single query with batching. If auto_fetch_all=true, fetches all rows and releases the query.",
+            "description": "Execute an async single query with batching. Use resolve_category to find CategoryNo and resolve_field to find field numbers before building the query. If auto_fetch_all=true, fetches all rows and releases the query.",
             "inputSchema": {
                 "type": "object",
                 "required": ["query"],
                 "properties": {
-                    "query": {"type": "object"},
+                    "query": {
+                        "type": "object",
+                        "description": "Query definition object. Use resolve_category to find CategoryNo and resolve_field to find field numbers.",
+                        "required": ["CategoryNo"],
+                        "properties": {
+                            "CategoryNo": {"type": "integer", "description": "Category number to query. Use resolve_category to find this."},
+                            "Conditions": {
+                                "type": "array",
+                                "description": "Filter conditions. Each condition uses FieldNoOrName (field number or name) and a Condition string. Operators: '= value', '>= value', '<= value', '<> value', 'LIKE value' (% wildcard), 'BETWEEN val1 AND val2'. Date format: YYYY-MM-DDThh:mm:ss. Use resolve_field to find field numbers.",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["FieldNoOrName", "Condition"],
+                                    "properties": {
+                                        "FieldNoOrName": {"type": "string", "description": "Field number (as string) or field name."},
+                                        "Condition": {"type": "string", "description": "Condition expression, e.g. '= John', '>= 2024-01-01T00:00:00', 'LIKE %invoice%'."},
+                                        "TimeZone": {"type": "integer", "description": "0 = UTC (default), 1 = ServerLocal.", "default": 0}
+                                    }
+                                }
+                            },
+                            "SelectedFieldsNoOrNames": {
+                                "type": "array",
+                                "description": "Field numbers or names to return as columns. If omitted, returns default fields.",
+                                "items": {"type": "string"}
+                            },
+                            "OrderByFieldsNoOrNames": {
+                                "type": "array",
+                                "description": "Field numbers or names to sort results by.",
+                                "items": {"type": "string"}
+                            },
+                            "GroupByFieldsNoOrNames": {
+                                "type": "array",
+                                "description": "Field numbers or names to group results by.",
+                                "items": {"type": "string"}
+                            },
+                            "MaxRows": {"type": "integer", "description": "Maximum number of rows to return.", "default": 2147483647},
+                            "Mode": {"type": "integer", "description": "Query mode: 0 = NormalQuery (default), 1 = FileQuery, 4 = WorkflowQuery, 5 = CaseQuery.", "default": 0},
+                            "CaseDefinitionNo": {"type": "integer", "description": "Case definition number for case queries. Omit or 0 if not applicable."},
+                            "QueryNo": {"type": "integer", "description": "Saved query number. If provided, executes a saved query instead of building one from Conditions."},
+                            "IsPersonalQuery": {"type": "boolean", "description": "Whether QueryNo refers to a personal (true) or public (false) saved query."}
+                        }
+                    },
                     "full_text": {"type": "string"},
                     "row_block_size": {"type": "integer", "default": 1000},
                     "max_rows": {"type": "integer", "default": 2147483647},
@@ -735,13 +815,13 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "execute_full_text_query",
-            "description": "Execute a full-text search query.",
+            "description": "Execute a full-text search query. Use resolve_category to find category numbers if filtering by categories.",
             "inputSchema": {
                 "type": "object",
                 "required": ["search"],
                 "properties": {
                     "search": {"type": "string"},
-                    "categories": {"type": "array", "items": {"type": "integer"}},
+                    "categories": {"type": "array", "items": {"type": "integer"}, "description": "Optional category numbers to filter results. Use resolve_category to find these."},
                     "max_rows": {"type": "integer", "default": 100},
                     "include_index_data": {"type": "boolean", "default": False},
                     "case_no": {"type": "integer", "default": 0}
@@ -775,12 +855,55 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "execute_async_multi_query",
-            "description": "Execute an async multi-query with batching. If auto_fetch_all=true, fetches all rows and releases the query.",
+            "description": "Execute an async multi-query with batching. Use resolve_category to find CategoryNo and resolve_field to find field numbers before building queries. If auto_fetch_all=true, fetches all rows and releases the query.",
             "inputSchema": {
                 "type": "object",
                 "required": ["queries"],
                 "properties": {
-                    "queries": {"type": "array", "items": {"type": "object"}},
+                    "queries": {
+                        "type": "array",
+                        "description": "Array of query definition objects. Each query has the same structure as execute_single_query.",
+                        "items": {
+                            "type": "object",
+                            "required": ["CategoryNo"],
+                            "properties": {
+                                "CategoryNo": {"type": "integer", "description": "Category number to query. Use resolve_category to find this."},
+                                "Conditions": {
+                                    "type": "array",
+                                    "description": "Filter conditions. Each condition uses FieldNoOrName (field number or name) and a Condition string. Operators: '= value', '>= value', '<= value', '<> value', 'LIKE value' (% wildcard), 'BETWEEN val1 AND val2'. Date format: YYYY-MM-DDThh:mm:ss. Use resolve_field to find field numbers.",
+                                    "items": {
+                                        "type": "object",
+                                        "required": ["FieldNoOrName", "Condition"],
+                                        "properties": {
+                                            "FieldNoOrName": {"type": "string", "description": "Field number (as string) or field name."},
+                                            "Condition": {"type": "string", "description": "Condition expression, e.g. '= John', '>= 2024-01-01T00:00:00', 'LIKE %invoice%'."},
+                                            "TimeZone": {"type": "integer", "description": "0 = UTC (default), 1 = ServerLocal.", "default": 0}
+                                        }
+                                    }
+                                },
+                                "SelectedFieldsNoOrNames": {
+                                    "type": "array",
+                                    "description": "Field numbers or names to return as columns. If omitted, returns default fields.",
+                                    "items": {"type": "string"}
+                                },
+                                "OrderByFieldsNoOrNames": {
+                                    "type": "array",
+                                    "description": "Field numbers or names to sort results by.",
+                                    "items": {"type": "string"}
+                                },
+                                "GroupByFieldsNoOrNames": {
+                                    "type": "array",
+                                    "description": "Field numbers or names to group results by.",
+                                    "items": {"type": "string"}
+                                },
+                                "MaxRows": {"type": "integer", "description": "Maximum number of rows to return.", "default": 2147483647},
+                                "Mode": {"type": "integer", "description": "Query mode: 0 = NormalQuery (default), 1 = FileQuery, 4 = WorkflowQuery, 5 = CaseQuery.", "default": 0},
+                                "CaseDefinitionNo": {"type": "integer", "description": "Case definition number for case queries. Omit or 0 if not applicable."},
+                                "QueryNo": {"type": "integer", "description": "Saved query number. If provided, executes a saved query instead of building one from Conditions."},
+                                "IsPersonalQuery": {"type": "boolean", "description": "Whether QueryNo refers to a personal (true) or public (false) saved query."}
+                            }
+                        }
+                    },
                     "full_text": {"type": "string"},
                     "row_block_size": {"type": "integer", "default": 1000},
                     "max_rows": {"type": "integer", "default": 2147483647},
@@ -813,12 +936,12 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "create_document",
-            "description": "Create a document using the web-client flow (GetCategoryInfo -> PreprocessIndexData -> EvaluateConditionalProperties -> CreateDocument). Default auto-append mode is 0.",
+            "description": "Create a document using the web-client flow (GetCategoryInfo -> PreprocessIndexData -> EvaluateConditionalProperties -> CreateDocument). Use resolve_category to find category_no and resolve_field to build index_data_items. Default auto-append mode is 0.",
             "inputSchema": {
                 "type": "object",
                 "required": ["category_no"],
                 "properties": {
-                    "category_no": {"type": "integer"},
+                    "category_no": {"type": "integer", "description": "Category number for the document. Use resolve_category to find this."},
                     "check_in_comments": {"type": "string"},
                     "with_auto_append_mode": {"type": "integer", "default": 0},
                     "do_fill_dependent_fields": {"type": "boolean", "default": True},
@@ -843,7 +966,7 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "update_document_index_data",
-            "description": "Update index fields for a document (uses SaveDocumentIndexData).",
+            "description": "Update index fields for a document (uses SaveDocumentIndexData). Use resolve_field to find field numbers before building updates.",
             "inputSchema": {
                 "type": "object",
                 "required": ["doc_no"],
@@ -851,7 +974,7 @@ def build_tools() -> List[Dict[str, Any]]:
                     "doc_no": {"type": "integer"},
                     "updates": {
                         "type": "array",
-                        "description": "List of field updates by field number.",
+                        "description": "List of field updates by field number. Use resolve_field to find field_no.",
                         "items": {
                             "type": "object",
                             "required": ["value"],
@@ -860,7 +983,7 @@ def build_tools() -> List[Dict[str, Any]]:
                                 {"required": ["field_name"]}
                             ],
                             "properties": {
-                                "field_no": {"type": "integer"},
+                                "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
                                 "field_name": {"type": "string", "description": "Optional field label/name to resolve if field_no not provided."},
                                 "value": {}
                             }
@@ -878,7 +1001,7 @@ def build_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "update_document",
-            "description": "Update a document's streams and/or index data (uses UpdateDocument).",
+            "description": "Update a document's streams and/or index data (uses UpdateDocument). Use resolve_field to find field numbers for updates.",
             "inputSchema": {
                 "type": "object",
                 "required": ["doc_no"],
@@ -886,7 +1009,7 @@ def build_tools() -> List[Dict[str, Any]]:
                     "doc_no": {"type": "integer"},
                     "updates": {
                         "type": "array",
-                        "description": "Optional index field updates by field number.",
+                        "description": "Optional index field updates by field number. Use resolve_field to find field_no.",
                         "items": {
                             "type": "object",
                             "required": ["value"],
@@ -895,7 +1018,7 @@ def build_tools() -> List[Dict[str, Any]]:
                                 {"required": ["field_name"]}
                             ],
                             "properties": {
-                                "field_no": {"type": "integer"},
+                                "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
                                 "field_name": {"type": "string", "description": "Optional field label/name to resolve if field_no not provided."},
                                 "value": {}
                             }
@@ -979,6 +1102,324 @@ def build_tools() -> List[Dict[str, Any]]:
                 "required": ["doc_no"],
                 "properties": {
                     "doc_no": {"type": "integer"}
+                }
+            },
+        },
+        {
+            "name": "check_out_document",
+            "description": "Check out (lock) a document for editing. Returns checkout status and lock information.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number to check out."},
+                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
+                }
+            },
+        },
+        {
+            "name": "check_in_document",
+            "description": "Check in (release lock on) a document after editing. Use after check_out_document.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number to check in."},
+                    "check_in_comments": {"type": "string", "description": "Optional comments describing changes."},
+                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
+                }
+            },
+        },
+        {
+            "name": "undo_check_out_document",
+            "description": "Cancel document checkout without saving changes. Reverts to state before checkout.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number to undo checkout."},
+                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
+                }
+            },
+        },
+        {
+            "name": "add_comment",
+            "description": "Add a comment to a document.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no", "comment_text"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number."},
+                    "comment_text": {"type": "string", "description": "The comment text to add."},
+                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
+                }
+            },
+        },
+        {
+            "name": "get_comments",
+            "description": "Get all comments for a document.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number."},
+                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
+                }
+            },
+        },
+        {
+            "name": "complete_task",
+            "description": "Complete a workflow task. Use after claiming a task with claim_workflow_instance.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["workflow_instance_token", "task_no"],
+                "properties": {
+                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
+                    "task_no": {"type": "integer", "description": "Task number to complete."},
+                    "user_decision": {"type": "string", "description": "Optional user decision/outcome (e.g., 'Approve', 'Reject')."},
+                    "index_data_items": {"type": "array", "items": {"type": "object"}, "description": "Optional index data updates."}
+                }
+            },
+        },
+        {
+            "name": "claim_workflow_instance",
+            "description": "Claim a workflow task for the current user. Use before completing tasks.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["workflow_instance_token"],
+                "properties": {
+                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
+                    "task_no": {"type": "integer", "description": "Optional task number to claim."}
+                }
+            },
+        },
+        {
+            "name": "disclaim_workflow_instance",
+            "description": "Unclaim (release) a workflow task. Allows others to claim it.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["workflow_instance_token"],
+                "properties": {
+                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
+                    "task_no": {"type": "integer", "description": "Optional task number to disclaim."}
+                }
+            },
+        },
+        {
+            "name": "delegate_workflow_instance",
+            "description": "Delegate a workflow task to another user.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["workflow_instance_token", "user_id"],
+                "properties": {
+                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
+                    "user_id": {"type": "integer", "description": "User ID to delegate to. Use execute_users_query to find user IDs."},
+                    "task_no": {"type": "integer", "description": "Optional task number to delegate."}
+                }
+            },
+        },
+        {
+            "name": "create_case",
+            "description": "Create a new case in a case definition.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["case_definition_no"],
+                "properties": {
+                    "case_definition_no": {"type": "integer", "description": "Case definition number."},
+                    "index_data_items": {"type": "array", "items": {"type": "object"}, "description": "Optional case index data."}
+                }
+            },
+        },
+        {
+            "name": "get_case",
+            "description": "Get case details by case number.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["case_no"],
+                "properties": {
+                    "case_no": {"type": "integer", "description": "Case number."}
+                }
+            },
+        },
+        {
+            "name": "get_case_documents",
+            "description": "List documents in a case.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["case_no"],
+                "properties": {
+                    "case_no": {"type": "integer", "description": "Case number."},
+                    "max_rows": {"type": "integer", "default": 1000, "description": "Maximum documents to return."}
+                }
+            },
+        },
+        {
+            "name": "get_case_history",
+            "description": "Get audit trail/history for a case.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["case_no"],
+                "properties": {
+                    "case_no": {"type": "integer", "description": "Case number."}
+                }
+            },
+        },
+        {
+            "name": "create_user",
+            "description": "Create a new Therefore user account.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_name", "full_name"],
+                "properties": {
+                    "user_name": {"type": "string", "description": "Username (login name)."},
+                    "full_name": {"type": "string", "description": "Full display name."},
+                    "email": {"type": "string", "description": "Email address."},
+                    "password": {"type": "string", "description": "Initial password."},
+                    "domain_name": {"type": "string", "description": "Domain name for AD/LDAP users."}
+                }
+            },
+        },
+        {
+            "name": "update_user_group_assignment",
+            "description": "Update user's group memberships.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
+                    "group_ids": {"type": "array", "items": {"type": "integer"}, "description": "List of group IDs to assign."}
+                }
+            },
+        },
+        {
+            "name": "get_user_group_assignment",
+            "description": "Get user's group memberships. Returns list of group IDs the user belongs to.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."}
+                }
+            },
+        },
+        {
+            "name": "set_user_password",
+            "description": "Set (reset) a user's password. Admin operation to change another user's password.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id", "new_password"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
+                    "new_password": {"type": "string", "description": "New password to set."}
+                }
+            },
+        },
+        {
+            "name": "change_user_password",
+            "description": "Change the current user's password. Requires old password for verification.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["old_password", "new_password"],
+                "properties": {
+                    "old_password": {"type": "string", "description": "Current password for verification."},
+                    "new_password": {"type": "string", "description": "New password to set."}
+                }
+            },
+        },
+        {
+            "name": "reset_user_password",
+            "description": "Reset a user's password and optionally send reset email. Generates a new temporary password.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
+                    "send_email": {"type": "boolean", "default": True, "description": "Send password reset email to user."}
+                }
+            },
+        },
+        {
+            "name": "delete_portal_user",
+            "description": "Delete a portal user account. For portal/external users only, not internal Therefore users.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "Portal user ID."}
+                }
+            },
+        },
+        {
+            "name": "save_portal_user",
+            "description": "Create or update a portal user account. For portal/external users only.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID (0 to create new user)."},
+                    "user_name": {"type": "string", "description": "Username (login name)."},
+                    "full_name": {"type": "string", "description": "Full display name."},
+                    "email": {"type": "string", "description": "Email address."},
+                    "is_active": {"type": "boolean", "description": "Whether the user account is active."}
+                }
+            },
+        },
+        {
+            "name": "move_user_license",
+            "description": "Move a license from one user to another. Used for license management.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["source_user_id", "target_user_id"],
+                "properties": {
+                    "source_user_id": {"type": "integer", "description": "Source user ID to take license from."},
+                    "target_user_id": {"type": "integer", "description": "Target user ID to assign license to."}
+                }
+            },
+        },
+        {
+            "name": "get_user_settings",
+            "description": "Get user-specific settings and preferences.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."}
+                }
+            },
+        },
+        {
+            "name": "set_user_settings",
+            "description": "Update user-specific settings and preferences.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["user_id", "settings"],
+                "properties": {
+                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
+                    "settings": {"type": "object", "description": "Settings object with key-value pairs to update."}
+                }
+            },
+        },
+        {
+            "name": "copy_document",
+            "description": "Copy a document to create a duplicate. Can copy to a different category.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number to copy."},
+                    "target_category_no": {"type": "integer", "description": "Optional target category. Use resolve_category to find category numbers."},
+                    "index_data_items": {"type": "array", "items": {"type": "object"}, "description": "Optional index data for the copy."}
+                }
+            },
+        },
+        {
+            "name": "get_document_versions",
+            "description": "List all versions of a document.",
+            "inputSchema": {
+                "type": "object",
+                "required": ["doc_no"],
+                "properties": {
+                    "doc_no": {"type": "integer", "description": "Document number."}
                 }
             },
         },
@@ -1272,6 +1713,8 @@ class MCPServer:
                     }],
                     'isError': True
                 })
+        if method == 'ping':
+            return _result_response(msg_id, {})
         if method == 'prompts/list':
             return _result_response(msg_id, {'prompts': self.prompts})
         if method == 'prompts/get':
@@ -1926,6 +2369,130 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return self._add_streams_to_document(args, tenant, client)
         if name == 'delete_document':
             return client.delete_document(int(args['doc_no']))
+        if name == 'check_out_document':
+            return client.check_out_document(
+                doc_no=int(args['doc_no']),
+                version_no=int(args.get('version_no', 0)),
+            )
+        if name == 'check_in_document':
+            return client.check_in_document(
+                doc_no=int(args['doc_no']),
+                check_in_comments=args.get('check_in_comments'),
+                version_no=int(args.get('version_no', 0)),
+            )
+        if name == 'undo_check_out_document':
+            return client.undo_check_out_document(
+                doc_no=int(args['doc_no']),
+                version_no=int(args.get('version_no', 0)),
+            )
+        if name == 'add_comment':
+            return client.add_comment(
+                doc_no=int(args['doc_no']),
+                comment_text=str(args['comment_text']),
+                version_no=int(args.get('version_no', 0)),
+            )
+        if name == 'get_comments':
+            return client.get_comments(
+                doc_no=int(args['doc_no']),
+                version_no=int(args.get('version_no', 0)),
+            )
+        if name == 'complete_task':
+            return client.complete_task(
+                workflow_instance_token=str(args['workflow_instance_token']),
+                task_no=int(args['task_no']),
+                user_decision=args.get('user_decision'),
+                index_data_items=args.get('index_data_items'),
+            )
+        if name == 'claim_workflow_instance':
+            return client.claim_workflow_instance(
+                workflow_instance_token=str(args['workflow_instance_token']),
+                task_no=int(args['task_no']) if args.get('task_no') is not None else None,
+            )
+        if name == 'disclaim_workflow_instance':
+            return client.disclaim_workflow_instance(
+                workflow_instance_token=str(args['workflow_instance_token']),
+                task_no=int(args['task_no']) if args.get('task_no') is not None else None,
+            )
+        if name == 'delegate_workflow_instance':
+            return client.delegate_workflow_instance(
+                workflow_instance_token=str(args['workflow_instance_token']),
+                user_id=int(args['user_id']),
+                task_no=int(args['task_no']) if args.get('task_no') is not None else None,
+            )
+        if name == 'create_case':
+            return client.create_case(
+                case_definition_no=int(args['case_definition_no']),
+                index_data_items=args.get('index_data_items'),
+            )
+        if name == 'get_case':
+            return client.get_case(int(args['case_no']))
+        if name == 'get_case_documents':
+            return client.get_case_documents(
+                case_no=int(args['case_no']),
+                max_rows=int(args.get('max_rows', 1000)),
+            )
+        if name == 'get_case_history':
+            return client.get_case_history(int(args['case_no']))
+        if name == 'create_user':
+            return client.create_user(
+                user_name=str(args['user_name']),
+                full_name=str(args['full_name']),
+                email=args.get('email'),
+                password=args.get('password'),
+                domain_name=args.get('domain_name'),
+            )
+        if name == 'update_user_group_assignment':
+            return client.update_user_group_assignment(
+                user_id=int(args['user_id']),
+                group_ids=args.get('group_ids'),
+            )
+        if name == 'get_user_group_assignment':
+            return client.get_user_group_assignment(int(args['user_id']))
+        if name == 'set_user_password':
+            return client.set_user_password(
+                user_id=int(args['user_id']),
+                new_password=str(args['new_password']),
+            )
+        if name == 'change_user_password':
+            return client.change_user_password(
+                old_password=str(args['old_password']),
+                new_password=str(args['new_password']),
+            )
+        if name == 'reset_user_password':
+            return client.reset_user_password(
+                user_id=int(args['user_id']),
+                send_email=bool(args.get('send_email', True)),
+            )
+        if name == 'delete_portal_user':
+            return client.delete_portal_user(int(args['user_id']))
+        if name == 'save_portal_user':
+            return client.save_portal_user(
+                user_id=int(args['user_id']),
+                user_name=args.get('user_name'),
+                full_name=args.get('full_name'),
+                email=args.get('email'),
+                is_active=args.get('is_active'),
+            )
+        if name == 'move_user_license':
+            return client.move_user_license(
+                source_user_id=int(args['source_user_id']),
+                target_user_id=int(args['target_user_id']),
+            )
+        if name == 'get_user_settings':
+            return client.get_user_settings(int(args['user_id']))
+        if name == 'set_user_settings':
+            return client.set_user_settings(
+                user_id=int(args['user_id']),
+                settings=args['settings'],
+            )
+        if name == 'copy_document':
+            return client.copy_document(
+                doc_no=int(args['doc_no']),
+                target_category_no=int(args['target_category_no']) if args.get('target_category_no') is not None else None,
+                index_data_items=args.get('index_data_items'),
+            )
+        if name == 'get_document_versions':
+            return client.get_document_versions(int(args['doc_no']))
         if name == 'get_converted_doc_streams':
             return self._get_converted_doc_streams(args, tenant, client)
         if name == 'get_logfiles':
@@ -4914,6 +5481,23 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
 
     app = FastAPI(title="Therefore MCP HTTP Server")
 
+    # Bearer token auth — skip for health check
+    auth_token = os.environ.get('THEREFORE_MCP_AUTH_TOKEN', '').strip()
+    if auth_token:
+        @app.middleware("http")
+        async def check_auth(request: Request, call_next):
+            if request.url.path == "/health":
+                return await call_next(request)
+            header = request.headers.get("authorization", "").strip()
+            scheme, _, token = header.partition(" ")
+            if scheme.lower() == "bearer" and token.strip() == auth_token:
+                return await call_next(request)
+            return JSONResponse(
+                {"error": "Unauthorized"},
+                status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     # Session management: session_id -> asyncio.Queue
     _sessions: Dict[str, asyncio.Queue] = {}
 
@@ -4980,7 +5564,54 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
 
     # -- Streamable HTTP transport (MCP 2025-03-26) --
     # Tracks sessions by Mcp-Session-Id header.
-    _mcp_sessions: Dict[str, bool] = {}  # session_id -> alive
+    # Each session has an optional asyncio.Queue for the GET SSE stream.
+    _mcp_sessions: Dict[str, Optional[asyncio.Queue]] = {}  # session_id -> queue or None
+
+    @app.get("/mcp")
+    async def streamable_http_get(request: Request):
+        """MCP Streamable HTTP: long-lived SSE stream for server-initiated messages."""
+        session_id = request.headers.get("mcp-session-id")
+        if not session_id or session_id not in _mcp_sessions:
+            return JSONResponse(
+                _error_response(None, -32000, "Bad or missing Mcp-Session-Id"),
+                status_code=400,
+            )
+
+        accept = request.headers.get("accept", "")
+        if "text/event-stream" not in accept:
+            return JSONResponse(
+                _error_response(None, -32000, "Accept header must include text/event-stream"),
+                status_code=406,
+            )
+
+        queue: asyncio.Queue = asyncio.Queue()
+        _mcp_sessions[session_id] = queue
+
+        async def event_stream():
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        data = await asyncio.wait_for(queue.get(), timeout=30.0)
+                        yield f"event: message\ndata: {data}\n\n"
+                    except asyncio.TimeoutError:
+                        yield ": keepalive\n\n"
+            finally:
+                # Clear the queue reference but keep the session alive
+                if _mcp_sessions.get(session_id) is queue:
+                    _mcp_sessions[session_id] = None
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+                "Mcp-Session-Id": session_id,
+            },
+        )
 
     @app.post("/mcp")
     async def streamable_http_endpoint(request: Request):
@@ -5016,21 +5647,21 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
         response = server.handle(body)
 
         if method == "initialize" and response is not None:
-            _mcp_sessions[session_id] = True
+            _mcp_sessions[session_id] = None
             return JSONResponse(
                 response,
                 headers={"Mcp-Session-Id": session_id},
             )
 
         if is_notification:
-            return Response(status_code=204)
+            return Response(status_code=202)
 
         if response is not None:
             return JSONResponse(
                 response,
                 headers={"Mcp-Session-Id": session_id} if session_id else {},
             )
-        return Response(status_code=204)
+        return Response(status_code=202)
 
     @app.delete("/mcp")
     async def streamable_http_delete(request: Request):
@@ -5038,7 +5669,7 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
         session_id = request.headers.get("mcp-session-id")
         if session_id and session_id in _mcp_sessions:
             del _mcp_sessions[session_id]
-        return Response(status_code=204)
+        return Response(status_code=200)
 
     # -- Direct JSON-RPC (non-MCP transport) --
 
@@ -5074,7 +5705,9 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
 def run_http_mode(server: 'MCPServer', host: str, port: int) -> None:
     """Run the server in HTTP-only mode using FastAPI."""
     app = _build_http_app(server)
+    auth_enabled = bool(os.environ.get('THEREFORE_MCP_AUTH_TOKEN', '').strip())
     print(f"Starting Therefore MCP server in HTTP mode on {host}:{port}", file=sys.stderr)
+    print(f"Auth: {'Bearer token' if auth_enabled else 'NONE (set THEREFORE_MCP_AUTH_TOKEN to enable)'}", file=sys.stderr)
     print(f"Access at: http://{host}:{port}", file=sys.stderr)
     print(f"Health check: http://{host}:{port}/health", file=sys.stderr)
     uvicorn.run(app, host=host, port=port, log_level="info")
@@ -5117,9 +5750,30 @@ def main() -> None:
     clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
     server = MCPServer(clients, default_tenant, tenant_labels, tenant_aliases)
 
+    # Debug startup diagnostics (stderr only)
+    any_debug = any(c.config.debug for c in clients.values())
+    if any_debug:
+        def _dbg(msg: str) -> None:
+            print(f"[THEREFORE] {msg}", file=sys.stderr, flush=True)
+        _dbg("--- startup diagnostics ---")
+        for key, client in clients.items():
+            label = tenant_labels.get(key, key)
+            cfg = client.config
+            _dbg(f"  tenant={label} base_url={cfg.base_url} auth={cfg.auth_method}")
+        _dbg(f"  default_tenant={default_tenant}")
+
     # Determine mode and run
     use_stdio = args.stdio or args.http is None  # stdio is the default
     use_http = args.http is not None
+
+    if any_debug:
+        if use_stdio and use_http:
+            _dbg(f"  transport=stdio+http (port {args.http})")
+        elif use_http:
+            _dbg(f"  transport=http (port {args.http})")
+        else:
+            _dbg("  transport=stdio")
+        _dbg("--- end startup diagnostics ---")
 
     if use_stdio and use_http:
         # Dual mode: HTTP in background thread, stdio on main thread

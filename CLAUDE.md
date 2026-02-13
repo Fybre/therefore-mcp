@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**therefore-mcp** is a Python MCP (Model Context Protocol) server that bridges AI assistants to the Therefore™ document management system via its WebAPI. It exposes 57+ tools for document CRUD, querying, workflow management, keyword dictionaries, and user/system operations. Communication uses LSP-style JSON-RPC over stdin/stdout.
+**therefore-mcp** is a Python MCP (Model Context Protocol) server that bridges AI assistants to the Therefore™ document management system via its WebAPI. It exposes 87+ tools for document CRUD, querying, workflow management, keyword dictionaries, user/system operations, document checkout/checkin, comments, case management, and comprehensive user administration (create, password management, licensing, portal users, settings). Communication uses LSP-style JSON-RPC over stdin/stdout.
 
 ## Running the Server
 
@@ -42,8 +42,8 @@ Generates delta XML for Therefore category creation from natural language or YAM
 
 ### Core Files
 
-- **`src/mcp_server.py`** (~3,900 lines) — The MCP server. Contains `MCPServer` class with all 57 tool handlers, caching, tenant management, and JSON-RPC message loop.
-- **`src/therefore_client.py`** (~1,100 lines) — HTTP client (`ThereforeClient`) for Therefore™ WebAPI. Handles auth, timeouts, retries, multi-tenant config building, and stream utilities.
+- **`src/mcp_server.py`** (~5,700 lines) — The MCP server. Contains `MCPServer` class with all 87 tool handlers, caching, tenant management, and JSON-RPC message loop.
+- **`src/therefore_client.py`** (~1,400 lines) — HTTP client (`ThereforeClient`) for Therefore™ WebAPI. Handles auth, timeouts, retries, multi-tenant config building, and stream utilities.
 
 ### Key Architectural Patterns
 

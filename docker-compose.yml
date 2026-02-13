@@ -6,6 +6,21 @@ services:
     volumes:
       - cache:/app/cache
     stdin_open: true
+    profiles:
+      - stdio
+
+  therefore-mcp-http:
+    build: .
+    env_file:
+      - .env.local
+    volumes:
+      - cache:/app/cache
+    ports:
+      - "8000:8000"
+    command: ["--http", "8000"]
+    restart: unless-stopped
+    profiles:
+      - http
 
 volumes:
   cache:

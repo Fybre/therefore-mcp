@@ -83,6 +83,20 @@ docker buildx create --name multiplatform --driver docker-container --use  # fir
 docker buildx build --platform linux/amd64,linux/arm64 -t fybre/therefore-mcp --push .
 ```
 
+### Docker Compose
+
+The included `docker-compose.yml` uses profiles to select the transport mode:
+
+```bash
+# HTTP mode (production) -- runs detached with auto-restart
+docker compose --profile http up -d
+
+# stdio mode -- for MCP clients that manage the process
+docker compose --profile stdio up
+```
+
+Create a `.env.local` in the project root before starting (see [Configuration](#configuration) above).
+
 ## MCP Host Configuration
 
 Below are example configurations for popular MCP-compatible clients. Replace `/path/to/therefore-mcp` with the actual path to your clone.
@@ -170,6 +184,17 @@ extensions:
   therefore:
     type: sse
     uri: http://localhost:8000/mcp
+```
+
+If you have `THEREFORE_MCP_AUTH_TOKEN` set, add the token as a header:
+
+```yaml
+extensions:
+  therefore:
+    type: sse
+    uri: http://localhost:8000/mcp
+    headers:
+      Authorization: "Bearer your-secret-token"
 ```
 
 Or for a remote server:
@@ -286,6 +311,34 @@ docs/
 | `THEREFORE_WORKFLOW_MAX_ROWS` | Max workflow query rows | `10000` |
 | `THEREFORE_LOCAL_TZ` | Local timezone | System default |
 | `THEREFORE_<TENANT>_ALLOW_WRITES` | Enable write operations | `false` |
+| `THEREFORE_MCP_AUTH_TOKEN` | Bearer token for HTTP endpoints (optional) | None (no auth) |
+| `THEREFORE_DEBUG` | Enable debug logging to stderr (`1`, `true`, or `yes`) | Disabled |
+
+## Debugging
+
+Set `THEREFORE_DEBUG=1` to enable verbose request/response logging. All debug output goes to **stderr** so it won't interfere with the JSON-RPC protocol on stdout.
+
+```bash
+# In your .env.local
+THEREFORE_DEBUG=true
+```
+
+Or pass it directly:
+
+```bash
+THEREFORE_DEBUG=1 python3 src/mcp_server.py
+```
+
+When enabled, you'll see output like:
+
+```
+[THEREFORE] POST https://tenant.thereforeonline.com/theservice/v0001/restun/GetCategoryInfo (142 bytes)
+[THEREFORE]  <- 200 OK (3854 bytes, 237ms)
+[THEREFORE] POST https://tenant.thereforeonline.com/theservice/v0001/restun/ExecuteSingleQuery (285 bytes)
+[THEREFORE]  <- 401 'Invalid credentials' (94 bytes, 58ms)
+```
+
+Each log line includes the HTTP method, URL, response status, body size, and round-trip time. Redirect hops are also logged when they occur. This is useful for diagnosing authentication issues, timeouts, and unexpected API responses.
 
 ## License
 

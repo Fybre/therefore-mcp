@@ -1,0 +1,6 @@
+{
+  "tenant": "craigdemo",
+  "token": "v2bJD5XoL_Dn",
+  "obtained_at": "2026-02-12T15:11:58Z",
+  "purpose": "Testing token expiry - try reusing this token after a few days"
+}
