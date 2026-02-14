@@ -1563,6 +1563,8 @@ def build_delta_xml(
                     update_bounds(pos_x, pos_y, width, height)
                     update_bounds(label_x, label_y, label_w, layout.label_h)
                     y += layout.row_height
+                    pos_y = y
+                    label_y = y + layout.label_offset_y
                     tab_order += 1
                     disp_order += 1
         elif f.type == "table":
@@ -1676,32 +1678,132 @@ def build_delta_xml(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate Therefore config delta XML for a new category.")
-    parser.add_argument("--baseline", help="Optional baseline TheConfiguration.xml export for diff-mode collision checks")
-    parser.add_argument("--description", required=True, help="Natural language description or YAML/JSON spec path")
-    parser.add_argument("--output", required=True, help="Output delta XML path")
+    epilog = """
+EXAMPLES:
+  Basic usage (no API, no baseline):
+    %(prog)s --description description.txt --output output.xml
+
+  With API check (recommended for reference_table fields):
+    %(prog)s --description description.txt --output output.xml --api-check --tenant craigdemo
+
+  With baseline validation (collision detection):
+    %(prog)s --description spec.json --baseline craigdemo-baseline.xml --output output.xml
+
+  Full options with interactive prompts:
+    %(prog)s --description description.txt --baseline baseline.xml --output output.xml \\
+             --api-check --tenant craigdemo --interactive --folder-on-exists unique
+
+WHEN TO USE OPTIONS:
+  --api-check
+    • Creating reference_table fields (resolves category names to IDs)
+    • Using "existing dictionary" (verifies dictionary exists)
+    • Checking for conflicts with existing folders/categories
+    • Required when description uses category names instead of IDs
+
+  --baseline
+    • Collision detection for categories/folders/dictionaries
+    • Generating unique names on conflicts (with --folder-on-exists unique)
+    • Validating against known server state
+    • Not required for normal generation
+
+  --interactive
+    • Running manually (not in automated scripts)
+    • Want prompts for conflict resolution decisions
+    • Need to choose between existing objects or creating new ones
+
+  --tenant
+    • Multiple tenants configured in .env file
+    • Overriding the default tenant
+    • Required with --api-check if default tenant not set
+
+FIELD TYPES SUPPORTED:
+  • text - Text field with configurable length (max 4000)
+  • number - Integer field
+  • decimal - Decimal field with precision/scale
+  • date - Date field with optional default values
+  • keyword_single - Single-select dropdown from dictionary
+  • keyword_multiple - Multi-select dropdown from dictionary
+  • table - Embedded table with columns
+  • reference_table - Referenced table with dependent fields
+
+REFERENCE TABLE DEPENDENCY MODES:
+  • Referenced (default) - Data pulled from source, not stored locally
+  • Synchronized redundant - Data copied locally and kept in sync (read-only)
+  • Editable redundant - Data copied locally, can be edited independently
+
+  Natural language: "with synchronized columns" or "with editable columns"
+  JSON: "dependency_mode": "synchronized" or "editable" or "referenced"
+"""
+
+    parser = argparse.ArgumentParser(
+        description="Generate Therefore config delta XML for a new category.",
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        "--baseline",
+        metavar="PATH",
+        help="Optional baseline TheConfiguration.xml export for diff-mode collision checks. "
+             "Use to validate against existing server state and detect naming conflicts."
+    )
+
+    parser.add_argument(
+        "--description",
+        required=True,
+        metavar="PATH",
+        help="Path to natural language description (.txt), YAML (.yaml/.yml), or JSON (.json) spec file. "
+             "Examples: 'description.txt', 'category.json', 'spec.yaml'"
+    )
+
+    parser.add_argument(
+        "--output",
+        required=True,
+        metavar="PATH",
+        help="Output delta XML file path. This file can be imported into Therefore to create the category. "
+             "Example: 'output.xml'"
+    )
+
     parser.add_argument(
         "--folder-on-exists",
         choices=["error", "use-existing", "unique"],
-        help="Policy when a requested new folder name already exists (default: use-existing).",
+        metavar="POLICY",
+        help="Policy when requested folder already exists. "
+             "Choices: error (fail), use-existing (reuse folder - default), unique (generate unique name)."
     )
+
     parser.add_argument(
         "--interactive",
         action="store_true",
-        help="Prompt for conflict resolution when possible.",
+        help="Enable interactive prompts for conflict resolution. "
+             "Use when running manually to make decisions about existing objects. "
+             "Not recommended for automated scripts."
     )
+
     parser.add_argument(
         "--api-check",
         action="store_true",
-        help="If connection details are available, check tenant objects via WebAPI.",
+        help="Query Therefore tenant via WebAPI to resolve names and validate objects. "
+             "REQUIRED for: reference_table fields (resolves category names), "
+             "existing dictionaries (validates they exist). "
+             "Requires valid tenant configuration in .env file."
     )
+
     parser.add_argument(
         "--env",
-        help="Path to Therefore .env file (defaults to THEREFORE_ENV_PATH if set).",
+        metavar="PATH",
+        help="Path to Therefore .env configuration file. "
+             "Defaults to THEREFORE_ENV_PATH environment variable if set. "
+             "Contains tenant connection details for --api-check. "
+             "Example: '/path/to/.env.local'"
     )
+
     parser.add_argument(
         "--tenant",
-        help="Tenant key/name to use when multiple tenants are configured.",
+        metavar="NAME",
+        help="Tenant key/name to use when multiple tenants are configured in .env file. "
+             "Required with --api-check if default tenant not specified. "
+             "Examples: 'craigdemo', 'production', 'dev'"
     )
 
     args = parser.parse_args()
