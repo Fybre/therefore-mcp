@@ -124,6 +124,36 @@ class CategorySpec:
     dictionary_conflict_policy: str = "use-existing"  # error | use-existing | unique
 
 
+# ------------------------- Resolution Data Structures -------------------------
+
+
+@dataclass
+class ResolvedFolder:
+    folder_no: str
+    name: str
+    source: str  # "api" | "baseline" | "new"
+    new_element: Optional[ET.Element] = None  # Only if source="new"
+    guid: Optional[str] = None  # Folder GUID for existing folders (from API)
+
+
+@dataclass
+class ResolvedDictionary:
+    key_dic_no: int
+    single_type_no: int
+    name: str
+    source: str  # "api" | "baseline" | "new"
+    new_element: Optional[ET.Element] = None  # Only if source="new"
+
+
+@dataclass
+class ResolvedReferenceTable:
+    category_id: int
+    category_name: str
+    table_info: Optional[Dict[str, Any]]  # Column details from API
+    source: str  # "api" | "spec"
+    guid: Optional[str] = None  # Category GUID for reference matching
+
+
 class NegativeIdPool:
     def __init__(self, start: int = -1) -> None:
         self.next_val = start
@@ -144,18 +174,463 @@ class Layout:
         self.row_height = 22
         self.start_y = 12
         self.widths = {
-            "text": 200,
-            "number": 80,
-            "decimal": 80,
-            "date": 120,
-            "keyword_single": 200,
-            "keyword_multiple": 200,
-            "table": 240,
-            "reference_table": 200,
+            "text": 120,  # Narrower to account for label + padding
+            "number": 70,  # Reduced to fit form better
+            "decimal": 70,
+            "date": 90,
+            "keyword_single": 120,
+            "keyword_multiple": 120,
+            "table": 180,
+            "reference_table": 120,  # Primary field is hidden anyway
         }
         self.table_height = 43
         self.half_width = 120
         self.full_width = 220
+
+
+# ------------------------- Resolution Functions -------------------------
+
+
+def resolve_or_create_folder(
+    spec: CategorySpec,
+    base_root: Optional[ET.Element],
+    api_client: Optional[Any],
+    interactive: bool,
+    folder_ids: NegativeIdPool
+) -> ResolvedFolder:
+    """Resolve folder from API/baseline or create new.
+
+    Returns ResolvedFolder with decision made about which folder to use.
+    """
+    folder_no = None
+    folder_guid = None
+    new_folder_elem = None
+    existing_folder_no = None
+    folder_found_via_api = False
+
+    # Check API first (gets both folder_no and GUID)
+    if spec.folder and api_client is not None:
+        result = _find_folder_by_name_api_with_guid(api_client, spec.folder)
+        if result:
+            existing_folder_no, folder_guid = result
+            folder_found_via_api = True
+
+    # Check baseline if not found in API
+    if spec.folder and not existing_folder_no and base_root is not None:
+        existing_folder_no = _find_folder_by_name(base_root, spec.folder)
+
+    # Use existing folder if not forcing new
+    if spec.folder and not spec.force_new_folder and existing_folder_no:
+        folder_no = existing_folder_no
+
+    # Handle conflicts when forcing new folder
+    if spec.force_new_folder and existing_folder_no:
+        if spec.folder_conflict_policy == "use-existing":
+            folder_no = existing_folder_no
+        elif spec.folder_conflict_policy == "unique" and base_root is not None:
+            spec.folder = _unique_folder_name(base_root, spec.folder)
+        else:
+            if interactive and folder_found_via_api and sys.stdin.isatty():
+                prompt = (
+                    f"Folder '{spec.folder}' already exists. Choose: "
+                    "[u]se existing, [n]ew unique name, [a]bort: "
+                )
+                choice = input(prompt).strip().lower()
+                if choice in ("u", "use", "existing"):
+                    folder_no = existing_folder_no
+                elif choice in ("n", "new", "unique") and base_root is not None:
+                    spec.folder = _unique_folder_name(base_root, spec.folder)
+                else:
+                    raise ValueError("Aborted by user.")
+            elif base_root is not None:
+                raise ValueError(
+                    f"Folder '{spec.folder}' already exists in baseline export. "
+                    "Specify 'use existing folder' or 'create unique folder name' in the description, "
+                    "set folder_conflict_policy in a YAML spec, or run with --api-check --interactive."
+                )
+
+    # Create new folder if not resolved
+    if not folder_no:
+        folder_name = spec.folder or "Generated"
+        folder_no = str(folder_ids.take())
+        new_folder_elem = ET.Element("Folder")
+        ET.SubElement(new_folder_elem, "FolderNo").text = folder_no
+        ET.SubElement(new_folder_elem, "Type").text = "3"
+        new_folder_elem.append(_tstr_element("Name", folder_name))
+        ET.SubElement(new_folder_elem, "Id").text = _guid()
+
+        return ResolvedFolder(
+            folder_no=folder_no,
+            name=folder_name,
+            source="new",
+            new_element=new_folder_elem
+        )
+
+    # Return existing folder
+    # For folders found via API with GUID:
+    # - Create folder element with PLACEHOLDER ID (like new folders)
+    # - Include the REAL GUID in the folder element
+    # - This should match the existing folder and not create a duplicate
+    if folder_guid:
+        folder_name = spec.folder or "Unknown"
+        placeholder_folder_no = str(folder_ids.take())
+
+        # Create folder element with placeholder ID but REAL GUID
+        folder_elem = ET.Element("Folder")
+        ET.SubElement(folder_elem, "FolderNo").text = placeholder_folder_no
+        ET.SubElement(folder_elem, "Type").text = "3"
+        folder_elem.append(_tstr_element("Name", folder_name))
+        ET.SubElement(folder_elem, "Id").text = folder_guid  # Use REAL GUID, not random
+
+        return ResolvedFolder(
+            folder_no=placeholder_folder_no,  # Use placeholder
+            name=folder_name,
+            source="api",
+            new_element=folder_elem,  # Include the element
+            guid=folder_guid  # Real GUID
+        )
+
+    # For baseline-only folders (no GUID), use the real folder number
+    source = "api" if folder_found_via_api else "baseline"
+    return ResolvedFolder(
+        folder_no=folder_no,  # Use REAL folder number
+        name=spec.folder or "Unknown",
+        source=source,
+        new_element=None,
+        guid=None
+    )
+
+
+def resolve_or_create_dictionary(
+    dspec: DictionarySpec,
+    spec_conflict_policy: str,
+    base_root: Optional[ET.Element],
+    api_client: Optional[Any],
+    interactive: bool,
+    dict_ids: NegativeIdPool,
+    dict_type_ids: NegativeIdPool,
+    next_keywords_suffix: int
+) -> tuple[ResolvedDictionary, int]:
+    """Resolve dictionary from API/baseline or create new.
+
+    Returns (ResolvedDictionary, updated_suffix).
+    """
+    existing_info = None
+    if base_root is not None:
+        existing_info = _find_dictionary_by_name(base_root, dspec.name)
+
+    existing_found_via_api = False
+    if not existing_info and api_client is not None:
+        existing_info = _find_dictionary_by_name_api(api_client, dspec.name)
+        if existing_info:
+            existing_found_via_api = True
+
+    # Mode: existing - must exist
+    if dspec.mode == "existing":
+        if existing_info:
+            return (
+                ResolvedDictionary(
+                    key_dic_no=int(existing_info["KeyDicNo"]),
+                    single_type_no=int(existing_info["SingleTypeNo"]),
+                    name=dspec.name,
+                    source="api" if existing_found_via_api else "baseline",
+                    new_element=None
+                ),
+                next_keywords_suffix
+            )
+        raise ValueError(
+            f"Dictionary '{dspec.name}' not found. "
+            "Use --api-check to query the tenant, or provide a --baseline export that includes it."
+        )
+
+    # Mode: create - check for conflicts
+    if existing_info:
+        if spec_conflict_policy == "use-existing":
+            return (
+                ResolvedDictionary(
+                    key_dic_no=int(existing_info["KeyDicNo"]),
+                    single_type_no=int(existing_info["SingleTypeNo"]),
+                    name=dspec.name,
+                    source="api" if existing_found_via_api else "baseline",
+                    new_element=None
+                ),
+                next_keywords_suffix
+            )
+        if spec_conflict_policy == "unique" and base_root is not None:
+            dspec.name = _unique_dictionary_name(base_root, dspec.name)
+        elif interactive and existing_found_via_api and sys.stdin.isatty():
+            prompt = (
+                f"Dictionary '{dspec.name}' already exists. Choose: "
+                "[u]se existing, [n]ew unique name, [a]bort: "
+            )
+            choice = input(prompt).strip().lower()
+            if choice in ("u", "use", "existing"):
+                return (
+                    ResolvedDictionary(
+                        key_dic_no=int(existing_info["KeyDicNo"]),
+                        single_type_no=int(existing_info["SingleTypeNo"]),
+                        name=dspec.name,
+                        source="api" if existing_found_via_api else "baseline",
+                        new_element=None
+                    ),
+                    next_keywords_suffix
+                )
+            if choice in ("n", "new", "unique") and base_root is not None:
+                dspec.name = _unique_dictionary_name(base_root, dspec.name)
+            else:
+                raise ValueError("Aborted by user.")
+        elif base_root is not None:
+            raise ValueError(
+                f"Dictionary '{dspec.name}' already exists. Use 'existing dictionary' in the description "
+                "or choose a different name. (Or run with --api-check --interactive for a prompt.)"
+            )
+
+    # Create new dictionary
+    key_dic_no = dict_ids.take()
+    single_type_no = dict_type_ids.take()
+    key_table = f"TheKeywords{next_keywords_suffix}"
+    updated_suffix = next_keywords_suffix + 1
+
+    d_el = ET.Element("Dictionary")
+    ET.SubElement(d_el, "KeyDicNo").text = str(key_dic_no)
+    next_no = len(dspec.keywords) if dspec.keywords else 0
+    ET.SubElement(d_el, "NextNo").text = str(next_no)
+    ET.SubElement(d_el, "SingleTypeNo").text = str(single_type_no)
+    ET.SubElement(d_el, "KeyDicName").text = dspec.name
+    ET.SubElement(d_el, "KeyDicTable").text = key_table
+
+    kw_root = ET.SubElement(d_el, "Keywords")
+    for i, kw in enumerate(dspec.keywords, start=1):
+        kw_el = ET.SubElement(kw_root, "KW")
+        ET.SubElement(kw_el, "KeywordNo").text = str(i)
+        kw_el.append(_tstr_element("Keyword", kw))
+        ET.SubElement(kw_el, "Id").text = _guid()
+
+    ET.SubElement(d_el, "Id").text = _guid()
+
+    return (
+        ResolvedDictionary(
+            key_dic_no=key_dic_no,
+            single_type_no=single_type_no,
+            name=dspec.name,
+            source="new",
+            new_element=d_el
+        ),
+        updated_suffix
+    )
+
+
+def resolve_reference_table(
+    ref_spec: ReferenceTableSpec,
+    field_name: str,
+    api_client: Optional[Any]
+) -> ResolvedReferenceTable:
+    """Resolve reference table by name or ID.
+
+    Returns ResolvedReferenceTable with category_id and table_info.
+    """
+    ref_cat_id = ref_spec.category_no
+    ref_table_info = None
+    category_name = ref_spec.category_name or "Unknown"
+
+    # Resolve by name if needed
+    if not ref_cat_id and ref_spec.category_name:
+        if api_client is not None:
+            ref_cat_id = _find_referenced_table_by_name_api(api_client, ref_spec.category_name)
+            if not ref_cat_id:
+                raise ValueError(
+                    f"Referenced table '{ref_spec.category_name}' not found. "
+                    "Provide category_no explicitly or ensure --api-check is enabled."
+                )
+            category_name = ref_spec.category_name
+        else:
+            raise ValueError(
+                f"Referenced table '{ref_spec.category_name}' requires API access to resolve. "
+                "Provide category_no explicitly or use --api-check."
+            )
+
+    if not ref_cat_id:
+        raise ValueError(
+            f"Reference table field '{field_name}' requires either category_name or category_no"
+        )
+
+    # Get table info and GUID if API available
+    category_guid = None
+    if api_client is not None:
+        ref_table_info = _get_referenced_table_info_api(api_client, ref_cat_id)
+
+        # Get GUID from get_objects for reference matching
+        try:
+            resp = api_client.get_objects(flags=0, obj_type=5)
+            for item in resp.get("ItemList", []):
+                if item.get("ID") == ref_cat_id:
+                    category_guid = item.get("Guid")
+                    break
+        except Exception:
+            pass  # GUID is optional, continue without it
+
+    return ResolvedReferenceTable(
+        category_id=ref_cat_id,
+        category_name=category_name,
+        table_info=ref_table_info,
+        source="api" if ref_spec.category_name else "spec",
+        guid=category_guid
+    )
+
+
+# ------------------------- Discovery Functions -------------------------
+
+
+def discover_referenced_tables(api_client: Any) -> None:
+    """List all referenced tables (Type 5) with their columns."""
+    try:
+        resp = api_client.get_objects(flags=0, obj_type=5)
+    except Exception as e:
+        print(f"Error querying referenced tables: {e}")
+        return
+
+    item_list = resp.get("ItemList") or []
+    if not item_list:
+        print("No referenced tables found.")
+        return
+
+    print(f"\nFound {len(item_list)} referenced table(s):\n")
+    for item in item_list:
+        name = item.get("Name") or "Unnamed"
+        cat_id = item.get("ID")
+        print(f"  • {name} (ID: {cat_id})")
+
+        # Get column details
+        try:
+            info = api_client.get_referenced_table_info(cat_id)
+            columns = info.get("Columns") or []
+            if columns:
+                col_names = [c.get("ColumnName", "?") for c in columns]
+                print(f"    Columns: {', '.join(col_names)}")
+        except Exception:
+            pass
+    print()
+
+
+def discover_folders(api_client: Any) -> None:
+    """List all folders using get_categories_tree."""
+    try:
+        resp = api_client.get_categories_tree()
+
+        def extract_folders(items, depth=0):
+            """Recursively extract folders from tree."""
+            folders = []
+            for item in items:
+                item_type = item.get('ItemType')
+                if item_type == 1:  # Folder
+                    folders.append({
+                        'name': item.get('Name', 'Unnamed'),
+                        'folder_no': item.get('ItemNo'),
+                        'guid': item.get('Guid'),
+                        'parent': item.get('ParentFolderNo'),
+                        'depth': depth
+                    })
+
+                # Recurse into children
+                children = item.get('ChildItems', [])
+                if children:
+                    folders.extend(extract_folders(children, depth + 1))
+
+            return folders
+
+        tree_items = resp.get('TreeItems', [])
+        folders = extract_folders(tree_items)
+
+        if not folders:
+            print("No folders found.")
+            return
+
+        print(f"\nFound {len(folders)} folder(s):\n")
+        for f in folders:
+            indent = '  ' * f['depth']
+            name = f['name']
+            fno = f['folder_no']
+            guid = f['guid'] or 'No GUID'
+            parent_info = f" (Parent: {f['parent']})" if f['parent'] else " (Root)"
+
+            print(f"{indent}• {name} (FolderNo: {fno}){parent_info}")
+            if f['depth'] == 0:  # Only show GUID for top-level to reduce clutter
+                print(f"{indent}  GUID: {guid}")
+        print()
+
+    except Exception as e:
+        print(f"Error querying folders: {e}")
+
+
+def discover_dictionaries(api_client: Any) -> None:
+    """List all keyword dictionaries."""
+    try:
+        resp = api_client.get_objects_list([
+            {
+                "Flags": 0,
+                "Type": 22,  # KeyDict
+                "RoleAccessMask": 18446744073709551615,
+            }
+        ])
+    except Exception as e:
+        print(f"Error querying keyword dictionaries: {e}")
+        return
+
+    all_items = resp.get("AllItemsList") or []
+    dictionaries = []
+    for entry in all_items:
+        item_list = entry.get("ItemList") or []
+        for item in item_list:
+            dname = item.get("Name") or "Unnamed"
+            dic_id = item.get("ID") or item.get("ObjID")
+            dictionaries.append((dname, dic_id))
+
+    if not dictionaries:
+        print("No keyword dictionaries found.")
+        return
+
+    print(f"\nFound {len(dictionaries)} keyword dictionar(y/ies):\n")
+    for dname, dic_id in dictionaries:
+        print(f"  • {dname} (ID: {dic_id})")
+    print()
+
+
+def discover_category_details(api_client: Any, category_id: int) -> None:
+    """Show detailed column info for a referenced table."""
+    try:
+        info = api_client.get_referenced_table_info(category_id)
+    except Exception as e:
+        print(f"Error getting category details for ID {category_id}: {e}")
+        return
+
+    cat_name = info.get("CategoryName") or "Unknown"
+    columns = info.get("Columns") or []
+
+    print(f"\nCategory: {cat_name} (ID: {category_id})")
+    print(f"Columns: {len(columns)}\n")
+
+    if not columns:
+        print("No columns found.")
+        return
+
+    for col in columns:
+        col_name = col.get("ColumnName") or "?"
+        col_type = col.get("TypeNo") or "?"
+        col_length = col.get("Length")
+
+        type_str = f"Type {col_type}"
+        if col_type == 1:
+            type_str = "Text"
+        elif col_type == 2:
+            type_str = "Number"
+        elif col_type == 3:
+            type_str = "Date"
+        elif col_type == 5:
+            type_str = "Decimal"
+
+        length_str = f", Length: {col_length}" if col_length else ""
+        print(f"  • {col_name} ({type_str}{length_str})")
+    print()
 
 
 # ------------------------- Parsing -------------------------
@@ -190,12 +665,24 @@ def parse_natural_language(text: str) -> CategorySpec:
 
     # Category name
     cat_name = None
-    m = re.search(r"\bcreate\s+(?:an|a)\s+([^.]+?)\s+category\b", joined, re.IGNORECASE)
+    # Try quoted names first (highest priority)
+    m = re.search(r"\bcreate\s+(?:an|a)\s+\"([^\"]+)\"\s+category\b", joined, re.IGNORECASE)
     if m:
-        cat_name = m.group(1).strip()
-        if cat_name:
-            cat_name = cat_name[:1].upper() + cat_name[1:]
-    # Only check for quoted category names if we haven't found one yet
+        cat_name = m.group(1)
+    if not cat_name:
+        m = re.search(r"\bcreate\s+(?:an|a)\s+'([^']+)'\s+category\b", joined, re.IGNORECASE)
+        if m:
+            cat_name = m.group(1)
+    # Try general pattern without quotes
+    if not cat_name:
+        m = re.search(r"\bcreate\s+(?:an|a)\s+([^.]+?)\s+category\b", joined, re.IGNORECASE)
+        if m:
+            cat_name = m.group(1).strip()
+            # Strip any quotes that might be included
+            cat_name = _strip_quotes(cat_name)
+            if cat_name:
+                cat_name = cat_name[:1].upper() + cat_name[1:]
+    # Check for quoted category names after "category" keyword
     if not cat_name:
         m = re.search(r"\bcategory\b\s+\"([^\"]+)\"", joined, re.IGNORECASE)
         if m:
@@ -210,7 +697,7 @@ def parse_natural_language(text: str) -> CategorySpec:
             cat_name = m.group(1)
             if " in folder " in cat_name.lower():
                 cat_name = cat_name.split(" in folder ", 1)[0]
-            cat_name = cat_name.strip()
+            cat_name = _strip_quotes(cat_name.strip())
     if not cat_name:
         raise ValueError("Could not determine category name from description.")
 
@@ -908,15 +1395,19 @@ def _make_table_field(field_no: int, name: str, foreign_table: str, pos_x: int, 
 
 
 def _make_primary_reference_field(field_no: int, name: str, ref_category_id: int, pos_x: int, pos_y: int, tab_order: int, disp_order: int, width: int, height: int, index_type: Optional[str] = None, mandatory: bool = False) -> ET.Element:
-    """Create a primary reference field (TypeNo = referenced category ID)."""
+    """Create a primary reference field (TypeNo = -1, resolved via References section).
+
+    Note: ref_category_id parameter is kept for compatibility but TypeNo is always -1.
+    The actual category reference is created in the References section of the XML.
+    """
     f = ET.Element("Field")
     ET.SubElement(f, "FieldNo").text = str(field_no)
-    ET.SubElement(f, "ColName").text = _slugify(name) + "No"
-    f.append(_tstr_element("Caption", name + "No"))
-    ET.SubElement(f, "TypeNo").text = str(ref_category_id)
+    ET.SubElement(f, "ColName").text = _slugify(name)
+    f.append(_tstr_element("Caption", name))
+    ET.SubElement(f, "TypeNo").text = "-1"  # Placeholder - resolved via References section
     if index_type:
         ET.SubElement(f, "IndexType").text = index_type
-    ET.SubElement(f, "Length").text = "250"
+    ET.SubElement(f, "Length").text = "10"
     ET.SubElement(f, "Width").text = "0"
     ET.SubElement(f, "Height").text = "0"
     ET.SubElement(f, "PosX").text = "0"
@@ -929,7 +1420,7 @@ def _make_primary_reference_field(field_no: int, name: str, ref_category_id: int
     ET.SubElement(f, "Id").text = _guid()
     ET.SubElement(f, "DisplayProp")
     ET.SubElement(f, "TabInfo", {"FactoryType": "0"})
-    ET.SubElement(f, "FieldID").text = _slugify(name) + "No"
+    ET.SubElement(f, "FieldID").text = _slugify(name)
     ET.SubElement(f, "DisplayPropCond")
     ET.SubElement(f, "Filter")
     return f
@@ -962,6 +1453,30 @@ def _make_dependent_reference_field(field_no: int, name: str, column_name: str, 
     ET.SubElement(f, "DisplayPropCond")
     ET.SubElement(f, "Filter")
     return f
+
+
+def _make_reference_element(object_id: str, object_type: str, object_name: str, parent_obj_no: Optional[str] = None, object_data: Optional[str] = None, guid: Optional[str] = None) -> ET.Element:
+    """Create a Reference element for the References section.
+
+    Args:
+        object_id: The ID of the referenced object (negative for new objects)
+        object_type: Type of object (5=Referenced Table, 4=Field, 17=Folder, 3=Category)
+        object_name: Name of the referenced object
+        parent_obj_no: Parent object ID (for fields, this is the category ID)
+        object_data: Optional data field (usually "3")
+        guid: Optional real GUID from API (for auto-resolution during import)
+    """
+    ref = ET.Element("Reference")
+    ET.SubElement(ref, "ObjectID").text = str(object_id)
+    if parent_obj_no is not None:
+        ET.SubElement(ref, "ParentObjNo").text = str(parent_obj_no)
+    ET.SubElement(ref, "ObjectType").text = str(object_type)
+    ET.SubElement(ref, "ObjectName").text = object_name
+    if object_data is not None:
+        ET.SubElement(ref, "ObjectData").text = str(object_data)
+    # Use real GUID if provided, otherwise generate random one
+    ET.SubElement(ref, "Id").text = guid.upper() if guid else _guid()
+    return ref
 
 
 def _make_table_column_field(
@@ -1114,24 +1629,40 @@ def _build_api_client(env_path: Optional[str], tenant: Optional[str]) -> Optiona
 
 
 def _find_folder_by_name_api(client: Any, name: str) -> Optional[str]:
+    """Find folder by name and return FolderNo (legacy function)."""
+    result = _find_folder_by_name_api_with_guid(client, name)
+    return result[0] if result else None
+
+
+def _find_folder_by_name_api_with_guid(client: Any, name: str) -> Optional[tuple[str, str]]:
+    """Find folder by name using get_categories_tree and return (FolderNo, Guid)."""
     try:
-        resp = client.get_objects_list([
-            {
-                "Flags": 0,
-                "Type": 0,
-                "RoleAccessMask": 18446744073709551615,
-            }
-        ])
+        resp = client.get_categories_tree()
+
+        def search_tree(items):
+            """Recursively search tree for folder by name."""
+            for item in items:
+                item_type = item.get('ItemType')
+                if item_type == 1:  # Folder
+                    item_name = item.get('Name', '')
+                    if item_name.lower() == name.lower():
+                        folder_no = str(item.get('ItemNo'))
+                        guid = item.get('Guid')
+                        return (folder_no, guid) if folder_no else None
+
+                # Recurse into children
+                children = item.get('ChildItems', [])
+                if children:
+                    result = search_tree(children)
+                    if result:
+                        return result
+            return None
+
+        tree_items = resp.get('TreeItems', [])
+        return search_tree(tree_items)
+
     except Exception:
         return None
-    all_items = resp.get("AllItemsList") or []
-    for entry in all_items:
-        folder_list = entry.get("FolderList") or []
-        for folder in folder_list:
-            fname = folder.get("Name") or ""
-            if fname.lower() == name.lower():
-                return str(folder.get("FolderNo")) if folder.get("FolderNo") is not None else None
-    return None
 
 
 def _find_category_by_name(root: ET.Element, name: str) -> Optional[str]:
@@ -1288,54 +1819,15 @@ def build_delta_xml(
     dict_type_ids = NegativeIdPool(-3000)
     folder_ids = NegativeIdPool(-4000)
 
-    folder_no = None
-    new_folder_elem = None
-    existing_folder_no = None
-    folder_found_via_api = False
-    if spec.folder and api_client is not None:
-        existing_folder_no = _find_folder_by_name_api(api_client, spec.folder)
-        if existing_folder_no:
-            folder_found_via_api = True
-    if spec.folder and not existing_folder_no and base_root is not None:
-        existing_folder_no = _find_folder_by_name(base_root, spec.folder)
+    # REFACTORED: Use resolution function
+    resolved_folder = resolve_or_create_folder(
+        spec, base_root, api_client, interactive, folder_ids
+    )
+    folder_no = resolved_folder.folder_no
+    new_folder_elem = resolved_folder.new_element
 
-    if spec.folder and not spec.force_new_folder and existing_folder_no:
-        folder_no = existing_folder_no
-
-    if spec.force_new_folder and existing_folder_no:
-        if spec.folder_conflict_policy == "use-existing":
-            folder_no = existing_folder_no
-        elif spec.folder_conflict_policy == "unique" and base_root is not None:
-            spec.folder = _unique_folder_name(base_root, spec.folder)
-        else:
-            if interactive and folder_found_via_api and sys.stdin.isatty():
-                prompt = (
-                    f"Folder '{spec.folder}' already exists. Choose: "
-                    "[u]se existing, [n]ew unique name, [a]bort: "
-                )
-                choice = input(prompt).strip().lower()
-                if choice in ("u", "use", "existing"):
-                    folder_no = existing_folder_no
-                elif choice in ("n", "new", "unique") and base_root is not None:
-                    spec.folder = _unique_folder_name(base_root, spec.folder)
-                else:
-                    raise ValueError("Aborted by user.")
-            elif base_root is not None:
-                raise ValueError(
-                    f"Folder '{spec.folder}' already exists in baseline export. "
-                    "Specify 'use existing folder' or 'create unique folder name' in the description, "
-                    "set folder_conflict_policy in a YAML spec, or run with --api-check --interactive."
-                )
-
-    if not folder_no:
-        # create folder if missing or not specified
-        folder_name = spec.folder or "Generated"
-        folder_no = str(folder_ids.take())
-        new_folder_elem = ET.Element("Folder")
-        ET.SubElement(new_folder_elem, "FolderNo").text = folder_no
-        ET.SubElement(new_folder_elem, "Type").text = "3"
-        new_folder_elem.append(_tstr_element("Name", folder_name))
-        ET.SubElement(new_folder_elem, "Id").text = _guid()
+    # Track referenced tables for References section
+    referenced_tables: List[Dict[str, Any]] = []  # Each dict has: category_id, category_name, table_info
 
     # Build keyword dictionaries (new only)
     new_dicts: List[ET.Element] = []
@@ -1343,75 +1835,23 @@ def build_delta_xml(
     next_keywords_suffix = _next_table_suffix(base_root, "TheKeywords") if base_root is not None else 1
 
     def ensure_dictionary(dspec: DictionarySpec) -> int:
-        existing_info = None
-        if base_root is not None:
-            existing_info = _find_dictionary_by_name(base_root, dspec.name)
-        existing_found_via_api = False
-        if not existing_info and api_client is not None:
-            existing_info = _find_dictionary_by_name_api(api_client, dspec.name)
-            if existing_info:
-                existing_found_via_api = True
-
-        if dspec.mode == "existing":
-            if existing_info:
-                return int(existing_info["SingleTypeNo"])
-            raise ValueError(
-                f"Dictionary '{dspec.name}' not found. "
-                "Use --api-check to query the tenant, or provide a --baseline export that includes it."
-            )
-
-        # create new dictionary
-        if existing_info:
-            if spec.dictionary_conflict_policy == "use-existing":
-                return int(existing_info["SingleTypeNo"])
-            if spec.dictionary_conflict_policy == "unique" and base_root is not None:
-                dspec.name = _unique_dictionary_name(base_root, dspec.name)
-            elif interactive and existing_found_via_api and sys.stdin.isatty():
-                prompt = (
-                    f"Dictionary '{dspec.name}' already exists. Choose: "
-                    "[u]se existing, [n]ew unique name, [a]bort: "
-                )
-                choice = input(prompt).strip().lower()
-                if choice in ("u", "use", "existing"):
-                    return int(existing_info["SingleTypeNo"])
-                if choice in ("n", "new", "unique") and base_root is not None:
-                    dspec.name = _unique_dictionary_name(base_root, dspec.name)
-                else:
-                    raise ValueError("Aborted by user.")
-            elif base_root is not None:
-                raise ValueError(
-                    f"Dictionary '{dspec.name}' already exists. Use 'existing dictionary' in the description "
-                    "or choose a different name. (Or run with --api-check --interactive for a prompt.)"
-                )
+        nonlocal next_keywords_suffix
+        # Check if already resolved
         if dspec.name in dict_type_map:
             return dict_type_map[dspec.name]
 
-        key_dic_no = dict_ids.take()
-        single_type_no = dict_type_ids.take()
-        nonlocal next_keywords_suffix
-        key_table = f"TheKeywords{next_keywords_suffix}"
-        next_keywords_suffix += 1
+        # REFACTORED: Call resolution function
+        resolved, updated_suffix = resolve_or_create_dictionary(
+            dspec, spec.dictionary_conflict_policy, base_root, api_client,
+            interactive, dict_ids, dict_type_ids, next_keywords_suffix
+        )
+        next_keywords_suffix = updated_suffix
 
-        d_el = ET.Element("Dictionary")
-        ET.SubElement(d_el, "KeyDicNo").text = str(key_dic_no)
-        # NextNo is max keyword no (or 0 if none)
-        next_no = len(dspec.keywords) if dspec.keywords else 0
-        ET.SubElement(d_el, "NextNo").text = str(next_no)
-        ET.SubElement(d_el, "SingleTypeNo").text = str(single_type_no)
-        ET.SubElement(d_el, "KeyDicName").text = dspec.name
-        ET.SubElement(d_el, "KeyDicTable").text = key_table
+        if resolved.new_element is not None:
+            new_dicts.append(resolved.new_element)
 
-        kw_root = ET.SubElement(d_el, "Keywords")
-        for i, kw in enumerate(dspec.keywords, start=1):
-            kw_el = ET.SubElement(kw_root, "KW")
-            ET.SubElement(kw_el, "KeywordNo").text = str(i)
-            kw_el.append(_tstr_element("Keyword", kw))
-            ET.SubElement(kw_el, "Id").text = _guid()
-
-        ET.SubElement(d_el, "Id").text = _guid()
-        new_dicts.append(d_el)
-        dict_type_map[dspec.name] = single_type_no
-        return single_type_no
+        dict_type_map[dspec.name] = resolved.single_type_no
+        return resolved.single_type_no
 
     # Build fields
     layout = Layout()
@@ -1513,33 +1953,25 @@ def build_delta_xml(
             if not f.reference_table:
                 raise ValueError(f"Reference table field '{f.name}' missing reference_table spec")
 
-            # Resolve referenced category
-            ref_cat_id = f.reference_table.category_no
-            ref_table_info = None
+            # REFACTORED: Use resolution function
+            resolved_ref = resolve_reference_table(
+                f.reference_table, f.name, api_client
+            )
+            ref_cat_id = resolved_ref.category_id
+            ref_table_info = resolved_ref.table_info
 
-            if not ref_cat_id and f.reference_table.category_name:
-                if api_client is not None:
-                    ref_cat_id = _find_referenced_table_by_name_api(api_client, f.reference_table.category_name)
-                    if not ref_cat_id:
-                        raise ValueError(
-                            f"Referenced table '{f.reference_table.category_name}' not found. "
-                            "Provide category_no explicitly or ensure --api-check is enabled."
-                        )
-                else:
-                    raise ValueError(
-                        f"Referenced table '{f.reference_table.category_name}' requires API access to resolve. "
-                        "Provide category_no explicitly or use --api-check."
-                    )
-
-            if not ref_cat_id:
-                raise ValueError(f"Reference table field '{f.name}' requires either category_name or category_no")
-
-            # Get table info if API available
-            if api_client is not None:
-                ref_table_info = _get_referenced_table_info_api(api_client, ref_cat_id)
+            # Track referenced table for References section
+            referenced_tables.append({
+                "category_id": ref_cat_id,
+                "category_name": resolved_ref.category_name,
+                "table_info": ref_table_info,
+                "guid": resolved_ref.guid,  # Real GUID for auto-resolution
+                "primary_field_no": None,  # Will be set below
+            })
 
             # Create primary (hidden) field
             primary_no = field_ids.take()
+            referenced_tables[-1]["primary_field_no"] = primary_no  # Store for References section
             primary_field = _make_primary_reference_field(primary_no, f.name, ref_cat_id, pos_x, pos_y, tab_order, disp_order, width, height, f.index_type, f.mandatory)
             field_elems.append(primary_field)
 
@@ -1625,8 +2057,9 @@ def build_delta_xml(
         calc_width = 300
         calc_height = 200
     else:
-        calc_width = int((max_x - min_x) + padding_x)
-        calc_height = int((max_y - min_y) + padding_y)
+        # Width/height = rightmost/bottommost edge + padding
+        calc_width = int(max_x + padding_x)
+        calc_height = int(max_y + padding_y)
         calc_width = max(calc_width, 200)
         calc_height = max(calc_height, 120)
     ET.SubElement(cat, "Width").text = str(calc_width)
@@ -1659,6 +2092,8 @@ def build_delta_xml(
         ET.SubElement(cfg, "Version").text = CONFIG_XML_VERSION
         ET.SubElement(cfg, "NewImportExport").text = CONFIG_XML_NEW_IMPORT_EXPORT
 
+    # Add folder to <Folders> section only for NEW folders
+    # Existing folders are NOT included - category just uses their real folder number
     if new_folder_elem is not None:
         folders_el = ET.SubElement(cfg, "Folders")
         folders_el.append(new_folder_elem)
@@ -1671,6 +2106,43 @@ def build_delta_xml(
     cats_el = ET.SubElement(cfg, "Categories")
     cats_el.append(cat)
 
+    # Build References section for referenced tables only
+    # Folders with real GUIDs are in <Folders> section, not References (to avoid duplication)
+    if referenced_tables:
+        refs_el = ET.SubElement(cfg, "References")
+        ref_id_pool = NegativeIdPool(-1)  # Start at -1 for referenced objects
+
+        # Add referenced table entries
+        for ref_table in referenced_tables:
+            cat_id = ref_table["category_id"]
+            cat_name = ref_table["category_name"]
+            table_info = ref_table["table_info"]
+            cat_guid = ref_table.get("guid")  # Real GUID for auto-resolution
+
+            # Add referenced table entry (ObjectType=5)
+            table_ref_id = str(ref_id_pool.take())
+            refs_el.append(_make_reference_element(
+                object_id=table_ref_id,
+                object_type="5",  # Referenced Table
+                object_name=cat_name,
+                guid=cat_guid  # Use real GUID if available
+            ))
+
+            # Add field references for all available columns (ObjectType=4)
+            if table_info:
+                columns = table_info.get("Columns") or []
+                for col in columns:
+                    col_name = col.get("ColumnName")
+                    if col_name:
+                        field_ref_id = str(ref_id_pool.take())
+                        refs_el.append(_make_reference_element(
+                            object_id=field_ref_id,
+                            object_type="4",  # Field
+                            object_name=col_name,
+                            parent_obj_no=table_ref_id,
+                            object_data="3"
+                        ))
+
     return ET.ElementTree(cfg)
 
 
@@ -1680,6 +2152,13 @@ def build_delta_xml(
 def main() -> None:
     epilog = """
 EXAMPLES:
+  Discovery mode - explore available objects:
+    %(prog)s --discover referenced-tables --tenant craigdemo
+    %(prog)s --discover folders --tenant craigdemo
+    %(prog)s --discover dictionaries --tenant craigdemo
+    %(prog)s --discover category-details --category-id 180 --tenant craigdemo
+    %(prog)s --discover category-details --category-name "Staff" --tenant craigdemo
+
   Basic usage (no API, no baseline):
     %(prog)s --description description.txt --output output.xml
 
@@ -1694,11 +2173,20 @@ EXAMPLES:
              --api-check --tenant craigdemo --interactive --folder-on-exists unique
 
 WHEN TO USE OPTIONS:
+  --discover
+    • Explore available objects BEFORE writing category descriptions
+    • List referenced tables and their columns
+    • View folder structure and keyword dictionaries
+    • Get detailed column info for specific categories
+    • Always requires --tenant to connect to Therefore
+
   --api-check
-    • Creating reference_table fields (resolves category names to IDs)
+    • REQUIRED for reference_table fields (resolves names to IDs, fetches GUIDs)
+    • REQUIRED for using existing folders (fetches folder GUIDs for auto-resolution)
+    • REQUIRED for dependent fields (fetches column information)
     • Using "existing dictionary" (verifies dictionary exists)
     • Checking for conflicts with existing folders/categories
-    • Required when description uses category names instead of IDs
+    • Enables GUID-based auto-resolution during Therefore import
 
   --baseline
     • Collision detection for categories/folders/dictionaries
@@ -1714,7 +2202,7 @@ WHEN TO USE OPTIONS:
   --tenant
     • Multiple tenants configured in .env file
     • Overriding the default tenant
-    • Required with --api-check if default tenant not set
+    • Required with --discover and --api-check if default tenant not set
 
 FIELD TYPES SUPPORTED:
   • text - Text field with configurable length (max 4000)
@@ -1731,14 +2219,49 @@ REFERENCE TABLE DEPENDENCY MODES:
   • Synchronized redundant - Data copied locally and kept in sync (read-only)
   • Editable redundant - Data copied locally, can be edited independently
 
-  Natural language: "with synchronized columns" or "with editable columns"
+  Natural language syntax (IMPORTANT - column names must be quoted):
+    - Reference table field "StaffRef" from category "Staff"
+    - Reference table field "StaffRef" from "Staff" with synchronized columns "Firstname", "Surname"
+    - Reference table field "StaffRef" from "Staff" with editable columns "Name", "Email"
+
   JSON: "dependency_mode": "synchronized" or "editable" or "referenced"
+
+  NOTE: Column names MUST be in quotes for dependent fields to be created!
+
+GUID-BASED AUTO-RESOLUTION:
+  When using --api-check, the generator fetches real GUIDs from Therefore:
+
+  • Existing folders - Categories import into existing folders without manual resolution
+  • Referenced tables - Tables auto-resolve during import via GUID matching
+  • Import preview shows "Update" for existing folders (no duplicates created)
+
+  Example workflow:
+    1. Explore available objects: --discover folders --tenant craigdemo
+    2. Generate category: --description desc.txt --output out.xml --api-check --tenant craigdemo
+    3. Import out.xml - existing folders/tables auto-resolve via GUIDs
 """
 
     parser = argparse.ArgumentParser(
         description="Generate Therefore config delta XML for a new category.",
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    # Add discovery mode (mutually exclusive with generation)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--discover",
+        choices=["referenced-tables", "folders", "dictionaries", "category-details"],
+        metavar="MODE",
+        help="Discovery mode: explore available objects before generation. "
+             "Choices: referenced-tables, folders, dictionaries, category-details. "
+             "Requires --tenant (and optionally --env)."
+    )
+    mode_group.add_argument(
+        "--description",
+        metavar="PATH",
+        help="Path to natural language description (.txt), YAML (.yaml/.yml), or JSON (.json) spec file. "
+             "Examples: 'description.txt', 'category.json', 'spec.yaml' (required for generation mode)"
     )
 
     parser.add_argument(
@@ -1749,19 +2272,23 @@ REFERENCE TABLE DEPENDENCY MODES:
     )
 
     parser.add_argument(
-        "--description",
-        required=True,
+        "--output",
         metavar="PATH",
-        help="Path to natural language description (.txt), YAML (.yaml/.yml), or JSON (.json) spec file. "
-             "Examples: 'description.txt', 'category.json', 'spec.yaml'"
+        help="Output delta XML file path. This file can be imported into Therefore to create the category. "
+             "Example: 'output.xml' (required for generation mode)"
     )
 
     parser.add_argument(
-        "--output",
-        required=True,
-        metavar="PATH",
-        help="Output delta XML file path. This file can be imported into Therefore to create the category. "
-             "Example: 'output.xml'"
+        "--category-id",
+        type=int,
+        metavar="ID",
+        help="Category ID for --discover category-details mode (use either --category-id or --category-name)."
+    )
+
+    parser.add_argument(
+        "--category-name",
+        metavar="NAME",
+        help="Category name for --discover category-details mode (resolves to ID using API)."
     )
 
     parser.add_argument(
@@ -1807,6 +2334,40 @@ REFERENCE TABLE DEPENDENCY MODES:
     )
 
     args = parser.parse_args()
+
+    # Discovery mode (automatically uses API)
+    if args.discover:
+        env_path = args.env or os.environ.get("THEREFORE_ENV_PATH")
+        api_client = _build_api_client(env_path, args.tenant)
+        if not api_client:
+            parser.error("Could not connect to Therefore API. Check --tenant and env config.")
+
+        if args.discover == "referenced-tables":
+            discover_referenced_tables(api_client)
+        elif args.discover == "folders":
+            discover_folders(api_client)
+        elif args.discover == "dictionaries":
+            discover_dictionaries(api_client)
+        elif args.discover == "category-details":
+            if not args.category_id and not args.category_name:
+                parser.error("--discover category-details requires either --category-id or --category-name")
+            if args.category_id and args.category_name:
+                parser.error("--discover category-details: specify only one of --category-id or --category-name")
+
+            # Resolve by name if needed
+            category_id = args.category_id
+            if args.category_name:
+                category_id = _find_referenced_table_by_name_api(api_client, args.category_name)
+                if not category_id:
+                    parser.error(f"Referenced table '{args.category_name}' not found")
+                print(f"Resolved '{args.category_name}' → Category ID {category_id}\n")
+
+            discover_category_details(api_client, category_id)
+        return
+
+    # Generation mode (existing logic)
+    if not args.description or not args.output:
+        parser.error("Generation mode requires --description and --output")
 
     spec = parse_description(args.description)
     if args.folder_on_exists:
