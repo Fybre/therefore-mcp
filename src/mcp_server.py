@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Repo root for locating tools/config_generator
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(_REPO_ROOT, 'tools', 'config_generator'))
+sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "config_generator"))
 import difflib
 import time
 import threading
@@ -39,6 +39,7 @@ try:
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse, Response, StreamingResponse
     import uvicorn
+
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
@@ -52,13 +53,13 @@ def _read_message() -> Optional[Dict[str, Any]]:
     line = line.strip()
     if not line:
         return None
-    return json.loads(line.decode('utf-8', errors='replace'))
+    return json.loads(line.decode("utf-8", errors="replace"))
 
 
 def _write_message(payload: Dict[str, Any]) -> None:
     """Write a newline-delimited JSON-RPC message to stdout (MCP stdio transport)."""
-    data = json.dumps(payload, separators=(',', ':')).encode('utf-8')
-    sys.stdout.buffer.write(data + b'\n')
+    data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    sys.stdout.buffer.write(data + b"\n")
     sys.stdout.buffer.flush()
 
 
@@ -82,1558 +83,566 @@ def _result_response(msg_id: Any, result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _tool_content(obj: Any) -> Dict[str, Any]:
-    return {
-        "content": [
-            {"type": "text", "text": json.dumps(obj, indent=2)}
-        ]
-    }
+    return {"content": [{"type": "text", "text": json.dumps(obj, indent=2)}]}
 
 
 def build_tools() -> List[Dict[str, Any]]:
-    tools = [
+    """
+    Build the 9 grouped MCP tool definitions.
+    Each tool (except ask_therefore_expert) uses an 'operation' enum to select sub-operations.
+    All parameters across operations are flattened as optional properties.
+    """
+    return [
         {
-            "name": "resolve_category",
-            "description": "Fuzzy-match a category name to category numbers. Returns ranked candidates.",
+            "name": "ask_therefore_expert",
+            "description": """Ask the Therefore API expert assistant for guidance on Therefore operations (supports multi-tenant: use 'tenant' parameter to target specific tenant).
+
+Use this when you need help understanding Therefore concepts, choosing the right operation,
+or troubleshooting issues with therefore_system, therefore_categories, therefore_documents,
+therefore_query, therefore_workflow, therefore_users, therefore_keywords, or therefore_knowledge tools.
+
+The expert has deep knowledge of Therefore WebAPI patterns, workflows, field types, quirks, and best practices.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"question": "how do I create a document?", "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
-                "required": ["query"],
                 "properties": {
-                    "query": {"type": "string"},
-                    "max_results": {"type": "integer", "default": 5},
-                    "min_score": {"type": "number", "default": 0.35},
-                    "include_non_categories": {"type": "boolean", "default": False},
-                    "confirm_threshold": {"type": "number", "default": 0.75}
-                }
+                    "question": {
+                        "type": "string",
+                        "description": "Your question about Therefore API usage, operations, or troubleshooting",
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
+                },
+                "required": ["question"],
             },
         },
         {
-            "name": "list_category_fields",
-            "description": "List fields for a category with key metadata (FieldNo, Caption, FieldID, etc.). Use resolve_category to find category_no.",
+            "name": "therefore_system",
+            "description": """System-level operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+get_customer_id, get_connected_user, get_version, get_connection_token,
+get_domain_info, get_discovery_info, get_permission_constants, get_role_permission_constants,
+get_objects_list, get_objects (requires obj_type), get_statistics, get_logfiles, get_login_history, call_endpoint (requires endpoint).
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "get_customer_id", "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
-                "required": ["category_no"],
                 "properties": {
-                    "category_no": {"type": "integer", "description": "Category number. Use resolve_category to find this."}
-                }
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "get_customer_id",
+                            "get_connected_user",
+                            "get_version",
+                            "get_connection_token",
+                            "get_domain_info",
+                            "get_discovery_info",
+                            "get_permission_constants",
+                            "get_role_permission_constants",
+                            "get_objects_list",
+                            "get_objects",
+                            "get_statistics",
+                            "get_logfiles",
+                            "get_login_history",
+                            "call_endpoint",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
+                    "create": {"type": "boolean"},
+                    "load_items_list": {"type": "array", "items": {"type": "object"}},
+                    "flags": {"type": "integer"},
+                    "obj_type": {"type": "integer"},
+                    "query_type": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
+                    "restrict_to_obj_no": {"type": "integer"},
+                    "restrict_to_user": {"type": "boolean"},
+                    "days_back": {"type": "integer"},
+                    "application_filter": {"type": "string"},
+                    "max_docs": {"type": "integer"},
+                    "include_raw": {"type": "boolean"},
+                    "output_mode": {"type": "string"},
+                    "severity_filter": {"type": "string"},
+                    "username": {"type": "string"},
+                    "max_entries": {"type": "integer"},
+                    "endpoint": {"type": "string"},
+                    "payload": {"type": "object"},
+                },
+                "required": ["operation"],
             },
         },
         {
-            "name": "resolve_field",
-            "description": "Fuzzy-match a field label to field numbers within a category. Returns ranked candidates.",
+            "name": "therefore_categories",
+            "description": """Category operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+get_tree, get_info (requires category_no), resolve (requires query),
+list_fields (requires category_no), resolve_field (requires category_no, query),
+get_referenced_table_info (requires category_no, data_type_no), generate_config (requires spec or description).
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "get_tree", "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
-                "required": ["category_no", "query"],
                 "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "get_tree",
+                            "get_info",
+                            "resolve",
+                            "list_fields",
+                            "resolve_field",
+                            "get_referenced_table_info",
+                            "generate_config",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
                     "category_no": {"type": "integer"},
                     "query": {"type": "string"},
-                    "max_results": {"type": "integer", "default": 5},
-                    "min_score": {"type": "number", "default": 0.35},
-                    "field_type_hint": {"type": "integer", "description": "Optional FieldType hint"},
-                    "confirm_threshold": {"type": "number", "default": 0.75}
-                }
+                    "max_results": {"type": "integer"},
+                    "min_score": {"type": "number"},
+                    "include_non_categories": {"type": "boolean"},
+                    "confirm_threshold": {"type": "number"},
+                    "field_type_hint": {"type": "integer"},
+                    "data_type_no": {"type": "integer"},
+                    "payload": {"type": "object"},
+                    "spec": {"type": "object"},
+                    "description": {"type": "string"},
+                    "baseline_path": {"type": "string"},
+                    "api_check": {"type": "boolean"},
+                    "output_path": {"type": "string"},
+                },
+                "required": ["operation"],
             },
         },
         {
-            "name": "get_categories_tree",
-            "description": "Return the full categories tree. Use empty payload to fetch all nodes.",
+            "name": "therefore_documents",
+            "description": """Document operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+get, get_index_data, get_properties, get_history, get_checkout_status, get_versions,
+get_converted_streams, create, update, update_index_data, add_streams, delete,
+copy, check_out, check_in, undo_check_out, add_comment, get_comments.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "get", "doc_no": 123, "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "payload": {"type": "object", "description": "Optional request payload"}
-                }
-            },
-        },
-        {
-            "name": "get_category_info",
-            "description": "Get category definition and field metadata by category number. Use resolve_category to find category_no.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["category_no"],
-                "properties": {
-                    "category_no": {"type": "integer", "description": "Category number. Use resolve_category to find this."}
-                }
-            },
-        },
-        {
-            "name": "get_document",
-            "description": "Fetch a document by document number.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "get",
+                            "get_index_data",
+                            "get_properties",
+                            "get_history",
+                            "get_checkout_status",
+                            "get_versions",
+                            "get_converted_streams",
+                            "create",
+                            "update",
+                            "update_index_data",
+                            "add_streams",
+                            "delete",
+                            "copy",
+                            "check_out",
+                            "check_in",
+                            "undo_check_out",
+                            "add_comment",
+                            "get_comments",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
                     "doc_no": {"type": "integer"},
-                    "include_index_data": {"type": "boolean", "default": True},
-                    "include_streams_info": {"type": "boolean", "default": False},
-                    "include_streams_data": {"type": "boolean", "default": False},
-                    "include_checkout_status": {"type": "boolean", "default": False},
-                    "include_access_mask": {"type": "boolean", "default": False}
-                }
+                    "include_index_data": {"type": "boolean"},
+                    "include_streams_info": {"type": "boolean"},
+                    "include_streams_data": {"type": "boolean"},
+                    "include_checkout_status": {"type": "boolean"},
+                    "include_access_mask": {"type": "boolean"},
+                    "version_no": {"type": "integer"},
+                    "is_doc_title_needed": {"type": "boolean"},
+                    "convert_to": {},
+                    "annotation_mode": {},
+                    "signature_mode": {},
+                    "certificate_name": {"type": "string"},
+                    "time_stamp_server": {"type": "string"},
+                    "time_stamp_user": {"type": "string"},
+                    "time_stamp_pwd": {"type": "string"},
+                    "multipage_stream_name": {"type": "string"},
+                    "stream_nos": {"type": "array", "items": {"type": "integer"}},
+                    "retrieve_reason": {"type": "string"},
+                    "archive_converted_files": {"type": "boolean"},
+                    "custom_archive_file_name": {"type": "string"},
+                    "category_no": {"type": "integer"},
+                    "check_in_comments": {"type": "string"},
+                    "with_auto_append_mode": {"type": "integer"},
+                    "do_fill_dependent_fields": {"type": "boolean"},
+                    "streams": {"type": "array", "items": {"type": "object"}},
+                    "content_text": {"type": "string"},
+                    "content_filename": {"type": "string"},
+                    "index_data_items": {"type": "array", "items": {"type": "object"}},
+                    "run_webclient_flow": {"type": "boolean"},
+                    "updates": {"type": "array", "items": {"type": "object"}},
+                    "stream_nos_to_delete": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                    },
+                    "streams_to_rename": {"type": "array", "items": {"type": "object"}},
+                    "conversion_options": {"type": "object"},
+                    "target_category_no": {"type": "integer"},
+                    "comment_text": {"type": "string"},
+                },
+                "required": ["operation"],
             },
         },
         {
-            "name": "get_document_index_data",
-            "description": "Fetch index data for a document.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "get_web_api_server_version",
-            "description": "Get WebAPI server version info.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_connection_token",
-            "description": "Get a connection token for the current user.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_domain_info",
-            "description": "Get domain info for the current tenant.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_client_discovery_info",
-            "description": "Get discovery info for clients (capabilities/endpoints).",
-            "inputSchema": {
-                "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_system_customer_id",
-            "description": "Get system customer/client id for the tenant.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_connected_user",
-            "description": "Get the connected user. If create=true, create if missing.",
+            "name": "therefore_query",
+            "description": """Query operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+search, search_async, search_multi, search_fulltext, get_next_rows, get_next_multi_rows, release, release_multi.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "search", "query": {...}, "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "create": {"type": "boolean", "default": False}
-                }
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "search",
+                            "search_async",
+                            "search_multi",
+                            "search_fulltext",
+                            "get_next_rows",
+                            "get_next_multi_rows",
+                            "release",
+                            "release_multi",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
+                    "query": {"type": "object"},
+                    "queries": {"type": "array", "items": {"type": "object"}},
+                    "full_text": {"type": "string"},
+                    "row_block_size": {"type": "integer"},
+                    "max_rows": {"type": "integer"},
+                    "auto_fetch_all": {"type": "boolean"},
+                    "query_id": {"type": "integer"},
+                    "search": {"type": "string"},
+                    "categories": {"type": "array", "items": {"type": "integer"}},
+                    "include_index_data": {"type": "boolean"},
+                    "case_no": {"type": "integer"},
+                },
+                "required": ["operation"],
             },
         },
         {
-            "name": "get_permission_constants",
-            "description": "Get permission constants.",
+            "name": "therefore_workflow",
+            "description": """Workflow operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+query_all, query_process, get_my_tasks, get_my_instances, get_all_instances, get_user_instances,
+get_instance, get_process, get_task_settings, get_history, get_linked, complete_task, claim, disclaim,
+delegate, create_case, get_case, get_case_documents, get_case_history.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "get_my_tasks", "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_role_permission_constants",
-            "description": "Get role permission constants.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {}
-            },
-        },
-        {
-            "name": "get_document_properties",
-            "description": "Get document properties by document number.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
                 "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "query_all",
+                            "query_process",
+                            "get_my_tasks",
+                            "get_my_instances",
+                            "get_all_instances",
+                            "get_user_instances",
+                            "get_instance",
+                            "get_process",
+                            "get_task_settings",
+                            "get_history",
+                            "get_linked",
+                            "complete_task",
+                            "claim",
+                            "disclaim",
+                            "delegate",
+                            "create_case",
+                            "get_case",
+                            "get_case_documents",
+                            "get_case_history",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
+                    "process_no": {"type": "integer"},
+                    "instance_no": {"type": "integer"},
+                    "workflow_flags": {
+                        "oneOf": [{"type": "string"}, {"type": "integer"}]
+                    },
+                    "max_rows": {"type": "integer"},
+                    "include_instance_details": {"type": "boolean"},
+                    "instance_detail_mode": {"type": "string"},
+                    "max_instance_workers": {"type": "integer"},
+                    "is_access_mask_needed": {"type": "boolean"},
+                    "load_history": {"type": "boolean"},
+                    "debug": {"type": "boolean"},
+                    "debug_log_path": {"type": "string"},
+                    "debug_progress_every": {"type": "integer"},
+                    "task_filter": {"type": "string"},
+                    "filter_to_user": {"type": "boolean"},
+                    "include_unfiltered": {"type": "boolean"},
+                    "include_overdue_summary": {"type": "boolean"},
+                    "assignee_values": {"type": "array", "items": {"type": "string"}},
+                    "resolve_group_membership": {"type": "boolean"},
+                    "user_query": {"type": "string"},
+                    "user_query_flags": {"type": "integer"},
+                    "two_phase": {"type": "boolean"},
+                    "fetch_details": {"type": "boolean"},
+                    "token_no": {"type": "integer"},
+                    "version_no": {"type": "integer"},
+                    "load_tasks": {"type": "boolean"},
+                    "task_no": {"type": "integer"},
+                    "setting_names": {"type": "array", "items": {"type": "string"}},
+                    "block_size": {"type": "integer"},
+                    "include_routing_info": {"type": "boolean"},
+                    "max_creation_date": {"type": "string"},
+                    "seq_pos": {"type": "integer"},
                     "doc_no": {"type": "integer"},
-                    "version_no": {"type": "integer", "default": 0},
-                    "is_doc_title_needed": {"type": "boolean", "default": False}
-                }
+                    "wf_doc_link_type": {"type": "integer"},
+                    "workflow_instance_token": {"type": "string"},
+                    "user_decision": {"type": "string"},
+                    "index_data_items": {"type": "array", "items": {"type": "object"}},
+                    "user_id": {"type": "integer"},
+                    "case_definition_no": {"type": "integer"},
+                    "case_no": {"type": "integer"},
+                },
+                "required": ["operation"],
             },
         },
         {
-            "name": "get_document_history",
-            "description": "Get document history by document number.",
+            "name": "therefore_users",
+            "description": """User operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+search, get_from_group, get_details, create, update_groups, get_groups, set_password, change_password,
+reset_password, delete_portal, save_portal, move_license, get_settings, set_settings.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "search", "query": "admin", "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
-                "required": ["doc_no"],
                 "properties": {
-                    "doc_no": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "get_document_checkout_status",
-            "description": "Get document checkout status by document number.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "get_objects_list",
-            "description": "Get objects list. Provide LoadItemsList as in the WebAPI.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["load_items_list"],
-                "properties": {
-                    "load_items_list": {"type": "array", "items": {"type": "object"}}
-                }
-            },
-        },
-        {
-            "name": "get_objects",
-            "description": "Get objects using the GetObjects endpoint (Flags + Type). Use Type=5 to list all referenced tables (categories that can be used in reference fields).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["flags", "obj_type"],
-                "properties": {
-                    "flags": {"type": "integer"},
-                    "obj_type": {"type": "integer", "description": "Object type to query. Use 5 for referenced tables, 22 for keyword dictionaries."}
-                }
-            },
-        },
-        {
-            "name": "get_referenced_table_info",
-            "description": "Get column information for a referenced table. Returns details about columns that can be used as dependent fields in reference table fields. The data_type_no is the category ID of the referenced table.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["data_type_no"],
-                "properties": {
-                    "data_type_no": {"type": "integer", "description": "The category ID (TypeNo) of the referenced table. Use get_objects with Type=5 to find available referenced tables."}
-                }
-            },
-        },
-        {
-            "name": "execute_users_query",
-            "description": "Query users by name or other text. Use an empty string to return all users.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query"],
-                "properties": {
-                    "query": {"type": "string", "description": "Search text to match against user names, display names, and email. Use empty string to return all users."},
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "search",
+                            "get_from_group",
+                            "get_details",
+                            "create",
+                            "update_groups",
+                            "get_groups",
+                            "set_password",
+                            "change_password",
+                            "reset_password",
+                            "delete_portal",
+                            "save_portal",
+                            "move_license",
+                            "get_settings",
+                            "set_settings",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
+                    "query": {"type": "string"},
                     "domain_names": {"type": "array", "items": {"type": "string"}},
-                    "flags": {"type": "integer", "default": 5}
-                }
-            },
-        },
-        {
-            "name": "get_users_from_group",
-            "description": "Get users from a group by name or id.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
+                    "flags": {"type": "integer"},
                     "group_id": {"type": "integer"},
                     "group_name": {"type": "string"},
-                    "domain_name": {"type": "string"}
-                }
+                    "domain_name": {"type": "string"},
+                    "user_or_group_id": {"type": "integer"},
+                    "user_name": {"type": "string"},
+                    "full_name": {"type": "string"},
+                    "email": {"type": "string"},
+                    "password": {"type": "string"},
+                    "user_id": {"type": "integer"},
+                    "group_ids": {"type": "array", "items": {"type": "integer"}},
+                    "new_password": {"type": "string"},
+                    "old_password": {"type": "string"},
+                    "send_email": {"type": "boolean"},
+                    "is_active": {"type": "boolean"},
+                    "source_user_id": {"type": "integer"},
+                    "target_user_id": {"type": "integer"},
+                    "settings": {"type": "object"},
+                },
+                "required": ["operation"],
             },
         },
         {
-            "name": "get_user_details",
-            "description": "Get details for a user or group id.",
+            "name": "therefore_keywords",
+            "description": """Keyword dictionary operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+get_by_field, get_by_dictionary, get_by_name, validate, add, update, delete, deactivate.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "get_by_field", "field_no": 105, "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
-                "required": ["user_or_group_id"],
                 "properties": {
-                    "user_or_group_id": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "get_keywords_by_field_no",
-            "description": "List keywords for a keyword field (dictionary) by field number. Use resolve_field to find field_no.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["field_no"],
-                "properties": {
-                    "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
-                    "category_no": {"type": "integer", "description": "Category number. Use resolve_category to find this."},
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "get_by_field",
+                            "get_by_dictionary",
+                            "get_by_name",
+                            "validate",
+                            "add",
+                            "update",
+                            "delete",
+                            "deactivate",
+                        ],
+                    },
+                    "tenant": {
+                        "type": "string",
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                    },
+                    "tenant_hint": {
+                        "type": "string",
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
+                    },
+                    "field_no": {"type": "integer"},
+                    "category_no": {"type": "integer"},
                     "case_definition_no": {"type": "integer"},
                     "dependent_field_filter_value": {"type": "string"},
                     "show_deactivated_keywords": {"type": "boolean"},
                     "skip_loading_keyword_nos": {"type": "boolean"},
                     "max_rows": {"type": "integer"},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}}
-                }
-            },
-        },
-        {
-            "name": "get_keywords_by_key_dic",
-            "description": "List keywords from a keyword dictionary by dictionary number.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["key_dic_no"],
-                "properties": {
+                    "index_data_items": {"type": "array", "items": {"type": "object"}},
                     "key_dic_no": {"type": "integer"},
                     "filter_value": {"type": "string"},
                     "max_values": {"type": "integer"},
-                    "include_deactivated_keywords": {"type": "boolean"}
-                }
-            },
-        },
-        {
-            "name": "validate_keywords",
-            "description": "Validate keywords for a keyword field; returns invalid keywords. Use resolve_field to find field_no.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["field_no", "keywords"],
-                "properties": {
-                    "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
+                    "include_deactivated_keywords": {"type": "boolean"},
+                    "dictionary_name": {"type": "string"},
+                    "max_results": {"type": "integer"},
+                    "min_score": {"type": "number"},
+                    "confirm_threshold": {"type": "number"},
                     "keywords": {"type": "array", "items": {"type": "string"}},
-                    "is_filter_mode": {"type": "boolean"}
-                }
-            },
-        },
-        {
-            "name": "get_keywords_by_dictionary_name",
-            "description": "Resolve a keyword dictionary by name (fuzzy) and list its keywords.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["dictionary_name"],
-                "properties": {
-                    "dictionary_name": {"type": "string"},
-                    "max_results": {"type": "integer", "default": 5},
-                    "min_score": {"type": "number", "default": 0.35},
-                    "confirm_threshold": {"type": "number", "default": 0.75},
-                    "filter_value": {"type": "string"},
-                    "max_values": {"type": "integer"},
-                    "include_deactivated_keywords": {"type": "boolean"}
-                }
-            },
-        },
-        {
-            "name": "add_dictionary_keyword",
-            "description": "Add a keyword to a dictionary (id or name).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["keyword_name"],
-                "properties": {
+                    "is_filter_mode": {"type": "boolean"},
                     "keyword_name": {"type": "string"},
                     "dictionary_no": {"type": "integer"},
-                    "dictionary_name": {"type": "string"},
                     "dictionary_type_no": {"type": "integer"},
                     "is_keyword_deactivated": {"type": "boolean"},
-                    "check_existing": {"type": "boolean", "default": True},
-                    "ignore_if_exists": {"type": "boolean", "default": True},
-                    "include_deactivated_keywords": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "update_dictionary_keyword",
-            "description": "Update (rename/deactivate) a keyword in a dictionary.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["new_keyword_name"],
-                "properties": {
-                    "dictionary_no": {"type": "integer"},
-                    "dictionary_name": {"type": "string"},
-                    "dictionary_type_no": {"type": "integer"},
-                    "keyword_id": {"type": "integer"},
-                    "keyword_name": {"type": "string", "description": "Existing keyword to rename"},
+                    "check_existing": {"type": "boolean"},
+                    "ignore_if_exists": {"type": "boolean"},
                     "new_keyword_name": {"type": "string"},
-                    "is_keyword_deactivated": {"type": "boolean"},
-                    "check_existing": {"type": "boolean", "default": True},
-                    "ignore_if_exists": {"type": "boolean", "default": True},
-                    "include_deactivated_keywords": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "delete_dictionary_keyword",
-            "description": "Delete a keyword from a dictionary.",
-            "inputSchema": {
-                "type": "object",
-                "required": [],
-                "properties": {
-                    "dictionary_no": {"type": "integer"},
-                    "dictionary_name": {"type": "string"},
-                    "dictionary_type_no": {"type": "integer"},
                     "keyword_id": {"type": "integer"},
-                    "keyword_name": {"type": "string"},
-                    "include_deactivated_keywords": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "deactivate_dictionary_keyword",
-            "description": "Deactivate a keyword in a dictionary (alias for update_dictionary_keyword with IsKeywordDeactivated=true).",
-            "inputSchema": {
-                "type": "object",
-                "required": [],
-                "properties": {
-                    "dictionary_no": {"type": "integer"},
-                    "dictionary_name": {"type": "string"},
-                    "dictionary_type_no": {"type": "integer"},
-                    "keyword_id": {"type": "integer"},
-                    "keyword_name": {"type": "string"},
-                    "include_deactivated_keywords": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "execute_workflow_query_for_all",
-            "description": "Execute a workflow query across all processes.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "workflow_flags": {"type": "integer", "default": 0},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
-                    "include_instance_details": {"type": "boolean", "default": False},
-                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
-                    "max_instance_workers": {"type": "integer", "default": 4},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False},
-                    "debug": {"type": "boolean", "default": False},
-                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
-                    "debug_progress_every": {"type": "integer", "default": 500}
-                }
-            },
-        },
-        {
-            "name": "execute_workflow_query_for_process",
-            "description": "Execute a workflow query for a specific process.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["process_no"],
-                "properties": {
-                    "process_no": {"type": "integer"},
-                    "workflow_flags": {"type": "integer", "default": 0},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
-                    "include_instance_details": {"type": "boolean", "default": False},
-                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
-                    "max_instance_workers": {"type": "integer", "default": 4},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False},
-                    "debug": {"type": "boolean", "default": False},
-                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
-                    "debug_progress_every": {"type": "integer", "default": 500}
-                }
-            },
-        },
-        {
-            "name": "get_linked_workflows_for_doc",
-            "description": "Get linked workflows for a document.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer"},
-                    "wf_doc_link_type": {"type": "integer", "default": 0}
-                }
-            },
-        },
-        {
-            "name": "get_workflow_history",
-            "description": "Get workflow history for an instance.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["instance_no"],
-                "properties": {
-                    "instance_no": {"type": "integer"},
-                    "block_size": {"type": "integer", "default": 1000},
-                    "include_routing_info": {"type": "boolean", "default": True},
-                    "max_creation_date": {"type": "string", "description": "Optional /Date(...) format value"},
-                    "seq_pos": {"type": "integer", "default": 0}
-                }
-            },
-        },
-        {
-            "name": "get_workflow_instance",
-            "description": "Get workflow instance by instance/token.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["instance_no"],
-                "properties": {
-                    "instance_no": {"type": "integer"},
-                    "token_no": {"type": "integer", "default": 0},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False}
-                }
-            },
-        },
-        {
-            "name": "get_workflow_process",
-            "description": "Get workflow process definition.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["process_no"],
-                "properties": {
-                    "process_no": {"type": "integer"},
-                    "version_no": {"type": "integer", "default": 0},
-                    "load_tasks": {"type": "boolean", "default": True},
-                    "is_access_mask_needed": {"type": "boolean", "default": False}
-                }
-            },
-        },
-        {
-            "name": "get_workflow_task_settings",
-            "description": "Get workflow task settings for a task in a process.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["task_no", "process_no"],
-                "properties": {
-                    "task_no": {"type": "integer"},
-                    "process_no": {"type": "integer"},
-                    "version_no": {"type": "integer", "default": 0},
-                    "setting_names": {"type": "array", "items": {"type": "string"}}
-                }
-            },
-        },
-        {
-            "name": "get_my_workflow_tasks",
-            "description": "List workflow tasks for the connected user. Defaults to running instances. Uses GetWorkflowInstance for assignment/state.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
-                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
-                    "filter_to_user": {"type": "boolean", "default": True},
-                    "include_unfiltered": {"type": "boolean", "default": False},
-                    "include_overdue_summary": {"type": "boolean", "default": True},
-                    "assignee_values": {"type": "array", "items": {"type": "string"}, "description": "Optional extra assignee/group names to include when filtering."},
-                    "resolve_group_membership": {"type": "boolean", "default": True},
-                    "user_query": {"type": "string", "description": "Optional user search string (e.g., full name)."},
-                    "user_query_flags": {"type": "integer", "default": 5},
-                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
-                    "max_instance_workers": {"type": "integer", "default": 4},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False},
-                    "debug": {"type": "boolean", "default": False},
-                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
-                    "debug_progress_every": {"type": "integer", "default": 500},
-                    "two_phase": {"type": "boolean", "default": False},
-                    "fetch_details": {"type": "boolean", "default": False}
-                }
-            },
-        },
-        {
-            "name": "get_my_workflow_instances",
-            "description": "List workflow instances for the connected user (assignment/state from GetWorkflowInstance).",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
-                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
-                    "include_overdue_summary": {"type": "boolean", "default": True},
-                    "assignee_values": {"type": "array", "items": {"type": "string"}, "description": "Optional extra assignee/group names to include when filtering."},
-                    "resolve_group_membership": {"type": "boolean", "default": True},
-                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
-                    "max_instance_workers": {"type": "integer", "default": 4},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False},
-                    "debug": {"type": "boolean", "default": False},
-                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
-                    "debug_progress_every": {"type": "integer", "default": 500},
-                    "two_phase": {"type": "boolean", "default": False},
-                    "fetch_details": {"type": "boolean", "default": False}
-                }
-            },
-        },
-        {
-            "name": "get_all_workflow_instances",
-            "description": "List workflow instances for all assignees (optionally enrich with GetWorkflowInstance).",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
-                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
-                    "include_overdue_summary": {"type": "boolean", "default": True},
-                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
-                    "max_instance_workers": {"type": "integer", "default": 4},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False},
-                    "debug": {"type": "boolean", "default": False},
-                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
-                    "debug_progress_every": {"type": "integer", "default": 500},
-                    "two_phase": {"type": "boolean", "default": False},
-                    "fetch_details": {"type": "boolean", "default": False}
-                }
-            },
-        },
-        {
-            "name": "get_workflow_instances_for_user",
-            "description": "List workflow instances for a resolved user (assignment/state from GetWorkflowInstance).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_query"],
-                "properties": {
-                    "user_query": {"type": "string", "description": "User search string (e.g., full name or username)."},
-                    "user_query_flags": {"type": "integer", "default": 5},
-                    "workflow_flags": {"type": ["string", "integer"], "default": "RunningInstances"},
-                    "task_filter": {"type": "string", "description": "Optional filter: running|overdue|all|finished|error|default."},
-                    "max_rows": {"type": "integer", "description": "Optional override; defaults to THEREFORE_WORKFLOW_MAX_ROWS or 1000."},
-                    "include_overdue_summary": {"type": "boolean", "default": True},
-                    "assignee_values": {"type": "array", "items": {"type": "string"}, "description": "Optional extra assignee/group names to include when filtering."},
-                    "resolve_group_membership": {"type": "boolean", "default": True},
-                    "instance_detail_mode": {"type": "string", "default": "summary", "description": "none|summary|full. summary includes assignment/current task/due dates; full attaches WorkflowInstance + LinkedDocuments."},
-                    "max_instance_workers": {"type": "integer", "default": 4},
-                    "is_access_mask_needed": {"type": "boolean", "default": False},
-                    "load_history": {"type": "boolean", "default": False},
-                    "debug": {"type": "boolean", "default": False},
-                    "debug_log_path": {"type": "string", "description": "Optional path for debug JSONL logs."},
-                    "debug_progress_every": {"type": "integer", "default": 500},
-                    "two_phase": {"type": "boolean", "default": False},
-                    "fetch_details": {"type": "boolean", "default": False}
-                }
-            },
-        },
-        {
-            "name": "execute_single_query",
-            "description": "Execute a single query. Use resolve_category to find CategoryNo and resolve_field to find field numbers before building the query. If the query contains multiple category numbers, automatically runs an async multi-query and returns merged results.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query"],
-                "properties": {
-                    "query": {
-                        "type": "object",
-                        "description": "Query definition object. Use resolve_category to find CategoryNo and resolve_field to find field numbers.",
-                        "required": ["CategoryNo"],
-                        "properties": {
-                            "CategoryNo": {"type": "integer", "description": "Category number to query. Use resolve_category to find this."},
-                            "Conditions": {
-                                "type": "array",
-                                "description": "Filter conditions. Each condition uses FieldNoOrName (field number or name) and a Condition string. Operators: '= value', '>= value', '<= value', '<> value', 'LIKE value' (% wildcard), 'BETWEEN val1 AND val2'. Date format: YYYY-MM-DDThh:mm:ss. Use resolve_field to find field numbers.",
-                                "items": {
-                                    "type": "object",
-                                    "required": ["FieldNoOrName", "Condition"],
-                                    "properties": {
-                                        "FieldNoOrName": {"type": "string", "description": "Field number (as string) or field name."},
-                                        "Condition": {"type": "string", "description": "Condition expression, e.g. '= John', '>= 2024-01-01T00:00:00', 'LIKE %invoice%'."},
-                                        "TimeZone": {"type": "integer", "description": "0 = UTC (default), 1 = ServerLocal.", "default": 0}
-                                    }
-                                }
-                            },
-                            "SelectedFieldsNoOrNames": {
-                                "type": "array",
-                                "description": "Field numbers or names to return as columns. If omitted, returns default fields.",
-                                "items": {"type": "string"}
-                            },
-                            "OrderByFieldsNoOrNames": {
-                                "type": "array",
-                                "description": "Field numbers or names to sort results by.",
-                                "items": {"type": "string"}
-                            },
-                            "GroupByFieldsNoOrNames": {
-                                "type": "array",
-                                "description": "Field numbers or names to group results by.",
-                                "items": {"type": "string"}
-                            },
-                            "MaxRows": {"type": "integer", "description": "Maximum number of rows to return.", "default": 2147483647},
-                            "Mode": {"type": "integer", "description": "Query mode: 0 = NormalQuery (default), 1 = FileQuery, 4 = WorkflowQuery, 5 = CaseQuery.", "default": 0},
-                            "CaseDefinitionNo": {"type": "integer", "description": "Case definition number for case queries. Omit or 0 if not applicable."},
-                            "QueryNo": {"type": "integer", "description": "Saved query number. If provided, executes a saved query instead of building one from Conditions."},
-                            "IsPersonalQuery": {"type": "boolean", "description": "Whether QueryNo refers to a personal (true) or public (false) saved query."}
-                        }
-                    },
-                    "full_text": {"type": "string"}
-                }
-            },
-        },
-        {
-            "name": "execute_async_single_query",
-            "description": "Execute an async single query with batching. Use resolve_category to find CategoryNo and resolve_field to find field numbers before building the query. If auto_fetch_all=true, fetches all rows and releases the query.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query"],
-                "properties": {
-                    "query": {
-                        "type": "object",
-                        "description": "Query definition object. Use resolve_category to find CategoryNo and resolve_field to find field numbers.",
-                        "required": ["CategoryNo"],
-                        "properties": {
-                            "CategoryNo": {"type": "integer", "description": "Category number to query. Use resolve_category to find this."},
-                            "Conditions": {
-                                "type": "array",
-                                "description": "Filter conditions. Each condition uses FieldNoOrName (field number or name) and a Condition string. Operators: '= value', '>= value', '<= value', '<> value', 'LIKE value' (% wildcard), 'BETWEEN val1 AND val2'. Date format: YYYY-MM-DDThh:mm:ss. Use resolve_field to find field numbers.",
-                                "items": {
-                                    "type": "object",
-                                    "required": ["FieldNoOrName", "Condition"],
-                                    "properties": {
-                                        "FieldNoOrName": {"type": "string", "description": "Field number (as string) or field name."},
-                                        "Condition": {"type": "string", "description": "Condition expression, e.g. '= John', '>= 2024-01-01T00:00:00', 'LIKE %invoice%'."},
-                                        "TimeZone": {"type": "integer", "description": "0 = UTC (default), 1 = ServerLocal.", "default": 0}
-                                    }
-                                }
-                            },
-                            "SelectedFieldsNoOrNames": {
-                                "type": "array",
-                                "description": "Field numbers or names to return as columns. If omitted, returns default fields.",
-                                "items": {"type": "string"}
-                            },
-                            "OrderByFieldsNoOrNames": {
-                                "type": "array",
-                                "description": "Field numbers or names to sort results by.",
-                                "items": {"type": "string"}
-                            },
-                            "GroupByFieldsNoOrNames": {
-                                "type": "array",
-                                "description": "Field numbers or names to group results by.",
-                                "items": {"type": "string"}
-                            },
-                            "MaxRows": {"type": "integer", "description": "Maximum number of rows to return.", "default": 2147483647},
-                            "Mode": {"type": "integer", "description": "Query mode: 0 = NormalQuery (default), 1 = FileQuery, 4 = WorkflowQuery, 5 = CaseQuery.", "default": 0},
-                            "CaseDefinitionNo": {"type": "integer", "description": "Case definition number for case queries. Omit or 0 if not applicable."},
-                            "QueryNo": {"type": "integer", "description": "Saved query number. If provided, executes a saved query instead of building one from Conditions."},
-                            "IsPersonalQuery": {"type": "boolean", "description": "Whether QueryNo refers to a personal (true) or public (false) saved query."}
-                        }
-                    },
-                    "full_text": {"type": "string"},
-                    "row_block_size": {"type": "integer", "default": 1000},
-                    "max_rows": {"type": "integer", "default": 2147483647},
-                    "auto_fetch_all": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "get_next_single_query_rows",
-            "description": "Fetch next batch of rows for an async single query (GetNextSingleQueryRows).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query_id", "row_block_size"],
-                "properties": {
-                    "query_id": {"type": "integer"},
-                    "row_block_size": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "release_single_query",
-            "description": "Release server resources for an async single query.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query_id"],
-                "properties": {
-                    "query_id": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "execute_full_text_query",
-            "description": "Execute a full-text search query. Use resolve_category to find category numbers if filtering by categories.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["search"],
-                "properties": {
-                    "search": {"type": "string"},
-                    "categories": {"type": "array", "items": {"type": "integer"}, "description": "Optional category numbers to filter results. Use resolve_category to find these."},
-                    "max_rows": {"type": "integer", "default": 100},
-                    "include_index_data": {"type": "boolean", "default": False},
-                    "case_no": {"type": "integer", "default": 0}
-                }
-            },
-        },
-        {
-            "name": "call_endpoint",
-            "description": "Call an arbitrary WebAPI endpoint (POST) with a JSON payload.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["endpoint"],
-                "properties": {
-                    "endpoint": {"type": "string", "description": "Endpoint name or path (e.g., GetDomainInfo)."},
-                    "payload": {"type": "object", "description": "JSON payload to send (optional)."}
-                }
-            },
-        },
-        {
-            "name": "execute_statistics_query",
-            "description": "Execute a statistics query (e.g., documents created by category, workflow instance counts).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query_type"],
-                "properties": {
-                    "query_type": {"type": ["string", "integer"], "description": "Statistics query type (name or numeric)."},
-                    "restrict_to_obj_no": {"type": "integer", "description": "Optional object/category/workflow restriction."},
-                    "restrict_to_user": {"type": "boolean", "description": "Optional restriction to current user."}
-                }
-            },
-        },
-        {
-            "name": "execute_async_multi_query",
-            "description": "Execute an async multi-query with batching. Use resolve_category to find CategoryNo and resolve_field to find field numbers before building queries. If auto_fetch_all=true, fetches all rows and releases the query.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["queries"],
-                "properties": {
-                    "queries": {
-                        "type": "array",
-                        "description": "Array of query definition objects. Each query has the same structure as execute_single_query.",
-                        "items": {
-                            "type": "object",
-                            "required": ["CategoryNo"],
-                            "properties": {
-                                "CategoryNo": {"type": "integer", "description": "Category number to query. Use resolve_category to find this."},
-                                "Conditions": {
-                                    "type": "array",
-                                    "description": "Filter conditions. Each condition uses FieldNoOrName (field number or name) and a Condition string. Operators: '= value', '>= value', '<= value', '<> value', 'LIKE value' (% wildcard), 'BETWEEN val1 AND val2'. Date format: YYYY-MM-DDThh:mm:ss. Use resolve_field to find field numbers.",
-                                    "items": {
-                                        "type": "object",
-                                        "required": ["FieldNoOrName", "Condition"],
-                                        "properties": {
-                                            "FieldNoOrName": {"type": "string", "description": "Field number (as string) or field name."},
-                                            "Condition": {"type": "string", "description": "Condition expression, e.g. '= John', '>= 2024-01-01T00:00:00', 'LIKE %invoice%'."},
-                                            "TimeZone": {"type": "integer", "description": "0 = UTC (default), 1 = ServerLocal.", "default": 0}
-                                        }
-                                    }
-                                },
-                                "SelectedFieldsNoOrNames": {
-                                    "type": "array",
-                                    "description": "Field numbers or names to return as columns. If omitted, returns default fields.",
-                                    "items": {"type": "string"}
-                                },
-                                "OrderByFieldsNoOrNames": {
-                                    "type": "array",
-                                    "description": "Field numbers or names to sort results by.",
-                                    "items": {"type": "string"}
-                                },
-                                "GroupByFieldsNoOrNames": {
-                                    "type": "array",
-                                    "description": "Field numbers or names to group results by.",
-                                    "items": {"type": "string"}
-                                },
-                                "MaxRows": {"type": "integer", "description": "Maximum number of rows to return.", "default": 2147483647},
-                                "Mode": {"type": "integer", "description": "Query mode: 0 = NormalQuery (default), 1 = FileQuery, 4 = WorkflowQuery, 5 = CaseQuery.", "default": 0},
-                                "CaseDefinitionNo": {"type": "integer", "description": "Case definition number for case queries. Omit or 0 if not applicable."},
-                                "QueryNo": {"type": "integer", "description": "Saved query number. If provided, executes a saved query instead of building one from Conditions."},
-                                "IsPersonalQuery": {"type": "boolean", "description": "Whether QueryNo refers to a personal (true) or public (false) saved query."}
-                            }
-                        }
-                    },
-                    "full_text": {"type": "string"},
-                    "row_block_size": {"type": "integer", "default": 1000},
-                    "max_rows": {"type": "integer", "default": 2147483647},
-                    "auto_fetch_all": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "get_next_multi_query_rows",
-            "description": "Fetch next batch of rows for an async multi-query (GetNextMultiQueryRows).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query_id", "row_block_size"],
-                "properties": {
-                    "query_id": {"type": "integer"},
-                    "row_block_size": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "release_multi_query",
-            "description": "Release server resources for an async multi-query.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["query_id"],
-                "properties": {
-                    "query_id": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "create_document",
-            "description": "Create a document using the web-client flow (GetCategoryInfo -> PreprocessIndexData -> EvaluateConditionalProperties -> CreateDocument). Use resolve_category to find category_no and resolve_field to build index_data_items. Default auto-append mode is 0.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["category_no"],
-                "properties": {
-                    "category_no": {"type": "integer", "description": "Category number for the document. Use resolve_category to find this."},
-                    "check_in_comments": {"type": "string"},
-                    "with_auto_append_mode": {"type": "integer", "default": 0},
-                    "do_fill_dependent_fields": {"type": "boolean", "default": True},
-                    "streams": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["file_name"],
-                            "properties": {
-                                "file_name": {"type": "string"},
-                                "file_data_base64": {"type": "string"},
-                                "file_data_text": {"type": "string"}
-                            }
-                        }
-                    },
-                    "content_text": {"type": "string", "description": "If provided and streams is empty, create a single text file."},
-                    "content_filename": {"type": "string", "default": "document.txt"},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}},
-                    "run_webclient_flow": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "update_document_index_data",
-            "description": "Update index fields for a document (uses SaveDocumentIndexData). Use resolve_field to find field numbers before building updates.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer"},
-                    "updates": {
-                        "type": "array",
-                        "description": "List of field updates by field number. Use resolve_field to find field_no.",
-                        "items": {
-                            "type": "object",
-                            "required": ["value"],
-                            "anyOf": [
-                                {"required": ["field_no"]},
-                                {"required": ["field_name"]}
-                            ],
-                            "properties": {
-                                "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
-                                "field_name": {"type": "string", "description": "Optional field label/name to resolve if field_no not provided."},
-                                "value": {}
-                            }
-                        }
-                    },
-                    "index_data_items": {
-                        "type": "array",
-                        "description": "Optional raw IndexDataItems; if provided, updates is ignored.",
-                        "items": {"type": "object"}
-                    },
-                    "check_in_comments": {"type": "string"},
-                    "do_fill_dependent_fields": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "update_document",
-            "description": "Update a document's streams and/or index data (uses UpdateDocument). Use resolve_field to find field numbers for updates.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer"},
-                    "updates": {
-                        "type": "array",
-                        "description": "Optional index field updates by field number. Use resolve_field to find field_no.",
-                        "items": {
-                            "type": "object",
-                            "required": ["value"],
-                            "anyOf": [
-                                {"required": ["field_no"]},
-                                {"required": ["field_name"]}
-                            ],
-                            "properties": {
-                                "field_no": {"type": "integer", "description": "Field number. Use resolve_field to find this."},
-                                "field_name": {"type": "string", "description": "Optional field label/name to resolve if field_no not provided."},
-                                "value": {}
-                            }
-                        }
-                    },
-                    "index_data_items": {
-                        "type": "array",
-                        "description": "Optional raw IndexDataItems; if provided, updates is ignored.",
-                        "items": {"type": "object"}
-                    },
-                    "streams": {
-                        "type": "array",
-                        "description": "Streams to add or update.",
-                        "items": {
-                            "type": "object",
-                            "required": ["file_name"],
-                            "properties": {
-                                "file_name": {"type": "string"},
-                                "file_data_base64": {"type": "string"},
-                                "file_data_text": {"type": "string"},
-                                "stream_no": {"type": "integer"},
-                                "new_stream_insert_mode": {"type": "integer", "default": 0}
-                            }
-                        }
-                    },
-                    "stream_nos_to_delete": {
-                        "type": "array",
-                        "items": {"type": "integer"}
-                    },
-                    "streams_to_rename": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["stream_no", "file_name"],
-                            "properties": {
-                                "stream_no": {"type": "integer"},
-                                "file_name": {"type": "string"}
-                            }
-                        }
-                    },
-                    "check_in_comments": {"type": "string"},
-                    "do_fill_dependent_fields": {"type": "boolean", "default": True}
-                }
-            },
-        },
-        {
-            "name": "add_streams_to_document",
-            "description": "Add new streams to a document (uses AddStreamsToDocument).",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no", "streams"],
-                "properties": {
-                    "doc_no": {"type": "integer"},
-                    "streams": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["file_name"],
-                            "properties": {
-                                "file_name": {"type": "string"},
-                                "file_data_base64": {"type": "string"},
-                                "file_data_text": {"type": "string"},
-                                "stream_no": {"type": "integer"},
-                                "new_stream_insert_mode": {"type": "integer", "default": 0}
-                            }
-                        }
-                    },
-                    "conversion_options": {
-                        "type": "object",
-                        "description": "Optional conversion settings (e.g., ConvertTo)."
-                    },
-                    "check_in_comments": {"type": "string"}
-                }
-            },
-        },
-        {
-            "name": "delete_document",
-            "description": "Delete a document by document number.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer"}
-                }
-            },
-        },
-        {
-            "name": "check_out_document",
-            "description": "Check out (lock) a document for editing. Returns checkout status and lock information.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number to check out."},
-                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
-                }
-            },
-        },
-        {
-            "name": "check_in_document",
-            "description": "Check in (release lock on) a document after editing. Use after check_out_document.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number to check in."},
-                    "check_in_comments": {"type": "string", "description": "Optional comments describing changes."},
-                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
-                }
-            },
-        },
-        {
-            "name": "undo_check_out_document",
-            "description": "Cancel document checkout without saving changes. Reverts to state before checkout.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number to undo checkout."},
-                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
-                }
-            },
-        },
-        {
-            "name": "add_comment",
-            "description": "Add a comment to a document.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no", "comment_text"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number."},
-                    "comment_text": {"type": "string", "description": "The comment text to add."},
-                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
-                }
-            },
-        },
-        {
-            "name": "get_comments",
-            "description": "Get all comments for a document.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number."},
-                    "version_no": {"type": "integer", "default": 0, "description": "Version number (0 for current)."}
-                }
-            },
-        },
-        {
-            "name": "complete_task",
-            "description": "Complete a workflow task. Use after claiming a task with claim_workflow_instance.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["workflow_instance_token", "task_no"],
-                "properties": {
-                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
-                    "task_no": {"type": "integer", "description": "Task number to complete."},
-                    "user_decision": {"type": "string", "description": "Optional user decision/outcome (e.g., 'Approve', 'Reject')."},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}, "description": "Optional index data updates."}
-                }
-            },
-        },
-        {
-            "name": "claim_workflow_instance",
-            "description": "Claim a workflow task for the current user. Use before completing tasks.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["workflow_instance_token"],
-                "properties": {
-                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
-                    "task_no": {"type": "integer", "description": "Optional task number to claim."}
-                }
-            },
-        },
-        {
-            "name": "disclaim_workflow_instance",
-            "description": "Unclaim (release) a workflow task. Allows others to claim it.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["workflow_instance_token"],
-                "properties": {
-                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
-                    "task_no": {"type": "integer", "description": "Optional task number to disclaim."}
-                }
-            },
-        },
-        {
-            "name": "delegate_workflow_instance",
-            "description": "Delegate a workflow task to another user.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["workflow_instance_token", "user_id"],
-                "properties": {
-                    "workflow_instance_token": {"type": "string", "description": "Workflow instance token from get_workflow_instance."},
-                    "user_id": {"type": "integer", "description": "User ID to delegate to. Use execute_users_query to find user IDs."},
-                    "task_no": {"type": "integer", "description": "Optional task number to delegate."}
-                }
-            },
-        },
-        {
-            "name": "create_case",
-            "description": "Create a new case in a case definition.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["case_definition_no"],
-                "properties": {
-                    "case_definition_no": {"type": "integer", "description": "Case definition number."},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}, "description": "Optional case index data."}
-                }
-            },
-        },
-        {
-            "name": "get_case",
-            "description": "Get case details by case number.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["case_no"],
-                "properties": {
-                    "case_no": {"type": "integer", "description": "Case number."}
-                }
-            },
-        },
-        {
-            "name": "get_case_documents",
-            "description": "List documents in a case.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["case_no"],
-                "properties": {
-                    "case_no": {"type": "integer", "description": "Case number."},
-                    "max_rows": {"type": "integer", "default": 1000, "description": "Maximum documents to return."}
-                }
-            },
-        },
-        {
-            "name": "get_case_history",
-            "description": "Get audit trail/history for a case.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["case_no"],
-                "properties": {
-                    "case_no": {"type": "integer", "description": "Case number."}
-                }
-            },
-        },
-        {
-            "name": "create_user",
-            "description": "Create a new Therefore user account.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_name", "full_name"],
-                "properties": {
-                    "user_name": {"type": "string", "description": "Username (login name)."},
-                    "full_name": {"type": "string", "description": "Full display name."},
-                    "email": {"type": "string", "description": "Email address."},
-                    "password": {"type": "string", "description": "Initial password."},
-                    "domain_name": {"type": "string", "description": "Domain name for AD/LDAP users."}
-                }
-            },
-        },
-        {
-            "name": "update_user_group_assignment",
-            "description": "Update user's group memberships.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
-                    "group_ids": {"type": "array", "items": {"type": "integer"}, "description": "List of group IDs to assign."}
-                }
-            },
-        },
-        {
-            "name": "get_user_group_assignment",
-            "description": "Get user's group memberships. Returns list of group IDs the user belongs to.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."}
-                }
-            },
-        },
-        {
-            "name": "set_user_password",
-            "description": "Set (reset) a user's password. Admin operation to change another user's password.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id", "new_password"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
-                    "new_password": {"type": "string", "description": "New password to set."}
-                }
-            },
-        },
-        {
-            "name": "change_user_password",
-            "description": "Change the current user's password. Requires old password for verification.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["old_password", "new_password"],
-                "properties": {
-                    "old_password": {"type": "string", "description": "Current password for verification."},
-                    "new_password": {"type": "string", "description": "New password to set."}
-                }
-            },
-        },
-        {
-            "name": "reset_user_password",
-            "description": "Reset a user's password and optionally send reset email. Generates a new temporary password.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
-                    "send_email": {"type": "boolean", "default": True, "description": "Send password reset email to user."}
-                }
-            },
-        },
-        {
-            "name": "delete_portal_user",
-            "description": "Delete a portal user account. For portal/external users only, not internal Therefore users.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "Portal user ID."}
-                }
-            },
-        },
-        {
-            "name": "save_portal_user",
-            "description": "Create or update a portal user account. For portal/external users only.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID (0 to create new user)."},
-                    "user_name": {"type": "string", "description": "Username (login name)."},
-                    "full_name": {"type": "string", "description": "Full display name."},
-                    "email": {"type": "string", "description": "Email address."},
-                    "is_active": {"type": "boolean", "description": "Whether the user account is active."}
-                }
-            },
-        },
-        {
-            "name": "move_user_license",
-            "description": "Move a license from one user to another. Used for license management.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["source_user_id", "target_user_id"],
-                "properties": {
-                    "source_user_id": {"type": "integer", "description": "Source user ID to take license from."},
-                    "target_user_id": {"type": "integer", "description": "Target user ID to assign license to."}
-                }
-            },
-        },
-        {
-            "name": "get_user_settings",
-            "description": "Get user-specific settings and preferences.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."}
-                }
-            },
-        },
-        {
-            "name": "set_user_settings",
-            "description": "Update user-specific settings and preferences.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["user_id", "settings"],
-                "properties": {
-                    "user_id": {"type": "integer", "description": "User ID. Use execute_users_query to find user IDs."},
-                    "settings": {"type": "object", "description": "Settings object with key-value pairs to update."}
-                }
-            },
-        },
-        {
-            "name": "copy_document",
-            "description": "Copy a document to create a duplicate. Can copy to a different category.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number to copy."},
-                    "target_category_no": {"type": "integer", "description": "Optional target category. Use resolve_category to find category numbers."},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}, "description": "Optional index data for the copy."}
-                }
-            },
-        },
-        {
-            "name": "get_document_versions",
-            "description": "List all versions of a document.",
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number."}
-                }
-            },
-        },
-        {
-            "name": "get_converted_doc_streams",
-            "description": (
-                "Retrieve document streams converted server-side to a target format "
-                "(PDF, TIFF, JPEG, etc.) via the GetConvertedDocStreams WebAPI endpoint. "
-                "Returns the converted file data as base64-encoded streams."
-            ),
-            "inputSchema": {
-                "type": "object",
-                "required": ["doc_no", "convert_to"],
-                "properties": {
-                    "doc_no": {"type": "integer", "description": "Document number"},
-                    "convert_to": {
-                        "description": (
-                            "Target conversion format. Accepts string names or numeric values: "
-                            "Original (0), SingleTIFF (1), SinglePDF (2), MultipageTIFF (3), "
-                            "MultipagePDF (4), SearchablePDF (5), SearchablePDFA (6), JPEG (50)"
-                        )
-                    },
-                    "annotation_mode": {
-                        "description": "Annotation handling: Default (0), Merge (1), Hide (2)"
-                    },
-                    "signature_mode": {
-                        "description": (
-                            "Signature handling: NoSignature (0), SignatureOnly (1), "
-                            "SignatureAndTimestamp (2)"
-                        )
-                    },
-                    "certificate_name": {"type": "string", "description": "Certificate name for signing"},
-                    "time_stamp_server": {"type": "string", "description": "Timestamp server URL"},
-                    "time_stamp_user": {"type": "string", "description": "Timestamp server username"},
-                    "time_stamp_pwd": {"type": "string", "description": "Timestamp server password"},
-                    "multipage_stream_name": {"type": "string", "description": "Output filename for multipage conversions"},
-                    "stream_nos": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                        "description": "Specific stream numbers to convert (omit for all streams)"
-                    },
-                    "version_no": {"type": "integer", "description": "Document version number (omit for latest)"},
-                    "retrieve_reason": {"type": "string", "description": "Reason for retrieval (audit trail)"},
-                    "archive_converted_files": {"type": "boolean", "description": "Archive converted files back to the document"},
-                    "custom_archive_file_name": {"type": "string", "description": "Custom filename when archiving converted files"},
-                }
-            },
-        },
-        {
-            "name": "get_logfiles",
-            "description": (
-                "Retrieve and parse Therefore server log files from the system "
-                "Logfiles category (ID 1). Fetches document streams, decodes base64, "
-                "and parses pipe-delimited entries into structured data."
-            ),
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "days_back": {
-                        "type": "integer",
-                        "description": "Number of days to look back (default: 7)",
-                    },
-                    "application_filter": {
-                        "type": "string",
-                        "description": "Filter by application name (e.g. 'Therefore Server')",
-                    },
-                    "max_docs": {
-                        "type": "integer",
-                        "description": "Maximum number of log documents to retrieve (default: 10)",
-                    },
-                    "include_raw": {
-                        "type": "boolean",
-                        "description": "Include raw stream text in response (default: false)",
-                    },
-                    "output_mode": {
-                        "type": "string",
-                        "enum": ["analysis", "summary", "full"],
-                        "description": (
-                            "Output mode: 'analysis' (default) returns compact statistics with "
-                            "grouped error summaries — fits in LLM context; 'summary' returns "
-                            "statistics plus every individual error entry; 'full' returns all "
-                            "individual entries per document."
-                        ),
-                    },
-                    "severity_filter": {
-                        "type": "string",
-                        "enum": ["all", "errors_only"],
-                        "description": "Filter entries: 'all' (default) processes everything; 'errors_only' skips non-error entries for faster processing.",
-                    },
-                }
-            },
-        },
-        {
-            "name": "get_login_history",
-            "description": (
-                "Retrieve and analyse Therefore login history. Shows authentication attempts "
-                "including successes, failures, client applications, IP addresses, and server nodes. "
-                "When username is provided, returns history for that single user (fuzzy-matched). "
-                "When username is omitted, enumerates all tenant users and fetches history for each, "
-                "providing a per-user breakdown. "
-                "Use 'analysis' mode for a compact summary with failure rates and breakdowns by "
-                "user, day, client, IP, node, and error code; 'full' mode returns all raw entries."
-            ),
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "days_back": {
-                        "type": "integer",
-                        "description": "Number of days of history to retrieve (default 7).",
-                    },
-                    "username": {
-                        "type": "string",
-                        "description": (
-                            "Optional username to filter by. Fuzzy-matched to resolve the user. "
-                            "Omit for tenant-wide login history."
-                        ),
-                    },
-                    "max_entries": {
-                        "type": "integer",
-                        "description": "Maximum number of login entries per user to retrieve (default 1000).",
-                    },
-                    "output_mode": {
-                        "type": "string",
-                        "enum": ["analysis", "full"],
-                        "description": (
-                            "Output format: 'analysis' (default) returns statistics with breakdowns "
-                            "by day, client, IP, node, and error code; 'full' returns all raw entries."
-                        ),
-                    },
                 },
+                "required": ["operation"],
             },
         },
         {
-            "name": "generate_category_config",
-            "description": (
-                "Generate a Therefore category configuration delta XML from a structured spec or "
-                "natural language description. The generated XML can be imported into Therefore to "
-                "create a new category with fields, keyword dictionaries, folder, and auto-layout. "
-                "Provide EITHER 'spec' (structured JSON) OR 'description' (natural language/text), not both."
-            ),
+            "name": "therefore_knowledge",
+            "description": """Knowledge base operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
+search, get_workflow, get_field_types, get_pattern, get_quirks, list_all, get_api_help.
+
+Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
+Example: {"operation": "get_quirks", "tenant": "demo"}""",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "spec": {
-                        "type": "object",
-                        "description": (
-                            "Structured category spec as JSON. Must contain 'category' (with 'name', optional "
-                            "'folder', 'description', 'force_new_folder', 'folder_conflict_policy', "
-                            "'dictionary_conflict_policy') and 'fields' array. Each field has 'name', 'type' "
-                            "(text|number|decimal|date|keyword_single|table), optional 'length', 'scale', "
-                            "'dictionary' (with 'mode', 'name', 'keywords'), or 'columns' (for table type)."
-                        ),
-                    },
-                    "description": {
+                    "operation": {
                         "type": "string",
-                        "description": (
-                            "Natural language description of the category to create. Include category name, "
-                            "folder, and field definitions. Example: 'Create an Invoice category in folder "
-                            "\"Accounting\" with text field \"Invoice Number\", date field \"Invoice Date\", "
-                            "decimal field \"Total Amount\"'."
-                        ),
+                        "enum": [
+                            "search",
+                            "get_workflow",
+                            "get_field_types",
+                            "get_pattern",
+                            "get_quirks",
+                            "list_all",
+                            "get_api_help",
+                        ],
                     },
-                    "baseline_path": {
+                    "tenant": {
                         "type": "string",
-                        "description": (
-                            "Optional path to a baseline TheConfiguration.xml export for diff-mode "
-                            "collision checks. Not required for normal generation."
-                        ),
+                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
                     },
-                    "api_check": {
-                        "type": "boolean",
-                        "description": (
-                            "Whether to use the Therefore API to check for existing folders and "
-                            "dictionaries. Defaults to true."
-                        ),
-                    },
-                    "output_path": {
+                    "tenant_hint": {
                         "type": "string",
-                        "description": (
-                            "Optional output file path for the generated XML. If omitted, auto-generates "
-                            "a path under docs/notes/generated_configs/."
-                        ),
+                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
                     },
+                    "query": {"type": "string"},
+                    "limit": {"type": "integer"},
+                    "workflow_name": {"type": "string"},
+                    "field_type": {},
+                    "pattern_name": {"type": "string"},
+                    "search_term": {"type": "string"},
+                    "format": {"type": "string"},
+                    "api_operation": {"type": "string"},
                 },
+                "required": ["operation"],
             },
         },
     ]
 
     # Add optional tenant selection to all tools.
     for tool in tools:
-        schema = tool.get('inputSchema')
-        if not schema or schema.get('type') != 'object':
+        schema = tool.get("inputSchema")
+        if not schema or schema.get("type") != "object":
             continue
-        props = schema.setdefault('properties', {})
-        if 'tenant' not in props:
-            props['tenant'] = {
-                'type': 'string',
-                'description': 'Optional tenant key when multiple tenants are configured.',
+        props = schema.setdefault("properties", {})
+        if "tenant" not in props:
+            props["tenant"] = {
+                "type": "string",
+                "description": (
+                    "Tenant key to target. Once set, it becomes the default for subsequent calls "
+                    "(sticky). To switch tenants, explicitly pass a different tenant key. "
+                    "If omitted, uses the last-used tenant or the default."
+                ),
             }
-        if 'tenant_hint' not in props:
-            props['tenant_hint'] = {
-                'type': 'string',
-                'description': 'Optional user prompt text to infer tenant when tenant is not provided.',
+        if "tenant_hint" not in props:
+            props["tenant_hint"] = {
+                "type": "string",
+                "description": (
+                    "Free-text hint to auto-detect the tenant (e.g. a company name or environment label). "
+                    "Used only when tenant is not explicitly provided. Matched against configured tenant labels."
+                ),
             }
     return tools
 
@@ -1642,17 +651,81 @@ def build_prompts() -> List[Dict[str, Any]]:
     """Build the list of MCP prompts exposed by this server."""
     return [
         {
-            'name': 'create-category',
-            'description': (
-                'Interactive guide for creating a new Therefore category configuration. '
-                'Walks through gathering requirements, building a structured spec, and '
-                'generating the delta XML via the generate_category_config tool.'
+            "name": "therefore-help",
+            "description": (
+                "Get help with Therefore API. Answers common questions like: "
+                "How do I query documents? How to get customer ID? How to summarize logs? "
+                "What's the structure for field types? Why isn't something working?"
             ),
-            'arguments': [
+            "arguments": [
                 {
-                    'name': 'description',
-                    'description': 'Optional starting description of the category to create.',
-                    'required': False,
+                    "name": "question",
+                    "description": "Your question about Therefore API",
+                    "required": False,
+                },
+            ],
+        },
+        {
+            "name": "query-documents",
+            "description": (
+                "Step-by-step guide for querying Therefore documents with filters, "
+                "paginating results, and accessing table data."
+            ),
+            "arguments": [
+                {
+                    "name": "category",
+                    "description": "Category name or number to query",
+                    "required": False,
+                },
+                {
+                    "name": "filter_field",
+                    "description": "Field to filter on",
+                    "required": False,
+                },
+            ],
+        },
+        {
+            "name": "create-document",
+            "description": (
+                "Step-by-step guide for creating a Therefore document using the "
+                "4-step web-client flow (GetCategoryInfo → PreprocessIndexData → "
+                "EvaluateConditionalProperties → CreateDocument)."
+            ),
+            "arguments": [
+                {
+                    "name": "category",
+                    "description": "Category name or number to create document in",
+                    "required": False,
+                },
+            ],
+        },
+        {
+            "name": "troubleshoot",
+            "description": (
+                "Help troubleshoot common Therefore API issues. Searches known quirks "
+                "and provides workarounds for: keyword fields, table data, user accounts, "
+                "query sessions, and more."
+            ),
+            "arguments": [
+                {
+                    "name": "problem",
+                    "description": "Description of the problem you're experiencing",
+                    "required": False,
+                },
+            ],
+        },
+        {
+            "name": "create-category",
+            "description": (
+                "Interactive guide for creating a new Therefore category configuration. "
+                "Walks through gathering requirements, building a structured spec, and "
+                "generating the delta XML via the generate_category_config tool."
+            ),
+            "arguments": [
+                {
+                    "name": "description",
+                    "description": "Optional starting description of the category to create.",
+                    "required": False,
                 },
             ],
         },
@@ -1674,61 +747,75 @@ class MCPServer:
         self.tenant_assignee_aliases = tenant_assignee_aliases or {}
         self.tools = build_tools()
         self.prompts = build_prompts()
-        cache_dir = os.environ.get('THEREFORE_CACHE_DIR') or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cache')
+        cache_dir = os.environ.get("THEREFORE_CACHE_DIR") or os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache"
+        )
         os.makedirs(cache_dir, exist_ok=True)
         self._category_cache: Dict[str, Dict[str, Any]] = {}
         self._category_cache_ts: Dict[str, float] = {}
         self._category_cache_ttl: int = 300
-        self._category_cache_path = os.path.join(cache_dir, 'category_cache_{tenant}.json')
+        self._category_cache_path = os.path.join(
+            cache_dir, "category_cache_{tenant}.json"
+        )
         self._field_cache: Dict[str, Dict[int, Dict[str, Any]]] = {}
         self._field_cache_ts: Dict[str, Dict[int, float]] = {}
         self._field_cache_ttl: int = 300
-        self._field_cache_path = os.path.join(cache_dir, 'field_cache_{tenant}.json')
+        self._field_cache_path = os.path.join(cache_dir, "field_cache_{tenant}.json")
         self._keyword_dict_cache: Dict[str, Dict[str, Any]] = {}
         self._keyword_dict_cache_ts: Dict[str, float] = {}
         self._keyword_dict_cache_ttl: int = 300
-        self._keyword_dict_cache_path = os.path.join(cache_dir, 'keyword_dictionary_cache_{tenant}.json')
+        self._keyword_dict_cache_path = os.path.join(
+            cache_dir, "keyword_dictionary_cache_{tenant}.json"
+        )
 
     def handle(self, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        method = msg.get('method')
-        msg_id = msg.get('id')
-        params = msg.get('params') or {}
+        method = msg.get("method")
+        msg_id = msg.get("id")
+        params = msg.get("params") or {}
 
-        if method == 'initialize':
-            return _result_response(msg_id, {
-                'protocolVersion': '2024-11-05',
-                'capabilities': {
-                    'tools': {'listChanged': False},
-                    'prompts': {'listChanged': False},
+        if method == "initialize":
+            return _result_response(
+                msg_id,
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {"listChanged": False},
+                        "prompts": {"listChanged": False},
+                    },
+                    "serverInfo": {"name": "therefore-mcp", "version": "0.1.0"},
                 },
-                'serverInfo': {
-                    'name': 'therefore-mcp',
-                    'version': '0.1.0'
-                }
-            })
-        if method in ('initialized', 'notifications/initialized'):
+            )
+        if method in ("initialized", "notifications/initialized"):
             return None
-        if method == 'tools/list':
-            return _result_response(msg_id, {'tools': self.tools})
-        if method == 'tools/call':
-            name = params.get('name')
-            args = params.get('arguments') or {}
+        if method == "tools/list":
+            return _result_response(msg_id, {"tools": self.tools})
+        if method == "tools/call":
+            name = params.get("name")
+            args = params.get("arguments") or {}
             try:
                 result = self._call_tool(name, args)
                 return _result_response(msg_id, _tool_content(result))
             except Exception as e:
-                return _result_response(msg_id, {
-                    'content': [{
-                        'type': 'text',
-                        'text': json.dumps({'error': str(e), 'trace': traceback.format_exc()}, indent=2)
-                    }],
-                    'isError': True
-                })
-        if method == 'ping':
+                return _result_response(
+                    msg_id,
+                    {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(
+                                    {"error": str(e), "trace": traceback.format_exc()},
+                                    indent=2,
+                                ),
+                            }
+                        ],
+                        "isError": True,
+                    },
+                )
+        if method == "ping":
             return _result_response(msg_id, {})
-        if method == 'prompts/list':
-            return _result_response(msg_id, {'prompts': self.prompts})
-        if method == 'prompts/get':
+        if method == "prompts/list":
+            return _result_response(msg_id, {"prompts": self.prompts})
+        if method == "prompts/get":
             try:
                 result = self._get_prompt(params)
                 return _result_response(msg_id, result)
@@ -1742,14 +829,14 @@ class MCPServer:
         return _error_response(msg_id, -32601, f"Method not found: {method}")
 
     def _get_prompt(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        name = params.get('name')
-        arguments = params.get('arguments') or {}
-        if name == 'create-category':
+        name = params.get("name")
+        arguments = params.get("arguments") or {}
+        if name == "create-category":
             return self._prompt_create_category(arguments)
         raise ValueError(f"Unknown prompt: {name}")
 
     def _prompt_create_category(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        description = arguments.get('description', '')
+        description = arguments.get("description", "")
         prompt_text = """\
 You are helping the user create a new Therefore™ category configuration.
 
@@ -1813,7 +900,7 @@ You are helping the user create a new Therefore™ category configuration.
 ## Workflow
 1. **Gather requirements**: Ask the user what category they want, what fields it needs, which folder it belongs in.
 2. **Build the spec**: Construct the JSON spec object with all fields, types, and dictionaries.
-3. **Generate**: Call the `generate_category_config` tool with the `spec` parameter.
+3. **Generate**: Call `therefore_categories` with `operation: "generate_config"` and the `spec` parameter.
 4. **Review**: Present the result to the user — the generated XML content and output file path.
 
 Keep it conversational. Ask clarifying questions if the user's requirements are ambiguous.
@@ -1822,13 +909,13 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             prompt_text += f"\n## Starting Point\nThe user provided this initial description:\n\n{description}\n"
 
         return {
-            'description': 'Interactive guide for creating a Therefore category configuration.',
-            'messages': [
+            "description": "Interactive guide for creating a Therefore category configuration.",
+            "messages": [
                 {
-                    'role': 'user',
-                    'content': {
-                        'type': 'text',
-                        'text': prompt_text,
+                    "role": "user",
+                    "content": {
+                        "type": "text",
+                        "text": prompt_text,
                     },
                 },
             ],
@@ -1837,533 +924,153 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
     def _call_tool(self, name: str, args: Dict[str, Any]) -> Any:
         tenant = self._resolve_tenant(args)
         client = self.clients[tenant]
-        if name == 'resolve_category':
-            return self._resolve_category(args, tenant, client)
-        if name == 'list_category_fields':
-            return self._list_category_fields(int(args['category_no']), tenant, client)
-        if name == 'resolve_field':
-            return self._resolve_field(args, tenant, client)
-        if name == 'get_categories_tree':
-            return client.get_categories_tree(args.get('payload'))
-        if name == 'get_category_info':
-            return client.get_category_info(int(args['category_no']))
-        if name == 'get_document':
-            return client.get_document(
-                doc_no=int(args['doc_no']),
-                include_index_data=bool(args.get('include_index_data', True)),
-                include_streams_info=bool(args.get('include_streams_info', False)),
-                include_streams_data=bool(args.get('include_streams_data', False)),
-                include_checkout_status=bool(args.get('include_checkout_status', False)),
-                include_access_mask=bool(args.get('include_access_mask', False)),
-            )
-        if name == 'get_document_index_data':
-            return client.get_document_index_data(int(args['doc_no']))
-        if name == 'get_web_api_server_version':
-            return client.get_web_api_server_version()
-        if name == 'get_connection_token':
-            return client.get_connection_token()
-        if name == 'get_domain_info':
-            return client.get_domain_info()
-        if name == 'get_client_discovery_info':
-            return client.get_client_discovery_info()
-        if name == 'get_system_customer_id':
+        if name == "ask_therefore_expert":
+            return self._ask_therefore_expert(args, tenant, client)
+        if name == "therefore_system":
+            return self._dispatch_system(args, tenant, client)
+        if name == "therefore_categories":
+            return self._dispatch_categories(args, tenant, client)
+        if name == "therefore_documents":
+            return self._dispatch_documents(args, tenant, client)
+        if name == "therefore_query":
+            return self._dispatch_query(args, tenant, client)
+        if name == "therefore_workflow":
+            return self._dispatch_workflow(args, tenant, client)
+        if name == "therefore_users":
+            return self._dispatch_users(args, tenant, client)
+        if name == "therefore_keywords":
+            return self._dispatch_keywords(args, tenant, client)
+        if name == "therefore_knowledge":
+            return self._dispatch_knowledge(args, tenant, client)
+        raise ValueError(f"Unknown tool: {name}")
+
+    def _dispatch_system(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "get_customer_id":
             return client.get_system_customer_id()
-        if name == 'get_connected_user':
-            return client.get_connected_user(bool(args.get('create', False)))
-        if name == 'get_permission_constants':
+        if op == "get_connected_user":
+            return client.get_connected_user(bool(args.get("create", False)))
+        if op == "get_version":
+            return client.get_web_api_server_version()
+        if op == "get_connection_token":
+            return client.get_connection_token()
+        if op == "get_domain_info":
+            return client.get_domain_info()
+        if op == "get_discovery_info":
+            return client.get_client_discovery_info()
+        if op == "get_permission_constants":
             return client.get_permission_constants()
-        if name == 'get_role_permission_constants':
+        if op == "get_role_permission_constants":
             return client.get_role_permission_constants()
-        if name == 'get_document_properties':
-            return client.get_document_properties(
-                doc_no=int(args['doc_no']),
-                version_no=int(args.get('version_no', 0)),
-                is_doc_title_needed=bool(args.get('is_doc_title_needed', False)),
-            )
-        if name == 'get_document_history':
-            return client.get_document_history(int(args['doc_no']))
-        if name == 'get_document_checkout_status':
-            return client.get_document_checkout_status(int(args['doc_no']))
-        if name == 'get_objects_list':
-            return client.get_objects_list(args['load_items_list'])
-        if name == 'get_objects':
+        if op == "get_objects_list":
+            return client.get_objects_list(args["load_items_list"])
+        if op == "get_objects":
             resp = client.get_objects(
-                flags=int(args['flags']),
-                obj_type=int(args['obj_type']),
+                flags=int(args["flags"]), obj_type=int(args["obj_type"])
             )
-            # Normalize items across GetObjects/GetObjectsList payload shapes.
-            resp['items'] = self._extract_object_items(resp)
+            resp["items"] = self._extract_object_items(resp)
             return resp
-        if name == 'get_referenced_table_info':
-            return client.get_referenced_table_info(int(args['data_type_no']))
-        if name == 'execute_users_query':
-            domain_names = args.get('domain_names')
-            if domain_names is None:
-                try:
-                    domain_info = client.get_domain_info() or {}
-                    domain_names = domain_info.get('DomainNames') or []
-                except Exception:
-                    domain_names = None
-            return client.execute_users_query(
-                query=args['query'],
-                domain_names=domain_names,
-                flags=int(args.get('flags', 5)),
-            )
-        if name == 'get_users_from_group':
-            return client.get_users_from_group(
-                group_id=args.get('group_id'),
-                group_name=args.get('group_name'),
-                domain_name=args.get('domain_name'),
-            )
-        if name == 'get_user_details':
-            return client.get_user_details(int(args['user_or_group_id']))
-        if name == 'get_keywords_by_field_no':
-            return client.get_keywords_by_field_no(
-                field_no=int(args['field_no']),
-                category_no=args.get('category_no'),
-                case_definition_no=args.get('case_definition_no'),
-                dependent_field_filter_value=args.get('dependent_field_filter_value'),
-                show_deactivated_keywords=args.get('show_deactivated_keywords'),
-                index_data_items=args.get('index_data_items'),
-                skip_loading_keyword_nos=args.get('skip_loading_keyword_nos'),
-                max_rows=args.get('max_rows'),
-            )
-        if name == 'get_keywords_by_key_dic':
-            return client.get_keywords_by_key_dic(
-                key_dic_no=int(args['key_dic_no']),
-                filter_value=args.get('filter_value'),
-                max_values=args.get('max_values'),
-                include_deactivated_keywords=args.get('include_deactivated_keywords'),
-            )
-        if name == 'validate_keywords':
-            return client.validate_keywords(
-                field_no=int(args['field_no']),
-                keywords=args.get('keywords') or [],
-                is_filter_mode=args.get('is_filter_mode'),
-            )
-        if name == 'get_keywords_by_dictionary_name':
-            return self._get_keywords_by_dictionary_name(args, tenant, client)
-        if name == 'add_dictionary_keyword':
-            return self._add_dictionary_keyword(args, tenant, client)
-        if name == 'update_dictionary_keyword':
-            return self._update_dictionary_keyword(args, tenant, client)
-        if name == 'delete_dictionary_keyword':
-            return self._delete_dictionary_keyword(args, tenant, client)
-        if name == 'deactivate_dictionary_keyword':
-            return self._deactivate_dictionary_keyword(args, tenant, client)
-        if name == 'execute_workflow_query_for_all':
-            debug_enabled = bool(args.get('debug', False))
-            debug_log_path = args.get('debug_log_path')
-            debug_progress_every = int(args.get('debug_progress_every') or 500)
-            debug_info: Dict[str, Any] = {
-                'workflow_query': {},
-                'instance_details': {},
-            } if debug_enabled else {}
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'start',
-                    'workflow_flags': args.get('workflow_flags'),
-                    'max_rows': args.get('max_rows'),
-                    'detail_mode': args.get('instance_detail_mode'),
-                })
-            if args.get('max_rows') is None:
-                max_rows = self._default_workflow_max_rows(client)
-            else:
-                max_rows = int(args.get('max_rows', 1000))
-            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 0))
-            start = time.time()
-            try:
-                resp = client.execute_workflow_query_for_all(
-                    workflow_flags=workflow_flags,
-                    max_rows=max_rows,
-                )
-            except Exception as exc:
-                if debug_enabled:
-                    debug_info['workflow_query'] = {
-                        'workflow_flags': workflow_flags,
-                        'max_rows': max_rows,
-                        'duration_ms': int((time.time() - start) * 1000),
-                        'error': str(exc),
-                    }
-                    if debug_log_path:
-                        self._debug_log(debug_log_path, {
-                            'event': 'workflow_query_error',
-                            'workflow_flags': workflow_flags,
-                            'max_rows': max_rows,
-                            'error': str(exc),
-                        })
-                    return {'error': str(exc), 'debug': debug_info}
-                raise
-            if debug_enabled:
-                debug_info['workflow_query'] = {
-                    'workflow_flags': workflow_flags,
-                    'max_rows': max_rows,
-                    'duration_ms': int((time.time() - start) * 1000),
-                }
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'workflow_query_done',
-                    'workflow_flags': workflow_flags,
-                    'max_rows': max_rows,
-                    'duration_ms': int((time.time() - start) * 1000),
-                })
-            if not args.get('include_instance_details'):
-                output = {'workflow_query': resp, 'debug': debug_info} if debug_enabled else resp
-                if debug_log_path:
-                    self._debug_log(debug_log_path, {'event': 'done'})
-                return output
-            detail_mode = str(args.get('instance_detail_mode') or 'summary').strip().lower()
-            if detail_mode == 'none':
-                detail_mode = 'summary'
-            tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
-            max_rows_reached = len(tasks) == max_rows
-            details_start = time.time()
-            details, detail_errors = self._fetch_workflow_instance_details(
-                client,
-                tasks,
-                max_workers=int(args.get('max_instance_workers') or 4),
-                is_access_mask_needed=bool(args.get('is_access_mask_needed', False)),
-                load_history=bool(args.get('load_history', False)),
-                debug_log_path=debug_log_path,
-                debug_progress_every=debug_progress_every,
-            )
-            if debug_enabled:
-                debug_info['instance_details'] = {
-                    'mode': detail_mode,
-                    'requested': len(tasks),
-                    'loaded': len(details),
-                    'failed': len(detail_errors),
-                    'duration_ms': int((time.time() - details_start) * 1000),
-                    'errors_sample': detail_errors[:10],
-                }
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'instance_details_done',
-                    'requested': len(tasks),
-                    'loaded': len(details),
-                    'failed': len(detail_errors),
-                    'duration_ms': int((time.time() - details_start) * 1000),
-                })
-            self._attach_instance_details(tasks, details, detail_errors, detail_mode)
-            output = {
-                'workflow_query': resp,
-                'instances': tasks,
-                'user_field_labels': user_field_labels,
-                'max_rows': max_rows,
-                'max_rows_reached': max_rows_reached,
-                'total_count': len(tasks),
-                'note': 'Reached max_rows; results may be truncated. Increase max_rows to fetch more.' if max_rows_reached else None,
-                'instance_detail_mode': detail_mode,
-                'instance_details_loaded': len(details),
-                'instance_details_failed': len(detail_errors),
-                'instance_detail_errors': detail_errors,
-                'debug': debug_info if debug_enabled else None,
-            }
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'done',
-                    'total_count': len(tasks),
-                    'max_rows_reached': max_rows_reached,
-                })
-            return output
-        if name == 'execute_workflow_query_for_process':
-            debug_enabled = bool(args.get('debug', False))
-            debug_log_path = args.get('debug_log_path')
-            debug_progress_every = int(args.get('debug_progress_every') or 500)
-            debug_info: Dict[str, Any] = {
-                'workflow_query': {},
-                'instance_details': {},
-            } if debug_enabled else {}
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'start',
-                    'process_no': args.get('process_no'),
-                    'workflow_flags': args.get('workflow_flags'),
-                    'max_rows': args.get('max_rows'),
-                    'detail_mode': args.get('instance_detail_mode'),
-                })
-            if args.get('max_rows') is None:
-                max_rows = self._default_workflow_max_rows(client)
-            else:
-                max_rows = int(args.get('max_rows', 1000))
-            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 0))
-            process_no = int(args['process_no'])
-            start = time.time()
-            try:
-                resp = client.execute_workflow_query_for_process(
-                    process_no=process_no,
-                    workflow_flags=workflow_flags,
-                    max_rows=max_rows,
-                )
-            except Exception as exc:
-                if debug_enabled:
-                    debug_info['workflow_query'] = {
-                        'process_no': process_no,
-                        'workflow_flags': workflow_flags,
-                        'max_rows': max_rows,
-                        'duration_ms': int((time.time() - start) * 1000),
-                        'error': str(exc),
-                    }
-                    if debug_log_path:
-                        self._debug_log(debug_log_path, {
-                            'event': 'workflow_query_error',
-                            'process_no': process_no,
-                            'workflow_flags': workflow_flags,
-                            'max_rows': max_rows,
-                            'error': str(exc),
-                        })
-                    return {'error': str(exc), 'debug': debug_info}
-                raise
-            if debug_enabled:
-                debug_info['workflow_query'] = {
-                    'process_no': process_no,
-                    'workflow_flags': workflow_flags,
-                    'max_rows': max_rows,
-                    'duration_ms': int((time.time() - start) * 1000),
-                }
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'workflow_query_done',
-                    'process_no': process_no,
-                    'workflow_flags': workflow_flags,
-                    'max_rows': max_rows,
-                    'duration_ms': int((time.time() - start) * 1000),
-                })
-            if not args.get('include_instance_details'):
-                output = {'workflow_query': resp, 'debug': debug_info} if debug_enabled else resp
-                if debug_log_path:
-                    self._debug_log(debug_log_path, {'event': 'done'})
-                return output
-            detail_mode = str(args.get('instance_detail_mode') or 'summary').strip().lower()
-            if detail_mode == 'none':
-                detail_mode = 'summary'
-            tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
-            max_rows_reached = len(tasks) == max_rows
-            details_start = time.time()
-            details, detail_errors = self._fetch_workflow_instance_details(
-                client,
-                tasks,
-                max_workers=int(args.get('max_instance_workers') or 4),
-                is_access_mask_needed=bool(args.get('is_access_mask_needed', False)),
-                load_history=bool(args.get('load_history', False)),
-                debug_log_path=debug_log_path,
-                debug_progress_every=debug_progress_every,
-            )
-            if debug_enabled:
-                debug_info['instance_details'] = {
-                    'mode': detail_mode,
-                    'requested': len(tasks),
-                    'loaded': len(details),
-                    'failed': len(detail_errors),
-                    'duration_ms': int((time.time() - details_start) * 1000),
-                    'errors_sample': detail_errors[:10],
-                }
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'instance_details_done',
-                    'requested': len(tasks),
-                    'loaded': len(details),
-                    'failed': len(detail_errors),
-                    'duration_ms': int((time.time() - details_start) * 1000),
-                })
-            self._attach_instance_details(tasks, details, detail_errors, detail_mode)
-            output = {
-                'workflow_query': resp,
-                'instances': tasks,
-                'user_field_labels': user_field_labels,
-                'max_rows': max_rows,
-                'max_rows_reached': max_rows_reached,
-                'total_count': len(tasks),
-                'note': 'Reached max_rows; results may be truncated. Increase max_rows to fetch more.' if max_rows_reached else None,
-                'instance_detail_mode': detail_mode,
-                'instance_details_loaded': len(details),
-                'instance_details_failed': len(detail_errors),
-                'instance_detail_errors': detail_errors,
-                'debug': debug_info if debug_enabled else None,
-            }
-            if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'done',
-                    'total_count': len(tasks),
-                    'max_rows_reached': max_rows_reached,
-                })
-            return output
-        if name == 'get_linked_workflows_for_doc':
-            return client.get_linked_workflows_for_doc(
-                doc_no=int(args['doc_no']),
-                wf_doc_link_type=int(args.get('wf_doc_link_type', 0)),
-            )
-        if name == 'get_workflow_history':
-            return client.get_workflow_history(
-                instance_no=int(args['instance_no']),
-                block_size=int(args.get('block_size', 1000)),
-                include_routing_info=bool(args.get('include_routing_info', True)),
-                max_creation_date=args.get('max_creation_date'),
-                seq_pos=int(args.get('seq_pos', 0)),
-            )
-        if name == 'get_workflow_instance':
-            return client.get_workflow_instance(
-                instance_no=int(args['instance_no']),
-                token_no=int(args.get('token_no', 0)),
-                is_access_mask_needed=bool(args.get('is_access_mask_needed', False)),
-                load_history=bool(args.get('load_history', False)),
-            )
-        if name == 'get_workflow_process':
-            return client.get_workflow_process(
-                process_no=int(args['process_no']),
-                version_no=int(args.get('version_no', 0)),
-                load_tasks=bool(args.get('load_tasks', True)),
-                is_access_mask_needed=bool(args.get('is_access_mask_needed', False)),
-            )
-        if name == 'get_workflow_task_settings':
-            return client.get_workflow_task_settings(
-                task_no=int(args['task_no']),
-                process_no=int(args['process_no']),
-                version_no=int(args.get('version_no', 0)),
-                setting_names=args.get('setting_names'),
-            )
-        if name == 'get_my_workflow_tasks':
-            return self._get_my_workflow_tasks(args, tenant, client)
-        if name == 'get_my_workflow_instances':
-            args = dict(args or {})
-            args['filter_to_user'] = True
-            output = self._get_workflow_instances_core(args, tenant, client)
-            output['tasks'] = output.get('instances', [])
-            return output
-        if name == 'get_all_workflow_instances':
-            args = dict(args or {})
-            args['filter_to_user'] = False
-            output = self._get_workflow_instances_core(args, tenant, client)
-            output['tasks'] = output.get('instances', [])
-            return output
-        if name == 'get_workflow_instances_for_user':
-            args = dict(args or {})
-            args['filter_to_user'] = True
-            output = self._get_workflow_instances_core(args, tenant, client)
-            output['tasks'] = output.get('instances', [])
-            return output
-        if name == 'execute_single_query':
-            query = args['query']
-            categories = self._extract_category_list(query)
-            if categories and len(categories) > 1:
-                base_query = dict(query)
-                for key in ('CategoryNos', 'CategoryIDs', 'CategoryIds', 'Categories', 'CategoryList'):
-                    base_query.pop(key, None)
-                if isinstance(base_query.get('CategoryNo'), (list, tuple, set, str)):
-                    base_query.pop('CategoryNo', None)
-                row_block_size = int(base_query.get('RowBlockSize') or 1000)
-                max_rows = int(base_query.get('MaxRows') or 2147483647)
-                queries = []
-                for cat in categories:
-                    q = dict(base_query)
-                    q['CategoryNo'] = int(cat)
-                    queries.append(q)
-                return client.execute_async_multi_query_all(
-                    queries=queries,
-                    full_text=args.get('full_text'),
-                    row_block_size=row_block_size,
-                    max_rows=max_rows,
-                )
-            return client.execute_single_query(
-                query=query,
-                full_text=args.get('full_text')
-            )
-        if name == 'execute_async_single_query':
-            row_block_size = int(args.get('row_block_size', 1000))
-            max_rows = int(args.get('max_rows', 2147483647))
-            auto_fetch_all = bool(args.get('auto_fetch_all', True))
-            if auto_fetch_all:
-                return client.execute_async_single_query_all(
-                    query=args['query'],
-                    full_text=args.get('full_text'),
-                    row_block_size=row_block_size,
-                    max_rows=max_rows,
-                )
-            return client.execute_async_single_query(
-                query=args['query'],
-                full_text=args.get('full_text')
-            )
-        if name == 'get_next_single_query_rows':
-            return client.get_next_single_query_rows(
-                query_id=int(args['query_id']),
-                row_block_size=int(args['row_block_size']),
-            )
-        if name == 'release_single_query':
-            return client.release_single_query(int(args['query_id']))
-        if name == 'execute_full_text_query':
-            return client.execute_full_text_query(
-                search=args['search'],
-                categories=args.get('categories'),
-                max_rows=int(args.get('max_rows', 100)),
-                include_index_data=bool(args.get('include_index_data', False)),
-                case_no=int(args.get('case_no', 0)),
-            )
-        if name == 'call_endpoint':
-            return client.call_endpoint(
-                endpoint=args['endpoint'],
-                payload=args.get('payload'),
-            )
-        if name == 'execute_statistics_query':
-            query_type = self._normalize_statistics_query_type(args.get('query_type'))
+        if op == "get_statistics":
+            query_type = self._normalize_statistics_query_type(args.get("query_type"))
             return client.execute_statistics_query(
                 query_type=query_type,
-                restrict_to_obj_no=args.get('restrict_to_obj_no'),
-                restrict_to_user=args.get('restrict_to_user'),
+                restrict_to_obj_no=args.get("restrict_to_obj_no"),
+                restrict_to_user=args.get("restrict_to_user"),
             )
-        if name == 'execute_async_multi_query':
-            row_block_size = int(args.get('row_block_size', 1000))
-            max_rows = int(args.get('max_rows', 2147483647))
-            auto_fetch_all = bool(args.get('auto_fetch_all', True))
-            if auto_fetch_all:
-                return client.execute_async_multi_query_all(
-                    queries=args['queries'],
-                    full_text=args.get('full_text'),
-                    row_block_size=row_block_size,
-                    max_rows=max_rows,
-                )
-            return client.execute_async_multi_query(
-                queries=args['queries'],
-                full_text=args.get('full_text'),
+        if op == "get_logfiles":
+            return self._get_logfiles(args, tenant, client)
+        if op == "get_login_history":
+            return self._get_login_history(args, tenant, client)
+        if op == "call_endpoint":
+            return client.call_endpoint(
+                endpoint=args["endpoint"], payload=args.get("payload")
             )
-        if name == 'get_next_multi_query_rows':
-            return client.get_next_multi_query_rows(
-                query_id=int(args['query_id']),
-                row_block_size=int(args['row_block_size']),
-            )
-        if name == 'release_multi_query':
-            return client.release_multi_query(int(args['query_id']))
-        if name == 'create_document':
-            category_no = int(args['category_no'])
-            check_in_comments = args.get('check_in_comments', '')
-            with_auto_append_mode = int(args.get('with_auto_append_mode', 0))
-            do_fill_dependent_fields = bool(args.get('do_fill_dependent_fields', True))
-            run_webclient_flow = bool(args.get('run_webclient_flow', True))
-            index_data_items = args.get('index_data_items') or []
+        raise ValueError(f"Unknown operation '{op}' for therefore_system")
 
+    def _dispatch_categories(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "get_tree":
+            return client.get_categories_tree(args.get("payload"))
+        if op == "get_info":
+            return client.get_category_info(int(args["category_no"]))
+        if op == "resolve":
+            return self._resolve_category(args, tenant, client)
+        if op == "list_fields":
+            return self._list_category_fields(int(args["category_no"]), tenant, client)
+        if op == "resolve_field":
+            return self._resolve_field(args, tenant, client)
+        if op == "get_referenced_table_info":
+            return client.get_referenced_table_info(int(args["data_type_no"]))
+        if op == "generate_config":
+            return self._generate_category_config(args, tenant, client)
+        raise ValueError(f"Unknown operation '{op}' for therefore_categories")
+
+    def _dispatch_documents(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "get":
+            return client.get_document(
+                doc_no=int(args["doc_no"]),
+                include_index_data=bool(args.get("include_index_data", True)),
+                include_streams_info=bool(args.get("include_streams_info", False)),
+                include_streams_data=bool(args.get("include_streams_data", False)),
+                include_checkout_status=bool(
+                    args.get("include_checkout_status", False)
+                ),
+                include_access_mask=bool(args.get("include_access_mask", False)),
+            )
+        if op == "get_index_data":
+            return client.get_document_index_data(int(args["doc_no"]))
+        if op == "get_properties":
+            return client.get_document_properties(
+                doc_no=int(args["doc_no"]),
+                version_no=int(args.get("version_no", 0)),
+                is_doc_title_needed=bool(args.get("is_doc_title_needed", False)),
+            )
+        if op == "get_history":
+            return client.get_document_history(int(args["doc_no"]))
+        if op == "get_checkout_status":
+            return client.get_document_checkout_status(int(args["doc_no"]))
+        if op == "get_versions":
+            return client.get_document_versions(int(args["doc_no"]))
+        if op == "get_converted_streams":
+            return self._get_converted_doc_streams(args, tenant, client)
+        if op == "create":
+            category_no = int(args["category_no"])
+            check_in_comments = args.get("check_in_comments", "")
+            with_auto_append_mode = int(args.get("with_auto_append_mode", 0))
+            do_fill_dependent_fields = bool(args.get("do_fill_dependent_fields", True))
+            run_webclient_flow = bool(args.get("run_webclient_flow", True))
+            index_data_items = args.get("index_data_items") or []
             streams = []
-            for s in (args.get('streams') or []):
-                file_name = s.get('file_name')
-                file_data_base64 = s.get('file_data_base64')
-                file_data_text = s.get('file_data_text')
+            for s in args.get("streams") or []:
+                file_name = s.get("file_name")
+                file_data_base64 = s.get("file_data_base64")
+                file_data_text = s.get("file_data_text")
                 if file_data_text and not file_data_base64:
-                    file_data_base64 = base64.b64encode(file_data_text.encode('utf-8')).decode('ascii')
+                    file_data_base64 = base64.b64encode(
+                        file_data_text.encode("utf-8")
+                    ).decode("ascii")
                 if not file_name:
-                    raise ValueError('stream missing file_name')
+                    raise ValueError("stream missing file_name")
                 if not file_data_base64:
-                    raise ValueError('stream missing file_data_base64 or file_data_text')
-                streams.append({
-                    'FileName': file_name,
-                    'FileDataBase64JSON': file_data_base64,
-                    'NewStreamInsertMode': 0,
-                })
-
+                    raise ValueError(
+                        "stream missing file_data_base64 or file_data_text"
+                    )
+                streams.append(
+                    {
+                        "FileName": file_name,
+                        "FileDataBase64JSON": file_data_base64,
+                        "NewStreamInsertMode": 0,
+                    }
+                )
             if not streams:
-                content_text = args.get('content_text')
+                content_text = args.get("content_text")
                 if content_text is None:
-                    raise ValueError('Either streams or content_text must be provided')
-                filename = args.get('content_filename') or 'document.txt'
-                streams.append(ThereforeClient.make_stream_from_text(filename, content_text))
-
+                    raise ValueError("Either streams or content_text must be provided")
+                filename = args.get("content_filename") or "document.txt"
+                streams.append(
+                    ThereforeClient.make_stream_from_text(filename, content_text)
+                )
             return client.create_document(
                 category_no=category_no,
                 streams=streams,
@@ -2372,161 +1079,672 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 with_auto_append_mode=with_auto_append_mode,
                 do_fill_dependent_fields=do_fill_dependent_fields,
                 run_webclient_flow=run_webclient_flow,
-                persist_evaluate_response_path='/Volumes/DataSSD/source/therefore-mcp/docs/notes/evaluate_conditional_properties.json',
+                persist_evaluate_response_path="/Volumes/DataSSD/source/therefore-mcp/docs/notes/evaluate_conditional_properties.json",
             )
-        if name == 'update_document_index_data':
-            return self._update_document_index_data(args, tenant, client)
-        if name == 'update_document':
+        if op == "update":
             return self._update_document(args, tenant, client)
-        if name == 'add_streams_to_document':
+        if op == "update_index_data":
+            return self._update_document_index_data(args, tenant, client)
+        if op == "add_streams":
             return self._add_streams_to_document(args, tenant, client)
-        if name == 'delete_document':
-            return client.delete_document(int(args['doc_no']))
-        if name == 'check_out_document':
-            return client.check_out_document(
-                doc_no=int(args['doc_no']),
-                version_no=int(args.get('version_no', 0)),
-            )
-        if name == 'check_in_document':
-            return client.check_in_document(
-                doc_no=int(args['doc_no']),
-                check_in_comments=args.get('check_in_comments'),
-                version_no=int(args.get('version_no', 0)),
-            )
-        if name == 'undo_check_out_document':
-            return client.undo_check_out_document(
-                doc_no=int(args['doc_no']),
-                version_no=int(args.get('version_no', 0)),
-            )
-        if name == 'add_comment':
-            return client.add_comment(
-                doc_no=int(args['doc_no']),
-                comment_text=str(args['comment_text']),
-                version_no=int(args.get('version_no', 0)),
-            )
-        if name == 'get_comments':
-            return client.get_comments(
-                doc_no=int(args['doc_no']),
-                version_no=int(args.get('version_no', 0)),
-            )
-        if name == 'complete_task':
-            return client.complete_task(
-                workflow_instance_token=str(args['workflow_instance_token']),
-                task_no=int(args['task_no']),
-                user_decision=args.get('user_decision'),
-                index_data_items=args.get('index_data_items'),
-            )
-        if name == 'claim_workflow_instance':
-            return client.claim_workflow_instance(
-                workflow_instance_token=str(args['workflow_instance_token']),
-                task_no=int(args['task_no']) if args.get('task_no') is not None else None,
-            )
-        if name == 'disclaim_workflow_instance':
-            return client.disclaim_workflow_instance(
-                workflow_instance_token=str(args['workflow_instance_token']),
-                task_no=int(args['task_no']) if args.get('task_no') is not None else None,
-            )
-        if name == 'delegate_workflow_instance':
-            return client.delegate_workflow_instance(
-                workflow_instance_token=str(args['workflow_instance_token']),
-                user_id=int(args['user_id']),
-                task_no=int(args['task_no']) if args.get('task_no') is not None else None,
-            )
-        if name == 'create_case':
-            return client.create_case(
-                case_definition_no=int(args['case_definition_no']),
-                index_data_items=args.get('index_data_items'),
-            )
-        if name == 'get_case':
-            return client.get_case(int(args['case_no']))
-        if name == 'get_case_documents':
-            return client.get_case_documents(
-                case_no=int(args['case_no']),
-                max_rows=int(args.get('max_rows', 1000)),
-            )
-        if name == 'get_case_history':
-            return client.get_case_history(int(args['case_no']))
-        if name == 'create_user':
-            return client.create_user(
-                user_name=str(args['user_name']),
-                full_name=str(args['full_name']),
-                email=args.get('email'),
-                password=args.get('password'),
-                domain_name=args.get('domain_name'),
-            )
-        if name == 'update_user_group_assignment':
-            return client.update_user_group_assignment(
-                user_id=int(args['user_id']),
-                group_ids=args.get('group_ids'),
-            )
-        if name == 'get_user_group_assignment':
-            return client.get_user_group_assignment(int(args['user_id']))
-        if name == 'set_user_password':
-            return client.set_user_password(
-                user_id=int(args['user_id']),
-                new_password=str(args['new_password']),
-            )
-        if name == 'change_user_password':
-            return client.change_user_password(
-                old_password=str(args['old_password']),
-                new_password=str(args['new_password']),
-            )
-        if name == 'reset_user_password':
-            return client.reset_user_password(
-                user_id=int(args['user_id']),
-                send_email=bool(args.get('send_email', True)),
-            )
-        if name == 'delete_portal_user':
-            return client.delete_portal_user(int(args['user_id']))
-        if name == 'save_portal_user':
-            return client.save_portal_user(
-                user_id=int(args['user_id']),
-                user_name=args.get('user_name'),
-                full_name=args.get('full_name'),
-                email=args.get('email'),
-                is_active=args.get('is_active'),
-            )
-        if name == 'move_user_license':
-            return client.move_user_license(
-                source_user_id=int(args['source_user_id']),
-                target_user_id=int(args['target_user_id']),
-            )
-        if name == 'get_user_settings':
-            return client.get_user_settings(int(args['user_id']))
-        if name == 'set_user_settings':
-            return client.set_user_settings(
-                user_id=int(args['user_id']),
-                settings=args['settings'],
-            )
-        if name == 'copy_document':
+        if op == "delete":
+            return client.delete_document(int(args["doc_no"]))
+        if op == "copy":
             return client.copy_document(
-                doc_no=int(args['doc_no']),
-                target_category_no=int(args['target_category_no']) if args.get('target_category_no') is not None else None,
-                index_data_items=args.get('index_data_items'),
+                doc_no=int(args["doc_no"]),
+                target_category_no=int(args["target_category_no"])
+                if args.get("target_category_no") is not None
+                else None,
+                index_data_items=args.get("index_data_items"),
             )
-        if name == 'get_document_versions':
-            return client.get_document_versions(int(args['doc_no']))
-        if name == 'get_converted_doc_streams':
-            return self._get_converted_doc_streams(args, tenant, client)
-        if name == 'get_logfiles':
-            return self._get_logfiles(args, tenant, client)
-        if name == 'get_login_history':
-            return self._get_login_history(args, tenant, client)
-        if name == 'generate_category_config':
-            return self._generate_category_config(args, tenant, client)
+        if op == "check_out":
+            return client.check_out_document(
+                doc_no=int(args["doc_no"]), version_no=int(args.get("version_no", 0))
+            )
+        if op == "check_in":
+            return client.check_in_document(
+                doc_no=int(args["doc_no"]),
+                check_in_comments=args.get("check_in_comments"),
+                version_no=int(args.get("version_no", 0)),
+            )
+        if op == "undo_check_out":
+            return client.undo_check_out_document(
+                doc_no=int(args["doc_no"]), version_no=int(args.get("version_no", 0))
+            )
+        if op == "add_comment":
+            return client.add_comment(
+                doc_no=int(args["doc_no"]),
+                comment_text=str(args["comment_text"]),
+                version_no=int(args.get("version_no", 0)),
+            )
+        if op == "get_comments":
+            return client.get_comments(
+                doc_no=int(args["doc_no"]), version_no=int(args.get("version_no", 0))
+            )
+        raise ValueError(f"Unknown operation '{op}' for therefore_documents")
 
-        raise ValueError(f'Unknown tool: {name}')
+    def _dispatch_query(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "search":
+            query = args["query"]
+            categories = self._extract_category_list(query)
+            if categories and len(categories) > 1:
+                base_query = dict(query)
+                for key in (
+                    "CategoryNos",
+                    "CategoryIDs",
+                    "CategoryIds",
+                    "Categories",
+                    "CategoryList",
+                ):
+                    base_query.pop(key, None)
+                if isinstance(base_query.get("CategoryNo"), (list, tuple, set, str)):
+                    base_query.pop("CategoryNo", None)
+                row_block_size = int(base_query.get("RowBlockSize") or 1000)
+                max_rows = int(base_query.get("MaxRows") or 2147483647)
+                queries = []
+                for cat in categories:
+                    q = dict(base_query)
+                    q["CategoryNo"] = int(cat)
+                    queries.append(q)
+                return client.execute_async_multi_query_all(
+                    queries=queries,
+                    full_text=args.get("full_text"),
+                    row_block_size=row_block_size,
+                    max_rows=max_rows,
+                )
+            return client.execute_single_query(
+                query=query, full_text=args.get("full_text")
+            )
+        if op == "search_async":
+            row_block_size = int(args.get("row_block_size", 1000))
+            max_rows = int(args.get("max_rows", 2147483647))
+            auto_fetch_all = bool(args.get("auto_fetch_all", True))
+            if auto_fetch_all:
+                return client.execute_async_single_query_all(
+                    query=args["query"],
+                    full_text=args.get("full_text"),
+                    row_block_size=row_block_size,
+                    max_rows=max_rows,
+                )
+            return client.execute_async_single_query(
+                query=args["query"], full_text=args.get("full_text")
+            )
+        if op == "search_multi":
+            row_block_size = int(args.get("row_block_size", 1000))
+            max_rows = int(args.get("max_rows", 2147483647))
+            auto_fetch_all = bool(args.get("auto_fetch_all", True))
+            if auto_fetch_all:
+                return client.execute_async_multi_query_all(
+                    queries=args["queries"],
+                    full_text=args.get("full_text"),
+                    row_block_size=row_block_size,
+                    max_rows=max_rows,
+                )
+            return client.execute_async_multi_query(
+                queries=args["queries"], full_text=args.get("full_text")
+            )
+        if op == "search_fulltext":
+            return client.execute_full_text_query(
+                search=args["search"],
+                categories=args.get("categories"),
+                max_rows=int(args.get("max_rows", 100)),
+                include_index_data=bool(args.get("include_index_data", False)),
+                case_no=int(args.get("case_no", 0)),
+            )
+        if op == "get_next_rows":
+            return client.get_next_single_query_rows(
+                query_id=int(args["query_id"]),
+                row_block_size=int(args["row_block_size"]),
+            )
+        if op == "get_next_multi_rows":
+            return client.get_next_multi_query_rows(
+                query_id=int(args["query_id"]),
+                row_block_size=int(args["row_block_size"]),
+            )
+        if op == "release":
+            return client.release_single_query(int(args["query_id"]))
+        if op == "release_multi":
+            return client.release_multi_query(int(args["query_id"]))
+        raise ValueError(f"Unknown operation '{op}' for therefore_query")
 
-    def _generate_category_config(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+    def _dispatch_workflow(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "query_all":
+            return self._execute_workflow_query_for_all(args, tenant, client)
+        if op == "query_process":
+            return self._execute_workflow_query_for_process(args, tenant, client)
+        if op == "get_my_tasks":
+            return self._get_my_workflow_tasks(args, tenant, client)
+        if op == "get_my_instances":
+            a = dict(args or {})
+            a["filter_to_user"] = True
+            output = self._get_workflow_instances_core(a, tenant, client)
+            output["tasks"] = output.get("instances", [])
+            return output
+        if op == "get_all_instances":
+            a = dict(args or {})
+            a["filter_to_user"] = False
+            output = self._get_workflow_instances_core(a, tenant, client)
+            output["tasks"] = output.get("instances", [])
+            return output
+        if op == "get_user_instances":
+            a = dict(args or {})
+            a["filter_to_user"] = True
+            output = self._get_workflow_instances_core(a, tenant, client)
+            output["tasks"] = output.get("instances", [])
+            return output
+        if op == "get_instance":
+            return client.get_workflow_instance(
+                instance_no=int(args["instance_no"]),
+                token_no=int(args.get("token_no", 0)),
+                is_access_mask_needed=bool(args.get("is_access_mask_needed", False)),
+                load_history=bool(args.get("load_history", False)),
+            )
+        if op == "get_process":
+            return client.get_workflow_process(
+                process_no=int(args["process_no"]),
+                version_no=int(args.get("version_no", 0)),
+                load_tasks=bool(args.get("load_tasks", True)),
+                is_access_mask_needed=bool(args.get("is_access_mask_needed", False)),
+            )
+        if op == "get_task_settings":
+            return client.get_workflow_task_settings(
+                task_no=int(args["task_no"]),
+                process_no=int(args["process_no"]),
+                version_no=int(args.get("version_no", 0)),
+                setting_names=args.get("setting_names"),
+            )
+        if op == "get_history":
+            return client.get_workflow_history(
+                instance_no=int(args["instance_no"]),
+                block_size=int(args.get("block_size", 1000)),
+                include_routing_info=bool(args.get("include_routing_info", True)),
+                max_creation_date=args.get("max_creation_date"),
+                seq_pos=int(args.get("seq_pos", 0)),
+            )
+        if op == "get_linked":
+            return client.get_linked_workflows_for_doc(
+                doc_no=int(args["doc_no"]),
+                wf_doc_link_type=int(args.get("wf_doc_link_type", 0)),
+            )
+        if op == "complete_task":
+            return client.complete_task(
+                workflow_instance_token=str(args["workflow_instance_token"]),
+                task_no=int(args["task_no"]),
+                user_decision=args.get("user_decision"),
+                index_data_items=args.get("index_data_items"),
+            )
+        if op == "claim":
+            return client.claim_workflow_instance(
+                workflow_instance_token=str(args["workflow_instance_token"]),
+                task_no=int(args["task_no"])
+                if args.get("task_no") is not None
+                else None,
+            )
+        if op == "disclaim":
+            return client.disclaim_workflow_instance(
+                workflow_instance_token=str(args["workflow_instance_token"]),
+                task_no=int(args["task_no"])
+                if args.get("task_no") is not None
+                else None,
+            )
+        if op == "delegate":
+            return client.delegate_workflow_instance(
+                workflow_instance_token=str(args["workflow_instance_token"]),
+                user_id=int(args["user_id"]),
+                task_no=int(args["task_no"])
+                if args.get("task_no") is not None
+                else None,
+            )
+        if op == "create_case":
+            return client.create_case(
+                case_definition_no=int(args["case_definition_no"]),
+                index_data_items=args.get("index_data_items"),
+            )
+        if op == "get_case":
+            return client.get_case(int(args["case_no"]))
+        if op == "get_case_documents":
+            return client.get_case_documents(
+                case_no=int(args["case_no"]), max_rows=int(args.get("max_rows", 1000))
+            )
+        if op == "get_case_history":
+            return client.get_case_history(int(args["case_no"]))
+        raise ValueError(f"Unknown operation '{op}' for therefore_workflow")
+
+    def _dispatch_users(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "search":
+            domain_names = args.get("domain_names")
+            if domain_names is None:
+                try:
+                    domain_info = client.get_domain_info() or {}
+                    domain_names = domain_info.get("DomainNames") or []
+                except Exception:
+                    domain_names = None
+            return client.execute_users_query(
+                query=args["query"],
+                domain_names=domain_names,
+                flags=int(args.get("flags", 5)),
+            )
+        if op == "get_from_group":
+            return client.get_users_from_group(
+                group_id=args.get("group_id"),
+                group_name=args.get("group_name"),
+                domain_name=args.get("domain_name"),
+            )
+        if op == "get_details":
+            return client.get_user_details(int(args["user_or_group_id"]))
+        if op == "create":
+            return client.create_user(
+                user_name=str(args["user_name"]),
+                full_name=str(args["full_name"]),
+                email=args.get("email"),
+                password=args.get("password"),
+                domain_name=args.get("domain_name"),
+            )
+        if op == "update_groups":
+            return client.update_user_group_assignment(
+                user_id=int(args["user_id"]), group_ids=args.get("group_ids")
+            )
+        if op == "get_groups":
+            return client.get_user_group_assignment(int(args["user_id"]))
+        if op == "set_password":
+            return client.set_user_password(
+                user_id=int(args["user_id"]), new_password=str(args["new_password"])
+            )
+        if op == "change_password":
+            return client.change_user_password(
+                old_password=str(args["old_password"]),
+                new_password=str(args["new_password"]),
+            )
+        if op == "reset_password":
+            return client.reset_user_password(
+                user_id=int(args["user_id"]),
+                send_email=bool(args.get("send_email", True)),
+            )
+        if op == "delete_portal":
+            return client.delete_portal_user(int(args["user_id"]))
+        if op == "save_portal":
+            return client.save_portal_user(
+                user_id=int(args["user_id"]),
+                user_name=args.get("user_name"),
+                full_name=args.get("full_name"),
+                email=args.get("email"),
+                is_active=args.get("is_active"),
+            )
+        if op == "move_license":
+            return client.move_user_license(
+                source_user_id=int(args["source_user_id"]),
+                target_user_id=int(args["target_user_id"]),
+            )
+        if op == "get_settings":
+            return client.get_user_settings(int(args["user_id"]))
+        if op == "set_settings":
+            return client.set_user_settings(
+                user_id=int(args["user_id"]), settings=args["settings"]
+            )
+        raise ValueError(f"Unknown operation '{op}' for therefore_users")
+
+    def _dispatch_keywords(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "get_by_field":
+            return client.get_keywords_by_field_no(
+                field_no=int(args["field_no"]),
+                category_no=args.get("category_no"),
+                case_definition_no=args.get("case_definition_no"),
+                dependent_field_filter_value=args.get("dependent_field_filter_value"),
+                show_deactivated_keywords=args.get("show_deactivated_keywords"),
+                index_data_items=args.get("index_data_items"),
+                skip_loading_keyword_nos=args.get("skip_loading_keyword_nos"),
+                max_rows=args.get("max_rows"),
+            )
+        if op == "get_by_dictionary":
+            return client.get_keywords_by_key_dic(
+                key_dic_no=int(args["key_dic_no"]),
+                filter_value=args.get("filter_value"),
+                max_values=args.get("max_values"),
+                include_deactivated_keywords=args.get("include_deactivated_keywords"),
+            )
+        if op == "get_by_name":
+            return self._get_keywords_by_dictionary_name(args, tenant, client)
+        if op == "validate":
+            return client.validate_keywords(
+                field_no=int(args["field_no"]),
+                keywords=args.get("keywords") or [],
+                is_filter_mode=args.get("is_filter_mode"),
+            )
+        if op == "add":
+            return self._add_dictionary_keyword(args, tenant, client)
+        if op == "update":
+            return self._update_dictionary_keyword(args, tenant, client)
+        if op == "delete":
+            return self._delete_dictionary_keyword(args, tenant, client)
+        if op == "deactivate":
+            return self._deactivate_dictionary_keyword(args, tenant, client)
+        raise ValueError(f"Unknown operation '{op}' for therefore_keywords")
+
+    def _dispatch_knowledge(self, args, tenant, client):
+        op = args.get("operation")
+        if op == "search":
+            return self._search_therefore_knowledge(args)
+        if op == "get_workflow":
+            return self._get_therefore_workflow(args)
+        if op == "get_field_types":
+            return self._get_therefore_field_type_info(args)
+        if op == "get_pattern":
+            return self._get_therefore_common_pattern(args)
+        if op == "get_quirks":
+            # Remap search_term to search
+            args["search"] = args.get("search_term")
+            return self._get_therefore_api_quirks(args)
+        if op == "list_all":
+            return self._list_therefore_knowledge()
+        if op == "get_api_help":
+            # Remap api_operation to operation
+            args["operation"] = args.get("api_operation")
+            return self._get_therefore_api_help(args, tenant, client)
+        raise ValueError(f"Unknown operation '{op}' for therefore_knowledge")
+
+    def _execute_workflow_query_for_all(self, args, tenant, client):
+        debug_enabled = bool(args.get("debug", False))
+        debug_log_path = args.get("debug_log_path")
+        debug_progress_every = int(args.get("debug_progress_every") or 500)
+        debug_info: Dict[str, Any] = (
+            {
+                "workflow_query": {},
+                "instance_details": {},
+            }
+            if debug_enabled
+            else {}
+        )
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "start",
+                    "workflow_flags": args.get("workflow_flags"),
+                    "max_rows": args.get("max_rows"),
+                    "detail_mode": args.get("instance_detail_mode"),
+                },
+            )
+        if args.get("max_rows") is None:
+            max_rows = self._default_workflow_max_rows(client)
+        else:
+            max_rows = int(args.get("max_rows", 1000))
+        workflow_flags = self._normalize_workflow_flags(args.get("workflow_flags", 0))
+        start = time.time()
+        try:
+            resp = client.execute_workflow_query_for_all(
+                workflow_flags=workflow_flags,
+                max_rows=max_rows,
+            )
+        except Exception as exc:
+            if debug_enabled:
+                debug_info["workflow_query"] = {
+                    "workflow_flags": workflow_flags,
+                    "max_rows": max_rows,
+                    "duration_ms": int((time.time() - start) * 1000),
+                    "error": str(exc),
+                }
+                if debug_log_path:
+                    self._debug_log(
+                        debug_log_path,
+                        {
+                            "event": "workflow_query_error",
+                            "workflow_flags": workflow_flags,
+                            "max_rows": max_rows,
+                            "error": str(exc),
+                        },
+                    )
+                return {"error": str(exc), "debug": debug_info}
+            raise
+        if debug_enabled:
+            debug_info["workflow_query"] = {
+                "workflow_flags": workflow_flags,
+                "max_rows": max_rows,
+                "duration_ms": int((time.time() - start) * 1000),
+            }
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "workflow_query_done",
+                    "workflow_flags": workflow_flags,
+                    "max_rows": max_rows,
+                    "duration_ms": int((time.time() - start) * 1000),
+                },
+            )
+        if not args.get("include_instance_details"):
+            output = (
+                {"workflow_query": resp, "debug": debug_info} if debug_enabled else resp
+            )
+            if debug_log_path:
+                self._debug_log(debug_log_path, {"event": "done"})
+            return output
+        detail_mode = str(args.get("instance_detail_mode") or "summary").strip().lower()
+        if detail_mode == "none":
+            detail_mode = "summary"
+        tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
+        max_rows_reached = len(tasks) == max_rows
+        details_start = time.time()
+        details, detail_errors = self._fetch_workflow_instance_details(
+            client,
+            tasks,
+            max_workers=int(args.get("max_instance_workers") or 4),
+            is_access_mask_needed=bool(args.get("is_access_mask_needed", False)),
+            load_history=bool(args.get("load_history", False)),
+            debug_log_path=debug_log_path,
+            debug_progress_every=debug_progress_every,
+        )
+        if debug_enabled:
+            debug_info["instance_details"] = {
+                "mode": detail_mode,
+                "requested": len(tasks),
+                "loaded": len(details),
+                "failed": len(detail_errors),
+                "duration_ms": int((time.time() - details_start) * 1000),
+                "errors_sample": detail_errors[:10],
+            }
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "instance_details_done",
+                    "requested": len(tasks),
+                    "loaded": len(details),
+                    "failed": len(detail_errors),
+                    "duration_ms": int((time.time() - details_start) * 1000),
+                },
+            )
+        self._attach_instance_details(tasks, details, detail_errors, detail_mode)
+        output = {
+            "workflow_query": resp,
+            "instances": tasks,
+            "user_field_labels": user_field_labels,
+            "max_rows": max_rows,
+            "max_rows_reached": max_rows_reached,
+            "total_count": len(tasks),
+            "note": "Reached max_rows; results may be truncated. Increase max_rows to fetch more."
+            if max_rows_reached
+            else None,
+            "instance_detail_mode": detail_mode,
+            "instance_details_loaded": len(details),
+            "instance_details_failed": len(detail_errors),
+            "instance_detail_errors": detail_errors,
+            "debug": debug_info if debug_enabled else None,
+        }
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "done",
+                    "total_count": len(tasks),
+                    "max_rows_reached": max_rows_reached,
+                },
+            )
+        return output
+
+    def _execute_workflow_query_for_process(self, args, tenant, client):
+        debug_enabled = bool(args.get("debug", False))
+        debug_log_path = args.get("debug_log_path")
+        debug_progress_every = int(args.get("debug_progress_every") or 500)
+        debug_info: Dict[str, Any] = (
+            {
+                "workflow_query": {},
+                "instance_details": {},
+            }
+            if debug_enabled
+            else {}
+        )
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "start",
+                    "process_no": args.get("process_no"),
+                    "workflow_flags": args.get("workflow_flags"),
+                    "max_rows": args.get("max_rows"),
+                    "detail_mode": args.get("instance_detail_mode"),
+                },
+            )
+        if args.get("max_rows") is None:
+            max_rows = self._default_workflow_max_rows(client)
+        else:
+            max_rows = int(args.get("max_rows", 1000))
+        workflow_flags = self._normalize_workflow_flags(args.get("workflow_flags", 0))
+        process_no = int(args["process_no"])
+        start = time.time()
+        try:
+            resp = client.execute_workflow_query_for_process(
+                process_no=process_no,
+                workflow_flags=workflow_flags,
+                max_rows=max_rows,
+            )
+        except Exception as exc:
+            if debug_enabled:
+                debug_info["workflow_query"] = {
+                    "process_no": process_no,
+                    "workflow_flags": workflow_flags,
+                    "max_rows": max_rows,
+                    "duration_ms": int((time.time() - start) * 1000),
+                    "error": str(exc),
+                }
+                if debug_log_path:
+                    self._debug_log(
+                        debug_log_path,
+                        {
+                            "event": "workflow_query_error",
+                            "process_no": process_no,
+                            "workflow_flags": workflow_flags,
+                            "max_rows": max_rows,
+                            "error": str(exc),
+                        },
+                    )
+                return {"error": str(exc), "debug": debug_info}
+            raise
+        if debug_enabled:
+            debug_info["workflow_query"] = {
+                "process_no": process_no,
+                "workflow_flags": workflow_flags,
+                "max_rows": max_rows,
+                "duration_ms": int((time.time() - start) * 1000),
+            }
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "workflow_query_done",
+                    "process_no": process_no,
+                    "workflow_flags": workflow_flags,
+                    "max_rows": max_rows,
+                    "duration_ms": int((time.time() - start) * 1000),
+                },
+            )
+        if not args.get("include_instance_details"):
+            output = (
+                {"workflow_query": resp, "debug": debug_info} if debug_enabled else resp
+            )
+            if debug_log_path:
+                self._debug_log(debug_log_path, {"event": "done"})
+            return output
+        detail_mode = str(args.get("instance_detail_mode") or "summary").strip().lower()
+        if detail_mode == "none":
+            detail_mode = "summary"
+        tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
+        max_rows_reached = len(tasks) == max_rows
+        details_start = time.time()
+        details, detail_errors = self._fetch_workflow_instance_details(
+            client,
+            tasks,
+            max_workers=int(args.get("max_instance_workers") or 4),
+            is_access_mask_needed=bool(args.get("is_access_mask_needed", False)),
+            load_history=bool(args.get("load_history", False)),
+            debug_log_path=debug_log_path,
+            debug_progress_every=debug_progress_every,
+        )
+        if debug_enabled:
+            debug_info["instance_details"] = {
+                "mode": detail_mode,
+                "requested": len(tasks),
+                "loaded": len(details),
+                "failed": len(detail_errors),
+                "duration_ms": int((time.time() - details_start) * 1000),
+                "errors_sample": detail_errors[:10],
+            }
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "instance_details_done",
+                    "requested": len(tasks),
+                    "loaded": len(details),
+                    "failed": len(detail_errors),
+                    "duration_ms": int((time.time() - details_start) * 1000),
+                },
+            )
+        self._attach_instance_details(tasks, details, detail_errors, detail_mode)
+        output = {
+            "workflow_query": resp,
+            "instances": tasks,
+            "user_field_labels": user_field_labels,
+            "max_rows": max_rows,
+            "max_rows_reached": max_rows_reached,
+            "total_count": len(tasks),
+            "note": "Reached max_rows; results may be truncated. Increase max_rows to fetch more."
+            if max_rows_reached
+            else None,
+            "instance_detail_mode": detail_mode,
+            "instance_details_loaded": len(details),
+            "instance_details_failed": len(detail_errors),
+            "instance_detail_errors": detail_errors,
+            "debug": debug_info if debug_enabled else None,
+        }
+        if debug_log_path:
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "done",
+                    "total_count": len(tasks),
+                    "max_rows_reached": max_rows_reached,
+                },
+            )
+        return output
+
+    def _generate_category_config(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
         import xml.etree.ElementTree as ET
         from generate import spec_from_mapping, parse_description, build_delta_xml
 
-        spec_obj = args.get('spec')
-        description = args.get('description')
+        spec_obj = args.get("spec")
+        description = args.get("description")
         if spec_obj and description:
             raise ValueError("Provide either 'spec' or 'description', not both.")
         if not spec_obj and not description:
-            raise ValueError("Provide either 'spec' (structured JSON) or 'description' (natural language text).")
+            raise ValueError(
+                "Provide either 'spec' (structured JSON) or 'description' (natural language text)."
+            )
 
         if spec_obj:
             spec = spec_from_mapping(spec_obj)
@@ -2534,56 +1752,453 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             spec = parse_description(description)
 
         # Baseline is only used when explicitly provided for diff-mode collision checks
-        baseline_path = args.get('baseline_path')
+        baseline_path = args.get("baseline_path")
         if baseline_path and not os.path.isfile(baseline_path):
             raise ValueError(f"Baseline file not found: {baseline_path}")
 
         # API check: reuse the existing authenticated client by default
-        api_check = args.get('api_check', True)
+        api_check = args.get("api_check", True)
         api_client = client if api_check else None
 
-        tree = build_delta_xml(spec, baseline_path, api_client=api_client, interactive=False)
-        xml_content = ET.tostring(tree.getroot(), encoding='unicode')
+        tree = build_delta_xml(
+            spec, baseline_path, api_client=api_client, interactive=False
+        )
+        xml_content = ET.tostring(tree.getroot(), encoding="unicode")
 
         # Write output file
-        output_path = args.get('output_path')
+        output_path = args.get("output_path")
         if not output_path:
-            slug = re.sub(r'[^A-Za-z0-9]+', '_', spec.name).strip('_').lower()
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_dir = os.path.join(_REPO_ROOT, 'docs', 'notes', 'generated_configs')
+            slug = re.sub(r"[^A-Za-z0-9]+", "_", spec.name).strip("_").lower()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = os.path.join(_REPO_ROOT, "docs", "notes", "generated_configs")
             os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, f'{slug}-{timestamp}-delta.xml')
+            output_path = os.path.join(output_dir, f"{slug}-{timestamp}-delta.xml")
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             f.write(xml_content)
 
         field_names = [fld.name for fld in spec.fields]
         return {
-            'xml_content': xml_content,
-            'category_name': spec.name,
-            'folder': spec.folder or '(auto-generated)',
-            'fields_count': len(spec.fields),
-            'field_names': field_names,
-            'output_file': output_path,
-            'note': (
-                'Delta XML generated successfully. Import this file into Therefore using '
-                'Administration > Configuration > Import to create the category.'
+            "xml_content": xml_content,
+            "category_name": spec.name,
+            "folder": spec.folder or "(auto-generated)",
+            "fields_count": len(spec.fields),
+            "field_names": field_names,
+            "output_file": output_path,
+            "note": (
+                "Delta XML generated successfully. Import this file into Therefore using "
+                "Administration > Configuration > Import to create the category."
             ),
         }
 
+    # Knowledge base tool handlers
+    def _ask_therefore_expert(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        """
+        Lightweight knowledge search that suggests which tool to use.
+        Returns documentation + tool name, but does NOT execute tools.
+        This keeps the function simple and puts tool execution back in the AI's hands.
+        """
+        question = args["question"].lower()
+
+        # Simple keyword -> tool+operation mapping (no execution, just suggestions)
+        tool_suggestions = {
+            "customer id": {"tool": "therefore_system", "operation": "get_customer_id"},
+            "client id": {"tool": "therefore_system", "operation": "get_customer_id"},
+            "system id": {"tool": "therefore_system", "operation": "get_customer_id"},
+            "tenant id": {"tool": "therefore_system", "operation": "get_customer_id"},
+            "categories": {"tool": "therefore_categories", "operation": "get_tree"},
+            "category tree": {"tool": "therefore_categories", "operation": "get_tree"},
+            "list categories": {
+                "tool": "therefore_categories",
+                "operation": "get_tree",
+            },
+            "logs": {"tool": "therefore_system", "operation": "get_logfiles"},
+            "log summary": {"tool": "therefore_system", "operation": "get_logfiles"},
+            "users": {"tool": "therefore_users", "operation": "search"},
+            "user list": {"tool": "therefore_users", "operation": "search"},
+            "connection": {
+                "tool": "therefore_system",
+                "operation": "get_connected_user",
+            },
+            "connected": {
+                "tool": "therefore_system",
+                "operation": "get_connected_user",
+            },
+        }
+
+        # Check for direct tool suggestion
+        suggested_tool = None
+        for keyword, suggestion in tool_suggestions.items():
+            if keyword in question:
+                suggested_tool = suggestion
+                break
+
+        # Search knowledge base
+        from knowledge_tools import search_knowledge
+
+        results = search_knowledge(question, limit=3)
+
+        # Build response
+        response = {"question": args["question"]}
+
+        if suggested_tool:
+            tool_name = suggested_tool["tool"]
+            operation = suggested_tool["operation"]
+            response["suggested_tool"] = tool_name
+            response["suggested_operation"] = operation
+            response["NEXT_ACTION"] = f"Call {tool_name} with operation: {operation}"
+            response["WARNING"] = (
+                "This is NOT the final answer - you must call the suggested tool to get actual data"
+            )
+            response["answer"] = (
+                f"⚠️ IMPORTANT: This is just a suggestion, NOT the answer!\n\n"
+                f'NEXT STEP: Call `{tool_name}` with `operation: "{operation}"` to get the actual data.\n\n'
+                f"DO NOT use call_endpoint - use the specific tool and operation instead."
+            )
+
+        if results:
+            top_result = results[0]
+            response["documentation"] = self._format_knowledge_result(top_result)
+            response["result_type"] = top_result["type"]
+
+            if not suggested_tool:
+                response["answer"] = self._format_knowledge_result(top_result)
+
+        if not suggested_tool and not results:
+            response["answer"] = (
+                "No direct match found. Try:\n"
+                "1. Use therefore_categories with operation: get_tree to explore available categories\n"
+                "2. Use therefore_system with operation: get_customer_id for customer/client/tenant ID\n"
+                "3. Use therefore_knowledge with operation: get_api_help for official API documentation"
+            )
+            response["suggested_tool"] = "therefore_categories"
+            response["suggested_operation"] = "get_tree"
+            response["NEXT_ACTION"] = (
+                "Call therefore_categories with operation: get_tree"
+            )
+
+        return response
+
+    def _format_knowledge_result(self, result: Dict[str, Any]) -> str:
+        """Format a knowledge search result into a clear answer."""
+        result_type = result.get("type")
+
+        if result_type == "workflow":
+            workflow = result.get("data", {})
+            steps = workflow.get("steps", [])
+            steps_summary = "\n".join(
+                [
+                    f"{step['step']}. {step['operation']}"
+                    for step in steps[:4]  # First 4 steps
+                ]
+            )
+            return f"{workflow.get('name')}\n\n{steps_summary}\n\nUse get_therefore_workflow for full details."
+
+        elif result_type == "pattern":
+            pattern = result.get("data", {})
+            return f"{pattern.get('description')}\n\nPattern: {pattern.get('pattern')}\n\nUse get_therefore_common_pattern for code examples."
+
+        elif result_type == "quirk":
+            quirk = result.get("data", {})
+            return f"Issue: {quirk.get('issue')}\nWorkaround: {quirk.get('workaround')}"
+
+        else:
+            return result.get("description", "See search results for details")
+
+    def _search_therefore_knowledge(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Search the Therefore API knowledge base."""
+        try:
+            from knowledge_tools import search_knowledge
+
+            query = args["query"]
+            limit = args.get("limit", 5)
+            results = search_knowledge(query, limit)
+
+            return {
+                "query": query,
+                "results_count": len(results),
+                "results": results,
+                "note": (
+                    "Found relevant Therefore API documentation. Each result includes "
+                    "type (workflow/pattern/quirk), description, and full data."
+                ),
+            }
+        except Exception as e:
+            return {
+                "error": f"Knowledge search failed: {str(e)}",
+                "query": args.get("query"),
+                "note": "Ensure knowledge_tools.py and knowledge-base.json are present in the project.",
+            }
+
+    def _get_therefore_workflow(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Get detailed workflow guide."""
+        try:
+            from knowledge_tools import get_workflow_guide
+
+            workflow_name = args["workflow_name"]
+            workflow = get_workflow_guide(workflow_name)
+
+            if "error" in workflow:
+                return workflow
+
+            return {
+                "workflow_name": workflow_name,
+                "name": workflow.get("name"),
+                "description": workflow.get("description"),
+                "use_cases": workflow.get("use_cases", []),
+                "steps": workflow.get("steps", []),
+                "code_examples": workflow.get("code_examples", {}),
+                "common_errors": workflow.get("common_errors", []),
+                "note": (
+                    f"Complete {len(workflow.get('steps', []))}-step workflow guide. "
+                    "Each step includes operation, endpoint, request template, and response fields."
+                ),
+            }
+        except Exception as e:
+            return {
+                "error": f"Workflow retrieval failed: {str(e)}",
+                "workflow_name": args.get("workflow_name"),
+            }
+
+    def _get_therefore_field_type_info(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Get field type information."""
+        try:
+            from knowledge_tools import get_field_type_info
+
+            field_type = args["field_type"]
+            info = get_field_type_info(field_type)
+
+            if "error" in info:
+                return info
+
+            return {
+                "field_type": field_type,
+                "name": info.get("name"),
+                "index_data_type": info.get("index_data_type"),
+                "structure": info.get("structure", {}),
+                "example": info.get("example", {}),
+                "validation": info.get("validation", {}),
+                "note": (
+                    f"Field type details for {info.get('name')}. Use the provided structure "
+                    "when creating or updating documents with this field type."
+                ),
+            }
+        except Exception as e:
+            return {
+                "error": f"Field type info retrieval failed: {str(e)}",
+                "field_type": args.get("field_type"),
+            }
+
+    def _get_therefore_common_pattern(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Get common coding pattern."""
+        try:
+            from knowledge_tools import get_common_pattern
+
+            pattern_name = args["pattern_name"]
+            pattern = get_common_pattern(pattern_name)
+
+            if "error" in pattern:
+                return pattern
+
+            return {
+                "pattern_name": pattern_name,
+                "description": pattern.get("description"),
+                "pattern": pattern.get("pattern"),
+                "example_python": pattern.get("example_python"),
+                "example_javascript": pattern.get("example_javascript"),
+                "note": (
+                    f"Common pattern guide for {pattern_name}. Includes examples in "
+                    "multiple programming languages."
+                ),
+            }
+        except Exception as e:
+            return {
+                "error": f"Pattern retrieval failed: {str(e)}",
+                "pattern_name": args.get("pattern_name"),
+            }
+
+    def _get_therefore_api_quirks(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Get API quirks and workarounds."""
+        try:
+            from knowledge_tools import get_api_quirks
+
+            search = args.get("search")
+            quirks = get_api_quirks(search)
+
+            return {
+                "search": search,
+                "quirks_count": len(quirks),
+                "quirks": quirks,
+                "note": (
+                    f"Found {len(quirks)} API quirk(s). Each includes issue description, "
+                    "explanation, affected operations, and workaround."
+                ),
+            }
+        except Exception as e:
+            return {
+                "error": f"Quirks retrieval failed: {str(e)}",
+                "search": args.get("search"),
+            }
+
+    def _list_therefore_knowledge(self) -> Dict[str, Any]:
+        """List all available knowledge resources."""
+        try:
+            from knowledge_tools import list_available_knowledge
+
+            knowledge = list_available_knowledge()
+
+            return {
+                "available_knowledge": knowledge,
+                "note": (
+                    "Available Therefore API knowledge resources. Use the specific tools "
+                    "(get_therefore_workflow, etc.) to retrieve detailed information."
+                ),
+            }
+        except Exception as e:
+            return {
+                "error": f"Knowledge listing failed: {str(e)}",
+                "note": "Ensure knowledge_tools.py and knowledge-base.json are present in the project.",
+            }
+
+    def _get_therefore_api_help(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        """Fetch live Therefore API help documentation."""
+        import urllib.request
+        import urllib.parse
+        from html.parser import HTMLParser
+
+        operation = args.get("operation")
+        format_type = args.get("format", "text")
+
+        # Build help URL
+        base_url = client.base_url
+        if operation:
+            # Specific operation help
+            help_url = f"{base_url}/help/operations/{urllib.parse.quote(operation)}"
+        else:
+            # Main help index
+            help_url = f"{base_url}/help"
+
+        try:
+            # Fetch help content
+            req = urllib.request.Request(help_url, headers=client._headers())
+            with urllib.request.urlopen(
+                req, context=client.ctx, timeout=30
+            ) as response:
+                content = response.read().decode("utf-8")
+
+            if format_type == "html":
+                return {
+                    "url": help_url,
+                    "operation": operation,
+                    "content": content,
+                    "format": "html",
+                    "note": "Raw HTML content from Therefore API help endpoint",
+                }
+
+            elif format_type == "text":
+                # Parse HTML to extract text
+                class TextExtractor(HTMLParser):
+                    def __init__(self):
+                        super().__init__()
+                        self.text = []
+                        self.in_script = False
+                        self.in_style = False
+
+                    def handle_starttag(self, tag, attrs):
+                        if tag == "script":
+                            self.in_script = True
+                        elif tag == "style":
+                            self.in_style = True
+
+                    def handle_endtag(self, tag):
+                        if tag == "script":
+                            self.in_script = False
+                        elif tag == "style":
+                            self.in_style = False
+
+                    def handle_data(self, data):
+                        if not self.in_script and not self.in_style:
+                            text = data.strip()
+                            if text:
+                                self.text.append(text)
+
+                parser = TextExtractor()
+                parser.feed(content)
+                text_content = "\n".join(parser.text)
+
+                return {
+                    "url": help_url,
+                    "operation": operation,
+                    "content": text_content,
+                    "format": "text",
+                    "note": (
+                        "Parsed text from Therefore API help. For structured data, "
+                        'see docs/export/tenant_operations.json or use format="html".'
+                    ),
+                }
+
+            else:  # json format
+                # Try to extract JSON examples from HTML
+                import re
+
+                json_blocks = re.findall(r"<pre[^>]*>(.*?)</pre>", content, re.DOTALL)
+
+                return {
+                    "url": help_url,
+                    "operation": operation,
+                    "json_blocks": json_blocks[:5] if json_blocks else [],
+                    "format": "json",
+                    "note": (
+                        f"Found {len(json_blocks)} code blocks. For complete structured API docs, "
+                        "see docs/export/tenant_operations.json"
+                    ),
+                }
+
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return {
+                    "error": f"Help not found for operation: {operation}"
+                    if operation
+                    else "Help endpoint not found",
+                    "url": help_url,
+                    "status_code": 404,
+                    "note": (
+                        "Operation may not exist or help may not be available. "
+                        "Try list_therefore_knowledge to see documented operations."
+                    ),
+                }
+            else:
+                return {
+                    "error": f"HTTP error {e.code}: {e.reason}",
+                    "url": help_url,
+                    "status_code": e.code,
+                }
+        except Exception as e:
+            return {
+                "error": f"Failed to fetch help: {str(e)}",
+                "url": help_url,
+                "note": "Check that the Therefore server is accessible and the operation name is correct.",
+            }
+
     def _resolve_tenant(self, args: Dict[str, Any]) -> str:
         tenant_raw = (
-            args.get('tenant')
-            or args.get('tenant_name')
-            or args.get('tenantName')
+            args.get("tenant") or args.get("tenant_name") or args.get("tenantName")
         )
         if tenant_raw:
             key = normalize_tenant_key(str(tenant_raw))
             if key in self.clients:
                 self._last_tenant = key
                 return key
-            available = ', '.join(self.tenant_labels.get(k, k) for k in self.clients.keys())
-            raise ValueError(f'Unknown tenant "{tenant_raw}". Available tenants: {available}')
+            available = ", ".join(
+                self.tenant_labels.get(k, k) for k in self.clients.keys()
+            )
+            raise ValueError(
+                f'Unknown tenant "{tenant_raw}". Available tenants: {available}'
+            )
 
         inferred = self._infer_tenant_from_args(args)
         if inferred:
@@ -2598,8 +2213,10 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if len(self.clients) == 1:
             return next(iter(self.clients.keys()))
 
-        available = ', '.join(self.tenant_labels.get(k, k) for k in self.clients.keys())
-        raise ValueError(f'Multiple tenants configured. Please provide tenant. Available tenants: {available}')
+        available = ", ".join(self.tenant_labels.get(k, k) for k in self.clients.keys())
+        raise ValueError(
+            f"Multiple tenants configured. Please provide tenant. Available tenants: {available}"
+        )
 
     def _infer_tenant_from_args(self, args: Dict[str, Any]) -> Optional[str]:
         if not args or not self.clients or len(self.clients) == 1:
@@ -2607,7 +2224,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
         texts: List[str] = []
 
-        hint = args.get('tenant_hint')
+        hint = args.get("tenant_hint")
         if isinstance(hint, str) and hint.strip():
             texts.append(hint.strip())
 
@@ -2619,7 +2236,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 # Skip likely base64 blobs / huge payloads.
                 if len(val) > 2000:
                     return
-                if len(val) > 64 and re.fullmatch(r'[A-Za-z0-9+/=]+', val):
+                if len(val) > 64 and re.fullmatch(r"[A-Za-z0-9+/=]+", val):
                     return
                 texts.append(val)
                 return
@@ -2681,8 +2298,8 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
     @staticmethod
     def _normalize_text(text: str) -> str:
         text = text.lower()
-        text = re.sub(r'[^a-z0-9]+', ' ', text)
-        return ' '.join(text.split())
+        text = re.sub(r"[^a-z0-9]+", " ", text)
+        return " ".join(text.split())
 
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize_text(query)
@@ -2716,7 +2333,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     continue
             return out or None
         if isinstance(value, str):
-            parts = [p for p in re.split(r'[\\s,;]+', value.strip()) if p]
+            parts = [p for p in re.split(r"[\\s,;]+", value.strip()) if p]
             out = []
             for p in parts:
                 try:
@@ -2731,7 +2348,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if value is None:
             return None
         if isinstance(value, str):
-            parts = [p.strip() for p in re.split(r'[;,]+', value) if p.strip()]
+            parts = [p.strip() for p in re.split(r"[;,]+", value) if p.strip()]
             return parts or None
         if isinstance(value, (list, tuple, set)):
             out = []
@@ -2747,27 +2364,38 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
     def _extract_category_list(self, query: Dict[str, Any]) -> Optional[List[int]]:
         if not isinstance(query, dict):
             return None
-        for key in ('CategoryNo', 'CategoryNos', 'CategoryIDs', 'CategoryIds', 'Categories', 'CategoryList'):
+        for key in (
+            "CategoryNo",
+            "CategoryNos",
+            "CategoryIDs",
+            "CategoryIds",
+            "Categories",
+            "CategoryList",
+        ):
             if key in query:
                 return self._coerce_int_list(query.get(key))
         return None
 
-    def _flatten_tree(self, items: List[Dict[str, Any]], parent_path: str = '') -> List[Dict[str, Any]]:
+    def _flatten_tree(
+        self, items: List[Dict[str, Any]], parent_path: str = ""
+    ) -> List[Dict[str, Any]]:
         out: List[Dict[str, Any]] = []
         for item in items:
-            name = item.get('Name') or ''
+            name = item.get("Name") or ""
             path = f"{parent_path}/{name}" if parent_path else name
-            out.append({
-                'name': name,
-                'path': path,
-                'item_no': item.get('ItemNo'),
-                'item_type': item.get('ItemType'),
-                'folder_type': item.get('FolderType'),
-                'parent_case_def_no': item.get('ParentCaseDefNo'),
-                'parent_folder_no': item.get('ParentFolderNo'),
-                'guid': item.get('Guid'),
-            })
-            children = item.get('ChildItems') or []
+            out.append(
+                {
+                    "name": name,
+                    "path": path,
+                    "item_no": item.get("ItemNo"),
+                    "item_type": item.get("ItemType"),
+                    "folder_type": item.get("FolderType"),
+                    "parent_case_def_no": item.get("ParentCaseDefNo"),
+                    "parent_folder_no": item.get("ParentFolderNo"),
+                    "guid": item.get("Guid"),
+                }
+            )
+            children = item.get("ChildItems") or []
             if children:
                 out.extend(self._flatten_tree(children, path))
         return out
@@ -2777,35 +2405,41 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         seen: set = set()
 
         def record(obj: Dict[str, Any]) -> None:
-            name = obj.get('Name') or obj.get('name') or ''
+            name = obj.get("Name") or obj.get("name") or ""
             if not name:
                 return
-            item_no = obj.get('ItemNo')
+            item_no = obj.get("ItemNo")
             if item_no is None:
-                item_no = obj.get('ID')
+                item_no = obj.get("ID")
             if item_no is None:
-                item_no = obj.get('Id')
+                item_no = obj.get("Id")
             if item_no is None:
-                item_no = obj.get('Number')
+                item_no = obj.get("Number")
             key = (name, str(item_no))
             if key in seen:
                 return
             seen.add(key)
-            items.append({
-                'name': name,
-                'item_no': item_no,
-                'id': obj.get('ID') or obj.get('Id'),
-                'item_type': obj.get('ItemType') or obj.get('Type') or obj.get('TypeNo'),
-                'folder_type': obj.get('FolderType'),
-                'parent_case_def_no': obj.get('ParentCaseDefNo'),
-                'parent_folder_no': obj.get('ParentFolderNo'),
-                'guid': obj.get('Guid'),
-                'data': obj.get('Data'),
-            })
+            items.append(
+                {
+                    "name": name,
+                    "item_no": item_no,
+                    "id": obj.get("ID") or obj.get("Id"),
+                    "item_type": obj.get("ItemType")
+                    or obj.get("Type")
+                    or obj.get("TypeNo"),
+                    "folder_type": obj.get("FolderType"),
+                    "parent_case_def_no": obj.get("ParentCaseDefNo"),
+                    "parent_folder_no": obj.get("ParentFolderNo"),
+                    "guid": obj.get("Guid"),
+                    "data": obj.get("Data"),
+                }
+            )
 
         def walk(node: Any) -> None:
             if isinstance(node, dict):
-                if ('Name' in node or 'name' in node) and any(k in node for k in ('ItemNo', 'ID', 'Id', 'Number')):
+                if ("Name" in node or "name" in node) and any(
+                    k in node for k in ("ItemNo", "ID", "Id", "Number")
+                ):
                     record(node)
                 for v in node.values():
                     walk(v)
@@ -2816,57 +2450,64 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         walk(payload)
         return items
 
-    def _resolve_category(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        query = args['query']
-        max_results = int(args.get('max_results', 5))
-        min_score = float(args.get('min_score', 0.35))
-        include_non_categories = bool(args.get('include_non_categories', False))
-        confirm_threshold = float(args.get('confirm_threshold', 0.75))
+    def _resolve_category(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        query = args["query"]
+        max_results = int(args.get("max_results", 5))
+        min_score = float(args.get("min_score", 0.35))
+        include_non_categories = bool(args.get("include_non_categories", False))
+        confirm_threshold = float(args.get("confirm_threshold", 0.75))
 
         flat = self._get_cached_categories(tenant, client)
 
         if not include_non_categories:
-            flat = [c for c in flat if c.get('item_type') == 2]
+            flat = [c for c in flat if c.get("item_type") == 2]
 
         # if query is numeric, try exact match on item_no
         numeric_match = None
         if str(query).isdigit():
             qno = int(query)
-            numeric_match = [c for c in flat if c.get('item_no') == qno]
+            numeric_match = [c for c in flat if c.get("item_no") == qno]
 
         candidates = []
         for c in flat:
-            name = c.get('name') or ''
-            path = c.get('path') or ''
+            name = c.get("name") or ""
+            path = c.get("path") or ""
             score = max(self._score(query, name), self._score(query, path))
             if score >= min_score:
-                candidates.append({**c, 'score': round(score, 4)})
+                candidates.append({**c, "score": round(score, 4)})
 
-        candidates.sort(key=lambda x: x['score'], reverse=True)
+        candidates.sort(key=lambda x: x["score"], reverse=True)
         if numeric_match:
             for c in numeric_match:
-                if all(c['item_no'] != m['item_no'] for m in candidates):
-                    candidates.insert(0, {**c, 'score': 1.0})
+                if all(c["item_no"] != m["item_no"] for m in candidates):
+                    candidates.insert(0, {**c, "score": 1.0})
 
         needs_confirmation = True
         if candidates:
-            if candidates[0]['score'] >= confirm_threshold and (len(candidates) == 1 or candidates[0]['score'] - candidates[1]['score'] >= 0.15):
+            if candidates[0]["score"] >= confirm_threshold and (
+                len(candidates) == 1
+                or candidates[0]["score"] - candidates[1]["score"] >= 0.15
+            ):
                 needs_confirmation = False
 
         return {
-            'query': query,
-            'count': len(candidates[:max_results]),
-            'candidates': candidates[:max_results],
-            'needs_confirmation': needs_confirmation,
+            "query": query,
+            "count": len(candidates[:max_results]),
+            "candidates": candidates[:max_results],
+            "needs_confirmation": needs_confirmation,
         }
 
-    def _resolve_keyword_dictionary(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        query = args.get('dictionary_name') or args.get('query') or args.get('name')
+    def _resolve_keyword_dictionary(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        query = args.get("dictionary_name") or args.get("query") or args.get("name")
         if not query:
-            raise ValueError('dictionary_name is required')
-        max_results = int(args.get('max_results', 5))
-        min_score = float(args.get('min_score', 0.35))
-        confirm_threshold = float(args.get('confirm_threshold', 0.75))
+            raise ValueError("dictionary_name is required")
+        max_results = int(args.get("max_results", 5))
+        min_score = float(args.get("min_score", 0.35))
+        confirm_threshold = float(args.get("confirm_threshold", 0.75))
 
         items = self._get_cached_keyword_dictionaries(tenant, client)
 
@@ -2875,7 +2516,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             qno = int(query)
             for item in items:
                 try:
-                    item_no = item.get('item_no')
+                    item_no = item.get("item_no")
                     if item_no is not None and int(item_no) == qno:
                         numeric_match.append(item)
                 except Exception:
@@ -2883,39 +2524,47 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
         candidates: List[Dict[str, Any]] = []
         for item in items:
-            name = item.get('name') or ''
+            name = item.get("name") or ""
             score = self._score(str(query), name)
             if score >= min_score:
-                candidates.append({
-                    'dictionary_no': item.get('item_no'),
-                    'name': name,
-                    'id': item.get('id'),
-                    'data': item.get('data'),
-                    'score': round(score, 4),
-                })
+                candidates.append(
+                    {
+                        "dictionary_no": item.get("item_no"),
+                        "name": name,
+                        "id": item.get("id"),
+                        "data": item.get("data"),
+                        "score": round(score, 4),
+                    }
+                )
 
-        candidates.sort(key=lambda x: x['score'], reverse=True)
+        candidates.sort(key=lambda x: x["score"], reverse=True)
         if numeric_match:
             for item in numeric_match:
-                if all(c['dictionary_no'] != item.get('item_no') for c in candidates):
-                    candidates.insert(0, {
-                        'dictionary_no': item.get('item_no'),
-                        'name': item.get('name'),
-                        'id': item.get('id'),
-                        'data': item.get('data'),
-                        'score': 1.0,
-                    })
+                if all(c["dictionary_no"] != item.get("item_no") for c in candidates):
+                    candidates.insert(
+                        0,
+                        {
+                            "dictionary_no": item.get("item_no"),
+                            "name": item.get("name"),
+                            "id": item.get("id"),
+                            "data": item.get("data"),
+                            "score": 1.0,
+                        },
+                    )
 
         needs_confirmation = True
         if candidates:
-            if candidates[0]['score'] >= confirm_threshold and (len(candidates) == 1 or candidates[0]['score'] - candidates[1]['score'] >= 0.15):
+            if candidates[0]["score"] >= confirm_threshold and (
+                len(candidates) == 1
+                or candidates[0]["score"] - candidates[1]["score"] >= 0.15
+            ):
                 needs_confirmation = False
 
         return {
-            'query': query,
-            'count': len(candidates[:max_results]),
-            'candidates': candidates[:max_results],
-            'needs_confirmation': needs_confirmation,
+            "query": query,
+            "count": len(candidates[:max_results]),
+            "candidates": candidates[:max_results],
+            "needs_confirmation": needs_confirmation,
         }
 
     def _get_keywords_by_dictionary_name(
@@ -2925,28 +2574,28 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         client: ThereforeClient,
     ) -> Dict[str, Any]:
         resolution = self._resolve_keyword_dictionary(args, tenant, client)
-        if resolution.get('needs_confirmation') or not resolution.get('candidates'):
+        if resolution.get("needs_confirmation") or not resolution.get("candidates"):
             return resolution
 
-        top = resolution['candidates'][0]
-        dictionary_no = top.get('dictionary_no')
+        top = resolution["candidates"][0]
+        dictionary_no = top.get("dictionary_no")
         if dictionary_no is None:
-            raise ValueError('Resolved dictionary does not include a dictionary number')
+            raise ValueError("Resolved dictionary does not include a dictionary number")
 
         resp = client.get_keywords_by_key_dic(
             key_dic_no=int(dictionary_no),
-            filter_value=args.get('filter_value'),
-            max_values=args.get('max_values'),
-            include_deactivated_keywords=args.get('include_deactivated_keywords'),
+            filter_value=args.get("filter_value"),
+            max_values=args.get("max_values"),
+            include_deactivated_keywords=args.get("include_deactivated_keywords"),
         )
         return {
             **resolution,
-            'needs_confirmation': False,
-            'dictionary_no': dictionary_no,
-            'dictionary_name': top.get('name'),
-            'keywords': resp.get('Keywords') or [],
-            'keyword_nos': resp.get('KeywordNos') or [],
-            'all_rows_returned': resp.get('AllRowsReturned'),
+            "needs_confirmation": False,
+            "dictionary_no": dictionary_no,
+            "dictionary_name": top.get("name"),
+            "keywords": resp.get("Keywords") or [],
+            "keyword_nos": resp.get("KeywordNos") or [],
+            "all_rows_returned": resp.get("AllRowsReturned"),
         }
 
     def _add_dictionary_keyword(
@@ -2955,29 +2604,33 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         tenant: str,
         client: ThereforeClient,
     ) -> Dict[str, Any]:
-        keyword_name = str(args.get('keyword_name') or '').strip()
+        keyword_name = str(args.get("keyword_name") or "").strip()
         if not keyword_name:
-            raise ValueError('keyword_name is required')
+            raise ValueError("keyword_name is required")
 
-        dictionary_no = args.get('dictionary_no')
-        dictionary_type_no = args.get('dictionary_type_no')
-        dictionary_name = args.get('dictionary_name')
+        dictionary_no = args.get("dictionary_no")
+        dictionary_type_no = args.get("dictionary_type_no")
+        dictionary_name = args.get("dictionary_name")
 
         if dictionary_no is None and dictionary_name:
-            resolution = self._resolve_keyword_dictionary({'dictionary_name': dictionary_name}, tenant, client)
-            if resolution.get('needs_confirmation') or not resolution.get('candidates'):
+            resolution = self._resolve_keyword_dictionary(
+                {"dictionary_name": dictionary_name}, tenant, client
+            )
+            if resolution.get("needs_confirmation") or not resolution.get("candidates"):
                 return {
-                    'keyword_name': keyword_name,
-                    'needs_confirmation': True,
-                    'resolution': resolution,
+                    "keyword_name": keyword_name,
+                    "needs_confirmation": True,
+                    "resolution": resolution,
                 }
-            dictionary_no = resolution['candidates'][0].get('dictionary_no')
+            dictionary_no = resolution["candidates"][0].get("dictionary_no")
         if dictionary_no is None and dictionary_type_no is None:
-            raise ValueError('dictionary_no, dictionary_name, or dictionary_type_no is required')
+            raise ValueError(
+                "dictionary_no, dictionary_name, or dictionary_type_no is required"
+            )
 
-        check_existing = bool(args.get('check_existing', True))
-        ignore_if_exists = bool(args.get('ignore_if_exists', True))
-        include_deactivated = bool(args.get('include_deactivated_keywords', True))
+        check_existing = bool(args.get("check_existing", True))
+        ignore_if_exists = bool(args.get("ignore_if_exists", True))
+        include_deactivated = bool(args.get("include_deactivated_keywords", True))
 
         existing = []
         if check_existing and dictionary_no is not None:
@@ -2987,7 +2640,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     include_deactivated_keywords=include_deactivated,
                     max_values=100000,
                 )
-                existing = existing_resp.get('Keywords') or []
+                existing = existing_resp.get("Keywords") or []
             except Exception:
                 existing = []
 
@@ -3002,26 +2655,30 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if existing_match is not None:
             if ignore_if_exists:
                 return {
-                    'status': 'exists',
-                    'keyword_name': keyword_name,
-                    'matched_keyword': existing_match,
-                    'dictionary_no': dictionary_no,
-                    'dictionary_type_no': dictionary_type_no,
+                    "status": "exists",
+                    "keyword_name": keyword_name,
+                    "matched_keyword": existing_match,
+                    "dictionary_no": dictionary_no,
+                    "dictionary_type_no": dictionary_type_no,
                 }
-            raise ValueError(f'Keyword "{keyword_name}" already exists in dictionary {dictionary_no}')
+            raise ValueError(
+                f'Keyword "{keyword_name}" already exists in dictionary {dictionary_no}'
+            )
 
         resp = client.add_dictionary_keyword(
             dictionary_no=int(dictionary_no) if dictionary_no is not None else None,
-            dictionary_type_no=int(dictionary_type_no) if dictionary_type_no is not None else None,
+            dictionary_type_no=int(dictionary_type_no)
+            if dictionary_type_no is not None
+            else None,
             keyword_name=keyword_name,
-            is_keyword_deactivated=args.get('is_keyword_deactivated'),
+            is_keyword_deactivated=args.get("is_keyword_deactivated"),
         )
         return {
-            'status': 'added',
-            'keyword_name': keyword_name,
-            'dictionary_no': dictionary_no,
-            'dictionary_type_no': dictionary_type_no,
-            'response': resp,
+            "status": "added",
+            "keyword_name": keyword_name,
+            "dictionary_no": dictionary_no,
+            "dictionary_type_no": dictionary_type_no,
+            "response": resp,
         }
 
     def _update_dictionary_keyword(
@@ -3030,31 +2687,35 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         tenant: str,
         client: ThereforeClient,
     ) -> Dict[str, Any]:
-        new_keyword_name = str(args.get('new_keyword_name') or '').strip()
+        new_keyword_name = str(args.get("new_keyword_name") or "").strip()
         if not new_keyword_name:
-            raise ValueError('new_keyword_name is required')
+            raise ValueError("new_keyword_name is required")
 
-        dictionary_no = args.get('dictionary_no')
-        dictionary_type_no = args.get('dictionary_type_no')
-        dictionary_name = args.get('dictionary_name')
-        keyword_id = args.get('keyword_id')
-        keyword_name = args.get('keyword_name')
+        dictionary_no = args.get("dictionary_no")
+        dictionary_type_no = args.get("dictionary_type_no")
+        dictionary_name = args.get("dictionary_name")
+        keyword_id = args.get("keyword_id")
+        keyword_name = args.get("keyword_name")
 
         if dictionary_no is None and dictionary_name:
-            resolution = self._resolve_keyword_dictionary({'dictionary_name': dictionary_name}, tenant, client)
-            if resolution.get('needs_confirmation') or not resolution.get('candidates'):
+            resolution = self._resolve_keyword_dictionary(
+                {"dictionary_name": dictionary_name}, tenant, client
+            )
+            if resolution.get("needs_confirmation") or not resolution.get("candidates"):
                 return {
-                    'keyword_name': keyword_name,
-                    'new_keyword_name': new_keyword_name,
-                    'needs_confirmation': True,
-                    'resolution': resolution,
+                    "keyword_name": keyword_name,
+                    "new_keyword_name": new_keyword_name,
+                    "needs_confirmation": True,
+                    "resolution": resolution,
                 }
-            dictionary_no = resolution['candidates'][0].get('dictionary_no')
+            dictionary_no = resolution["candidates"][0].get("dictionary_no")
 
         if dictionary_no is None and dictionary_type_no is None:
-            raise ValueError('dictionary_no, dictionary_name, or dictionary_type_no is required')
+            raise ValueError(
+                "dictionary_no, dictionary_name, or dictionary_type_no is required"
+            )
 
-        include_deactivated = bool(args.get('include_deactivated_keywords', True))
+        include_deactivated = bool(args.get("include_deactivated_keywords", True))
         existing = []
         existing_resp = None
         if dictionary_no is not None:
@@ -3064,17 +2725,19 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     include_deactivated_keywords=include_deactivated,
                     max_values=100000,
                 )
-                existing = existing_resp.get('Keywords') or []
+                existing = existing_resp.get("Keywords") or []
             except Exception:
                 existing = []
 
         if keyword_id is None:
             if not keyword_name:
-                raise ValueError('keyword_id or keyword_name is required')
+                raise ValueError("keyword_id or keyword_name is required")
             target = str(keyword_name).strip().lower()
             if not existing_resp:
-                raise ValueError('Unable to resolve keyword_id without dictionary keywords.')
-            keyword_nos = existing_resp.get('KeywordNos') or []
+                raise ValueError(
+                    "Unable to resolve keyword_id without dictionary keywords."
+                )
+            keyword_nos = existing_resp.get("KeywordNos") or []
             found_id = None
             for idx, kw in enumerate(existing):
                 if str(kw).strip().lower() == target:
@@ -3082,38 +2745,44 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                         found_id = keyword_nos[idx]
                     break
             if found_id is None:
-                raise ValueError(f'Keyword "{keyword_name}" not found in dictionary {dictionary_no}')
+                raise ValueError(
+                    f'Keyword "{keyword_name}" not found in dictionary {dictionary_no}'
+                )
             keyword_id = found_id
 
-        check_existing = bool(args.get('check_existing', True))
-        ignore_if_exists = bool(args.get('ignore_if_exists', True))
+        check_existing = bool(args.get("check_existing", True))
+        ignore_if_exists = bool(args.get("ignore_if_exists", True))
         if check_existing and existing:
             target = new_keyword_name.strip().lower()
             for kw in existing:
                 if str(kw).strip().lower() == target:
                     if ignore_if_exists:
                         return {
-                            'status': 'exists',
-                            'keyword_name': new_keyword_name,
-                            'dictionary_no': dictionary_no,
-                            'dictionary_type_no': dictionary_type_no,
+                            "status": "exists",
+                            "keyword_name": new_keyword_name,
+                            "dictionary_no": dictionary_no,
+                            "dictionary_type_no": dictionary_type_no,
                         }
-                    raise ValueError(f'Keyword "{new_keyword_name}" already exists in dictionary {dictionary_no}')
+                    raise ValueError(
+                        f'Keyword "{new_keyword_name}" already exists in dictionary {dictionary_no}'
+                    )
 
         resp = client.update_dictionary_keyword(
             dictionary_no=int(dictionary_no) if dictionary_no is not None else None,
-            dictionary_type_no=int(dictionary_type_no) if dictionary_type_no is not None else None,
+            dictionary_type_no=int(dictionary_type_no)
+            if dictionary_type_no is not None
+            else None,
             keyword_id=int(keyword_id),
             keyword_name=new_keyword_name,
-            is_keyword_deactivated=args.get('is_keyword_deactivated'),
+            is_keyword_deactivated=args.get("is_keyword_deactivated"),
         )
         return {
-            'status': 'updated',
-            'dictionary_no': dictionary_no,
-            'dictionary_type_no': dictionary_type_no,
-            'keyword_id': keyword_id,
-            'keyword_name': new_keyword_name,
-            'response': resp,
+            "status": "updated",
+            "dictionary_no": dictionary_no,
+            "dictionary_type_no": dictionary_type_no,
+            "keyword_id": keyword_id,
+            "keyword_name": new_keyword_name,
+            "response": resp,
         }
 
     def _delete_dictionary_keyword(
@@ -3122,36 +2791,40 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         tenant: str,
         client: ThereforeClient,
     ) -> Dict[str, Any]:
-        dictionary_no = args.get('dictionary_no')
-        dictionary_type_no = args.get('dictionary_type_no')
-        dictionary_name = args.get('dictionary_name')
-        keyword_id = args.get('keyword_id')
-        keyword_name = args.get('keyword_name')
+        dictionary_no = args.get("dictionary_no")
+        dictionary_type_no = args.get("dictionary_type_no")
+        dictionary_name = args.get("dictionary_name")
+        keyword_id = args.get("keyword_id")
+        keyword_name = args.get("keyword_name")
 
         if dictionary_no is None and dictionary_name:
-            resolution = self._resolve_keyword_dictionary({'dictionary_name': dictionary_name}, tenant, client)
-            if resolution.get('needs_confirmation') or not resolution.get('candidates'):
+            resolution = self._resolve_keyword_dictionary(
+                {"dictionary_name": dictionary_name}, tenant, client
+            )
+            if resolution.get("needs_confirmation") or not resolution.get("candidates"):
                 return {
-                    'keyword_name': keyword_name,
-                    'needs_confirmation': True,
-                    'resolution': resolution,
+                    "keyword_name": keyword_name,
+                    "needs_confirmation": True,
+                    "resolution": resolution,
                 }
-            dictionary_no = resolution['candidates'][0].get('dictionary_no')
+            dictionary_no = resolution["candidates"][0].get("dictionary_no")
 
         if dictionary_no is None and dictionary_type_no is None:
-            raise ValueError('dictionary_no, dictionary_name, or dictionary_type_no is required')
+            raise ValueError(
+                "dictionary_no, dictionary_name, or dictionary_type_no is required"
+            )
 
-        include_deactivated = bool(args.get('include_deactivated_keywords', True))
+        include_deactivated = bool(args.get("include_deactivated_keywords", True))
         if keyword_id is None:
             if not keyword_name:
-                raise ValueError('keyword_id or keyword_name is required')
+                raise ValueError("keyword_id or keyword_name is required")
             existing_resp = client.get_keywords_by_key_dic(
                 key_dic_no=int(dictionary_no),
                 include_deactivated_keywords=include_deactivated,
                 max_values=100000,
             )
-            keywords = existing_resp.get('Keywords') or []
-            keyword_nos = existing_resp.get('KeywordNos') or []
+            keywords = existing_resp.get("Keywords") or []
+            keyword_nos = existing_resp.get("KeywordNos") or []
             target = str(keyword_name).strip().lower()
             found_id = None
             for idx, kw in enumerate(keywords):
@@ -3160,20 +2833,24 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                         found_id = keyword_nos[idx]
                     break
             if found_id is None:
-                raise ValueError(f'Keyword "{keyword_name}" not found in dictionary {dictionary_no}')
+                raise ValueError(
+                    f'Keyword "{keyword_name}" not found in dictionary {dictionary_no}'
+                )
             keyword_id = found_id
 
         resp = client.delete_dictionary_keyword(
             dictionary_no=int(dictionary_no) if dictionary_no is not None else None,
-            dictionary_type_no=int(dictionary_type_no) if dictionary_type_no is not None else None,
+            dictionary_type_no=int(dictionary_type_no)
+            if dictionary_type_no is not None
+            else None,
             keyword_id=int(keyword_id),
         )
         return {
-            'status': 'deleted',
-            'dictionary_no': dictionary_no,
-            'dictionary_type_no': dictionary_type_no,
-            'keyword_id': keyword_id,
-            'response': resp,
+            "status": "deleted",
+            "dictionary_no": dictionary_no,
+            "dictionary_type_no": dictionary_type_no,
+            "keyword_id": keyword_id,
+            "response": resp,
         }
 
     def _deactivate_dictionary_keyword(
@@ -3182,36 +2859,40 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         tenant: str,
         client: ThereforeClient,
     ) -> Dict[str, Any]:
-        dictionary_no = args.get('dictionary_no')
-        dictionary_type_no = args.get('dictionary_type_no')
-        dictionary_name = args.get('dictionary_name')
-        keyword_id = args.get('keyword_id')
-        keyword_name = args.get('keyword_name')
+        dictionary_no = args.get("dictionary_no")
+        dictionary_type_no = args.get("dictionary_type_no")
+        dictionary_name = args.get("dictionary_name")
+        keyword_id = args.get("keyword_id")
+        keyword_name = args.get("keyword_name")
 
         if dictionary_no is None and dictionary_name:
-            resolution = self._resolve_keyword_dictionary({'dictionary_name': dictionary_name}, tenant, client)
-            if resolution.get('needs_confirmation') or not resolution.get('candidates'):
+            resolution = self._resolve_keyword_dictionary(
+                {"dictionary_name": dictionary_name}, tenant, client
+            )
+            if resolution.get("needs_confirmation") or not resolution.get("candidates"):
                 return {
-                    'keyword_name': keyword_name,
-                    'needs_confirmation': True,
-                    'resolution': resolution,
+                    "keyword_name": keyword_name,
+                    "needs_confirmation": True,
+                    "resolution": resolution,
                 }
-            dictionary_no = resolution['candidates'][0].get('dictionary_no')
+            dictionary_no = resolution["candidates"][0].get("dictionary_no")
 
         if dictionary_no is None and dictionary_type_no is None:
-            raise ValueError('dictionary_no, dictionary_name, or dictionary_type_no is required')
+            raise ValueError(
+                "dictionary_no, dictionary_name, or dictionary_type_no is required"
+            )
 
-        include_deactivated = bool(args.get('include_deactivated_keywords', True))
+        include_deactivated = bool(args.get("include_deactivated_keywords", True))
         if keyword_id is None:
             if not keyword_name:
-                raise ValueError('keyword_id or keyword_name is required')
+                raise ValueError("keyword_id or keyword_name is required")
             existing_resp = client.get_keywords_by_key_dic(
                 key_dic_no=int(dictionary_no),
                 include_deactivated_keywords=include_deactivated,
                 max_values=100000,
             )
-            keywords = existing_resp.get('Keywords') or []
-            keyword_nos = existing_resp.get('KeywordNos') or []
+            keywords = existing_resp.get("Keywords") or []
+            keyword_nos = existing_resp.get("KeywordNos") or []
             target = str(keyword_name).strip().lower()
             found_id = None
             for idx, kw in enumerate(keywords):
@@ -3220,62 +2901,72 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                         found_id = keyword_nos[idx]
                     break
             if found_id is None:
-                raise ValueError(f'Keyword "{keyword_name}" not found in dictionary {dictionary_no}')
+                raise ValueError(
+                    f'Keyword "{keyword_name}" not found in dictionary {dictionary_no}'
+                )
             keyword_id = found_id
 
         resp = client.update_dictionary_keyword(
             dictionary_no=int(dictionary_no) if dictionary_no is not None else None,
-            dictionary_type_no=int(dictionary_type_no) if dictionary_type_no is not None else None,
+            dictionary_type_no=int(dictionary_type_no)
+            if dictionary_type_no is not None
+            else None,
             keyword_id=int(keyword_id),
             is_keyword_deactivated=True,
         )
         return {
-            'status': 'deactivated',
-            'dictionary_no': dictionary_no,
-            'dictionary_type_no': dictionary_type_no,
-            'keyword_id': keyword_id,
-            'response': resp,
+            "status": "deactivated",
+            "dictionary_no": dictionary_no,
+            "dictionary_type_no": dictionary_type_no,
+            "keyword_id": keyword_id,
+            "response": resp,
         }
 
-    def _list_category_fields(self, category_no: int, tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+    def _list_category_fields(
+        self, category_no: int, tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
         fields = self._get_cached_fields(tenant, category_no, client)
         simplified = []
         for f in fields:
-            simplified.append({
-                'field_no': f.get('FieldNo'),
-                'field_id': f.get('FieldID'),
-                'caption': f.get('Caption'),
-                'index_name': f.get('IndexDataFieldName'),
-                'field_type': f.get('FieldType'),
-                'type_no': f.get('TypeNo'),
-                'mandatory': f.get('Mandatory'),
-                'visible': f.get('Visible'),
-                'regular_expr': f.get('RegularExpr'),
-                'regex_sample': f.get('RegExSample'),
-                'is_auto_append': f.get('IsAutoAppendField'),
-                'counter_mode': f.get('CounterMode'),
-            })
+            simplified.append(
+                {
+                    "field_no": f.get("FieldNo"),
+                    "field_id": f.get("FieldID"),
+                    "caption": f.get("Caption"),
+                    "index_name": f.get("IndexDataFieldName"),
+                    "field_type": f.get("FieldType"),
+                    "type_no": f.get("TypeNo"),
+                    "mandatory": f.get("Mandatory"),
+                    "visible": f.get("Visible"),
+                    "regular_expr": f.get("RegularExpr"),
+                    "regex_sample": f.get("RegExSample"),
+                    "is_auto_append": f.get("IsAutoAppendField"),
+                    "counter_mode": f.get("CounterMode"),
+                }
+            )
         return {
-            'category_no': category_no,
-            'field_count': len(simplified),
-            'fields': simplified,
+            "category_no": category_no,
+            "field_count": len(simplified),
+            "fields": simplified,
         }
 
-    def _resolve_field(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        category_no = int(args['category_no'])
-        query = args['query']
-        max_results = int(args.get('max_results', 5))
-        min_score = float(args.get('min_score', 0.35))
-        field_type_hint = args.get('field_type_hint')
-        confirm_threshold = float(args.get('confirm_threshold', 0.75))
+    def _resolve_field(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        category_no = int(args["category_no"])
+        query = args["query"]
+        max_results = int(args.get("max_results", 5))
+        min_score = float(args.get("min_score", 0.35))
+        field_type_hint = args.get("field_type_hint")
+        confirm_threshold = float(args.get("confirm_threshold", 0.75))
 
         fields = self._get_cached_fields(tenant, category_no, client)
 
         candidates = []
         for f in fields:
-            caption = f.get('Caption') or ''
-            field_id = f.get('FieldID') or ''
-            index_name = f.get('IndexDataFieldName') or ''
+            caption = f.get("Caption") or ""
+            field_id = f.get("FieldID") or ""
+            index_name = f.get("IndexDataFieldName") or ""
 
             score = max(
                 self._score(query, caption),
@@ -3283,34 +2974,39 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 self._score(query, index_name),
             )
 
-            if field_type_hint is not None and f.get('FieldType') == field_type_hint:
+            if field_type_hint is not None and f.get("FieldType") == field_type_hint:
                 score = min(1.0, score + 0.05)
 
             if score >= min_score:
-                candidates.append({
-                    'field_no': f.get('FieldNo'),
-                    'field_id': field_id,
-                    'caption': caption,
-                    'index_name': index_name,
-                    'field_type': f.get('FieldType'),
-                    'type_no': f.get('TypeNo'),
-                    'mandatory': f.get('Mandatory'),
-                    'visible': f.get('Visible'),
-                    'score': round(score, 4),
-                })
+                candidates.append(
+                    {
+                        "field_no": f.get("FieldNo"),
+                        "field_id": field_id,
+                        "caption": caption,
+                        "index_name": index_name,
+                        "field_type": f.get("FieldType"),
+                        "type_no": f.get("TypeNo"),
+                        "mandatory": f.get("Mandatory"),
+                        "visible": f.get("Visible"),
+                        "score": round(score, 4),
+                    }
+                )
 
-        candidates.sort(key=lambda x: x['score'], reverse=True)
+        candidates.sort(key=lambda x: x["score"], reverse=True)
         needs_confirmation = True
         if candidates:
-            if candidates[0]['score'] >= confirm_threshold and (len(candidates) == 1 or candidates[0]['score'] - candidates[1]['score'] >= 0.15):
+            if candidates[0]["score"] >= confirm_threshold and (
+                len(candidates) == 1
+                or candidates[0]["score"] - candidates[1]["score"] >= 0.15
+            ):
                 needs_confirmation = False
 
         return {
-            'category_no': category_no,
-            'query': query,
-            'count': len(candidates[:max_results]),
-            'candidates': candidates[:max_results],
-            'needs_confirmation': needs_confirmation,
+            "category_no": category_no,
+            "query": query,
+            "count": len(candidates[:max_results]),
+            "candidates": candidates[:max_results],
+            "needs_confirmation": needs_confirmation,
         }
 
     def _prepare_index_update(
@@ -3318,45 +3014,50 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         doc_no: int,
         updates: List[Dict[str, Any]],
         index_data_items_override: Optional[List[Dict[str, Any]]] = None,
-        tenant: str = '',
+        tenant: str = "",
         client: Optional[ThereforeClient] = None,
     ) -> Tuple[List[Dict[str, Any]], Optional[str], Optional[str], Optional[int]]:
         if client is None:
-            raise ValueError('client is required for index update preparation')
+            raise ValueError("client is required for index update preparation")
         current = client.get_document_index_data(doc_no)
-        idx = current.get('IndexData') or {}
-        last_change_time = idx.get('LastChangeTime')
-        last_change_time_iso = idx.get('LastChangeTimeISO8601')
-        category_no = idx.get('CategoryNo')
+        idx = current.get("IndexData") or {}
+        last_change_time = idx.get("LastChangeTime")
+        last_change_time_iso = idx.get("LastChangeTimeISO8601")
+        category_no = idx.get("CategoryNo")
 
         if index_data_items_override is not None:
-            return index_data_items_override, last_change_time, last_change_time_iso, category_no
+            return (
+                index_data_items_override,
+                last_change_time,
+                last_change_time_iso,
+                category_no,
+            )
 
         if not updates:
             return [], last_change_time, last_change_time_iso, category_no
 
         type_keys = [
-            'StringIndexData',
-            'IntIndexData',
-            'MoneyIndexData',
-            'DateIndexData',
-            'DateTimeIndexData',
-            'LogicalIndexData',
-            'SingleKeywordData',
-            'MultipleKeywordData',
-            'TableIndexData',
+            "StringIndexData",
+            "IntIndexData",
+            "MoneyIndexData",
+            "DateIndexData",
+            "DateTimeIndexData",
+            "LogicalIndexData",
+            "SingleKeywordData",
+            "MultipleKeywordData",
+            "TableIndexData",
         ]
 
         existing_map: Dict[int, Tuple[str, Optional[str]]] = {}
-        for item in (idx.get('IndexDataItems') or []):
+        for item in idx.get("IndexDataItems") or []:
             for key in type_keys:
                 data = item.get(key)
-                if data and data.get('FieldNo') is not None:
+                if data and data.get("FieldNo") is not None:
                     try:
-                        fno = int(data.get('FieldNo'))
+                        fno = int(data.get("FieldNo"))
                     except Exception:
                         continue
-                    existing_map[fno] = (key, data.get('FieldName'))
+                    existing_map[fno] = (key, data.get("FieldName"))
                     break
 
         category_fields: Optional[List[Dict[str, Any]]] = None
@@ -3364,12 +3065,14 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         def find_field_meta(field_no: int) -> Optional[Dict[str, Any]]:
             nonlocal category_fields
             if category_no and category_fields is None:
-                category_fields = self._get_cached_fields(tenant, int(category_no), client)
+                category_fields = self._get_cached_fields(
+                    tenant, int(category_no), client
+                )
             if not category_fields:
                 return None
             for f in category_fields:
                 try:
-                    if int(f.get('FieldNo')) == field_no:
+                    if int(f.get("FieldNo")) == field_no:
                         return f
                 except Exception:
                     continue
@@ -3380,13 +3083,13 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             if category_no and category_fields is None:
                 category_fields = self._get_cached_fields(int(category_no))
             if not category_fields:
-                raise ValueError('Category fields not available to resolve field name')
+                raise ValueError("Category fields not available to resolve field name")
 
             candidates = []
             for f in category_fields:
-                caption = f.get('Caption') or ''
-                field_id = f.get('FieldID') or ''
-                index_name = f.get('IndexDataFieldName') or ''
+                caption = f.get("Caption") or ""
+                field_id = f.get("FieldID") or ""
+                index_name = f.get("IndexDataFieldName") or ""
                 score = max(
                     self._score(query, caption),
                     self._score(query, field_id),
@@ -3396,72 +3099,86 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     candidates.append((score, f))
 
             if not candidates:
-                raise ValueError(f'No field matches query: {query}')
+                raise ValueError(f"No field matches query: {query}")
 
             candidates.sort(key=lambda x: x[0], reverse=True)
             best_score, best_field = candidates[0]
             needs_confirmation = True
-            if best_score >= 0.75 and (len(candidates) == 1 or best_score - candidates[1][0] >= 0.15):
+            if best_score >= 0.75 and (
+                len(candidates) == 1 or best_score - candidates[1][0] >= 0.15
+            ):
                 needs_confirmation = False
             if needs_confirmation:
                 top = [
                     {
-                        'field_no': c[1].get('FieldNo'),
-                        'caption': c[1].get('Caption'),
-                        'field_id': c[1].get('FieldID'),
-                        'index_name': c[1].get('IndexDataFieldName'),
-                        'score': round(c[0], 4),
+                        "field_no": c[1].get("FieldNo"),
+                        "caption": c[1].get("Caption"),
+                        "field_id": c[1].get("FieldID"),
+                        "index_name": c[1].get("IndexDataFieldName"),
+                        "score": round(c[0], 4),
                     }
                     for c in candidates[:5]
                 ]
-                raise ValueError(f'Ambiguous field name \"{query}\". Candidates: {top}')
+                raise ValueError(f'Ambiguous field name "{query}". Candidates: {top}')
 
-            return int(best_field.get('FieldNo')), best_field
+            return int(best_field.get("FieldNo")), best_field
 
         def infer_type_key(field_type: Optional[int]) -> Optional[str]:
             mapping = {
-                1: 'StringIndexData',
-                2: 'IntIndexData',
-                3: 'DateIndexData',
-                5: 'MoneyIndexData',
-                6: 'LogicalIndexData',
-                9: 'StringIndexData',
+                1: "StringIndexData",
+                2: "IntIndexData",
+                3: "DateIndexData",
+                5: "MoneyIndexData",
+                6: "LogicalIndexData",
+                9: "StringIndexData",
             }
             return mapping.get(field_type)
 
         index_data_items: List[Dict[str, Any]] = []
         for upd in updates:
-            field_no = upd.get('field_no')
+            field_no = upd.get("field_no")
             if field_no is None:
                 query = (
-                    upd.get('field_name')
-                    or upd.get('field_id')
-                    or upd.get('caption')
-                    or upd.get('index_name')
-                    or upd.get('query')
+                    upd.get("field_name")
+                    or upd.get("field_id")
+                    or upd.get("caption")
+                    or upd.get("index_name")
+                    or upd.get("query")
                 )
                 if not query:
-                    raise ValueError('Update item must include field_no or field_name/query')
+                    raise ValueError(
+                        "Update item must include field_no or field_name/query"
+                    )
                 field_no, meta = resolve_field_no(str(query))
             else:
                 field_no = int(field_no)
-            value = upd.get('value')
+            value = upd.get("value")
 
             if field_no in existing_map:
                 type_key, field_name = existing_map[field_no]
             else:
                 meta = find_field_meta(field_no)
                 if not meta:
-                    raise ValueError(f'Field {field_no} not found for document {doc_no}')
-                field_type = meta.get('FieldType')
+                    raise ValueError(
+                        f"Field {field_no} not found for document {doc_no}"
+                    )
+                field_type = meta.get("FieldType")
                 if field_type == 4:
-                    raise ValueError(f'Field {field_no} is label-only and cannot hold a value')
+                    raise ValueError(
+                        f"Field {field_no} is label-only and cannot hold a value"
+                    )
                 type_key = infer_type_key(field_type)
                 if not type_key:
-                    raise ValueError(f'Field {field_no} has unsupported FieldType {field_type}; provide index_data_items explicitly')
-                field_name = meta.get('IndexDataFieldName') or meta.get('FieldID') or meta.get('Caption')
+                    raise ValueError(
+                        f"Field {field_no} has unsupported FieldType {field_type}; provide index_data_items explicitly"
+                    )
+                field_name = (
+                    meta.get("IndexDataFieldName")
+                    or meta.get("FieldID")
+                    or meta.get("Caption")
+                )
 
-            if type_key == 'MultipleKeywordData':
+            if type_key == "MultipleKeywordData":
                 if value is None:
                     data_value = []
                 elif isinstance(value, list):
@@ -3469,32 +3186,36 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 else:
                     data_value = [value]
                 data = {
-                    'FieldNo': field_no,
-                    'DataValue': data_value,
-                    'FieldName': field_name,
+                    "FieldNo": field_no,
+                    "DataValue": data_value,
+                    "FieldName": field_name,
                 }
             else:
                 data = {
-                    'FieldNo': field_no,
-                    'DataValue': value,
-                    'FieldName': field_name,
+                    "FieldNo": field_no,
+                    "DataValue": value,
+                    "FieldName": field_name,
                 }
 
             index_data_items.append({type_key: data})
 
         return index_data_items, last_change_time, last_change_time_iso, category_no
 
-    def _update_document_index_data(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        doc_no = int(args['doc_no'])
-        check_in_comments = args.get('check_in_comments', '')
-        do_fill_dependent_fields = bool(args.get('do_fill_dependent_fields', True))
+    def _update_document_index_data(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        doc_no = int(args["doc_no"])
+        check_in_comments = args.get("check_in_comments", "")
+        do_fill_dependent_fields = bool(args.get("do_fill_dependent_fields", True))
 
-        index_data_items, last_change_time, last_change_time_iso, _ = self._prepare_index_update(
-            doc_no=doc_no,
-            updates=args.get('updates') or [],
-            index_data_items_override=args.get('index_data_items'),
-            tenant=tenant,
-            client=client,
+        index_data_items, last_change_time, last_change_time_iso, _ = (
+            self._prepare_index_update(
+                doc_no=doc_no,
+                updates=args.get("updates") or [],
+                index_data_items_override=args.get("index_data_items"),
+                tenant=tenant,
+                client=client,
+            )
         )
 
         update_resp = client.save_document_index_data(
@@ -3507,91 +3228,113 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         )
         updated = client.get_document_index_data(doc_no)
         return {
-            'update_response': update_resp,
-            'updated_index_data': updated.get('IndexData'),
+            "update_response": update_resp,
+            "updated_index_data": updated.get("IndexData"),
         }
 
-    def _update_document(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        doc_no = int(args['doc_no'])
-        check_in_comments = args.get('check_in_comments', '')
-        do_fill_dependent_fields = bool(args.get('do_fill_dependent_fields', True))
+    def _update_document(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        doc_no = int(args["doc_no"])
+        check_in_comments = args.get("check_in_comments", "")
+        do_fill_dependent_fields = bool(args.get("do_fill_dependent_fields", True))
 
-        index_data_items, last_change_time, last_change_time_iso, _ = self._prepare_index_update(
-            doc_no=doc_no,
-            updates=args.get('updates') or [],
-            index_data_items_override=args.get('index_data_items'),
-            tenant=tenant,
-            client=client,
+        index_data_items, last_change_time, last_change_time_iso, _ = (
+            self._prepare_index_update(
+                doc_no=doc_no,
+                updates=args.get("updates") or [],
+                index_data_items_override=args.get("index_data_items"),
+                tenant=tenant,
+                client=client,
+            )
         )
 
         streams_to_update = []
-        for s in (args.get('streams') or []):
-            file_name = s.get('file_name')
-            file_data_base64 = s.get('file_data_base64')
-            file_data_text = s.get('file_data_text')
+        for s in args.get("streams") or []:
+            file_name = s.get("file_name")
+            file_data_base64 = s.get("file_data_base64")
+            file_data_text = s.get("file_data_text")
             if file_data_text and not file_data_base64:
-                file_data_base64 = base64.b64encode(file_data_text.encode('utf-8')).decode('ascii')
+                file_data_base64 = base64.b64encode(
+                    file_data_text.encode("utf-8")
+                ).decode("ascii")
             if not file_name:
-                raise ValueError('stream missing file_name')
+                raise ValueError("stream missing file_name")
             if not file_data_base64:
-                raise ValueError('stream missing file_data_base64 or file_data_text')
+                raise ValueError("stream missing file_data_base64 or file_data_text")
             entry = {
-                'FileName': file_name,
-                'FileDataBase64JSON': file_data_base64,
-                'NewStreamInsertMode': self._normalize_stream_insert_mode(s.get('new_stream_insert_mode', 0)),
+                "FileName": file_name,
+                "FileDataBase64JSON": file_data_base64,
+                "NewStreamInsertMode": self._normalize_stream_insert_mode(
+                    s.get("new_stream_insert_mode", 0)
+                ),
             }
-            if s.get('stream_no') is not None:
-                entry['StreamNo'] = int(s.get('stream_no'))
+            if s.get("stream_no") is not None:
+                entry["StreamNo"] = int(s.get("stream_no"))
             streams_to_update.append(entry)
 
         streams_to_rename = []
-        for r in (args.get('streams_to_rename') or []):
-            streams_to_rename.append({
-                'StreamNo': int(r['stream_no']),
-                'FileName': r['file_name'],
-            })
+        for r in args.get("streams_to_rename") or []:
+            streams_to_rename.append(
+                {
+                    "StreamNo": int(r["stream_no"]),
+                    "FileName": r["file_name"],
+                }
+            )
 
         update_resp = client.update_document(
             doc_no=doc_no,
             index_data_items=index_data_items,
             streams_to_update=streams_to_update or None,
-            stream_nos_to_delete=args.get('stream_nos_to_delete'),
+            stream_nos_to_delete=args.get("stream_nos_to_delete"),
             streams_to_rename=streams_to_rename or None,
             check_in_comments=check_in_comments,
             do_fill_dependent_fields=do_fill_dependent_fields,
             last_change_time=last_change_time,
             last_change_time_iso=last_change_time_iso,
-            conversion_options=self._normalize_conversion_options(args.get('conversion_options')),
+            conversion_options=self._normalize_conversion_options(
+                args.get("conversion_options")
+            ),
         )
-        updated = client.get_document(doc_no, include_index_data=True, include_streams_info=True)
+        updated = client.get_document(
+            doc_no, include_index_data=True, include_streams_info=True
+        )
         return {
-            'update_response': update_resp,
-            'updated_document': updated,
+            "update_response": update_resp,
+            "updated_document": updated,
         }
 
-    def _add_streams_to_document(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        doc_no = int(args['doc_no'])
-        check_in_comments = args.get('check_in_comments', '')
-        conversion_options = self._normalize_conversion_options(args.get('conversion_options'))
+    def _add_streams_to_document(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        doc_no = int(args["doc_no"])
+        check_in_comments = args.get("check_in_comments", "")
+        conversion_options = self._normalize_conversion_options(
+            args.get("conversion_options")
+        )
 
         streams_to_upload = []
-        for s in (args.get('streams') or []):
-            file_name = s.get('file_name')
-            file_data_base64 = s.get('file_data_base64')
-            file_data_text = s.get('file_data_text')
+        for s in args.get("streams") or []:
+            file_name = s.get("file_name")
+            file_data_base64 = s.get("file_data_base64")
+            file_data_text = s.get("file_data_text")
             if file_data_text and not file_data_base64:
-                file_data_base64 = base64.b64encode(file_data_text.encode('utf-8')).decode('ascii')
+                file_data_base64 = base64.b64encode(
+                    file_data_text.encode("utf-8")
+                ).decode("ascii")
             if not file_name:
-                raise ValueError('stream missing file_name')
+                raise ValueError("stream missing file_name")
             if not file_data_base64:
-                raise ValueError('stream missing file_data_base64 or file_data_text')
+                raise ValueError("stream missing file_data_base64 or file_data_text")
             entry = {
-                'FileName': file_name,
-                'FileDataBase64JSON': file_data_base64,
-                'NewStreamInsertMode': self._normalize_stream_insert_mode(s.get('new_stream_insert_mode', 0)),
+                "FileName": file_name,
+                "FileDataBase64JSON": file_data_base64,
+                "NewStreamInsertMode": self._normalize_stream_insert_mode(
+                    s.get("new_stream_insert_mode", 0)
+                ),
             }
-            if s.get('stream_no') is not None:
-                entry['StreamNo'] = int(s.get('stream_no'))
+            if s.get("stream_no") is not None:
+                entry["StreamNo"] = int(s.get("stream_no"))
             streams_to_upload.append(entry)
 
         add_resp = client.add_streams_to_document(
@@ -3600,71 +3343,79 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             conversion_options=conversion_options,
             check_in_comments=check_in_comments,
         )
-        updated = client.get_document(doc_no, include_index_data=False, include_streams_info=True)
+        updated = client.get_document(
+            doc_no, include_index_data=False, include_streams_info=True
+        )
         return {
-            'add_streams_response': add_resp,
-            'updated_streams_info': updated.get('StreamsInfo'),
+            "add_streams_response": add_resp,
+            "updated_streams_info": updated.get("StreamsInfo"),
         }
 
-    def _get_converted_doc_streams(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        doc_no = int(args['doc_no'])
+    def _get_converted_doc_streams(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        doc_no = int(args["doc_no"])
         conversion_options: Dict[str, Any] = {}
-        if args.get('convert_to') is not None:
-            conversion_options['ConvertTo'] = args['convert_to']
-        if args.get('annotation_mode') is not None:
-            conversion_options['AnnotationMode'] = args['annotation_mode']
-        if args.get('signature_mode') is not None:
-            conversion_options['SignatureMode'] = args['signature_mode']
-        if args.get('certificate_name') is not None:
-            conversion_options['CertificateName'] = args['certificate_name']
-        if args.get('time_stamp_server') is not None:
-            conversion_options['TimeStampServer'] = args['time_stamp_server']
-        if args.get('time_stamp_user') is not None:
-            conversion_options['TimeStampUser'] = args['time_stamp_user']
-        if args.get('time_stamp_pwd') is not None:
-            conversion_options['TimeStampPwd'] = args['time_stamp_pwd']
-        if args.get('multipage_stream_name') is not None:
-            conversion_options['MultipageStreamName'] = args['multipage_stream_name']
-        conversion_options = self._normalize_conversion_options(conversion_options) or {}
+        if args.get("convert_to") is not None:
+            conversion_options["ConvertTo"] = args["convert_to"]
+        if args.get("annotation_mode") is not None:
+            conversion_options["AnnotationMode"] = args["annotation_mode"]
+        if args.get("signature_mode") is not None:
+            conversion_options["SignatureMode"] = args["signature_mode"]
+        if args.get("certificate_name") is not None:
+            conversion_options["CertificateName"] = args["certificate_name"]
+        if args.get("time_stamp_server") is not None:
+            conversion_options["TimeStampServer"] = args["time_stamp_server"]
+        if args.get("time_stamp_user") is not None:
+            conversion_options["TimeStampUser"] = args["time_stamp_user"]
+        if args.get("time_stamp_pwd") is not None:
+            conversion_options["TimeStampPwd"] = args["time_stamp_pwd"]
+        if args.get("multipage_stream_name") is not None:
+            conversion_options["MultipageStreamName"] = args["multipage_stream_name"]
+        conversion_options = (
+            self._normalize_conversion_options(conversion_options) or {}
+        )
         return client.get_converted_doc_streams(
             doc_no=doc_no,
             conversion_options=conversion_options,
-            stream_nos=args.get('stream_nos'),
-            version_no=args.get('version_no'),
+            stream_nos=args.get("stream_nos"),
+            version_no=args.get("version_no"),
             is_file_data_base64_json_needed=True,
-            retrieve_reason=args.get('retrieve_reason'),
-            archive_converted_files=args.get('archive_converted_files'),
-            custom_archive_file_name=args.get('custom_archive_file_name'),
+            retrieve_reason=args.get("retrieve_reason"),
+            archive_converted_files=args.get("archive_converted_files"),
+            custom_archive_file_name=args.get("custom_archive_file_name"),
         )
 
-    def _get_logfiles(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+    def _get_logfiles(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
         from datetime import timedelta
 
-        days_back = int(args.get('days_back', 7))
-        application_filter = args.get('application_filter')
-        max_docs = int(args.get('max_docs', 10))
-        include_raw = bool(args.get('include_raw', False))
-        output_mode = args.get('output_mode', 'analysis')
-        severity_filter = args.get('severity_filter', 'all')
+        days_back = int(args.get("days_back", 7))
+        application_filter = args.get("application_filter")
+        max_docs = int(args.get("max_docs", 10))
+        include_raw = bool(args.get("include_raw", False))
+        output_mode = args.get("output_mode", "analysis")
+        severity_filter = args.get("severity_filter", "all")
 
         # Validate category 1 is the Logfiles category
         cat_info = client.get_category_info(1)
-        cat_name = (cat_info.get('Name') or '').strip()
+        cat_name = (cat_info.get("Name") or "").strip()
 
         # Discover field numbers from data fields (skip labels with TypeNo=4)
         generated_field_no = None
         application_field_no = None
         data_field_types = {1, 2, 3, 7}  # text, number, date, datetime
 
-        for f in (cat_info.get('CategoryFields') or []):
-            type_no = f.get('TypeNo')
+        for f in cat_info.get("CategoryFields") or []:
+            type_no = f.get("TypeNo")
             if type_no not in data_field_types:
                 continue
-            caption = (f.get('Caption') or '').lower()
-            fno = f.get('FieldNo')
-            if caption == 'generated' and type_no == 7:
+            caption = (f.get("Caption") or "").lower()
+            fno = f.get("FieldNo")
+            if caption == "generated" and type_no == 7:
                 generated_field_no = fno
-            elif caption == 'application' and type_no == 1:
+            elif caption == "application" and type_no == 1:
                 application_field_no = fno
 
         if generated_field_no is None:
@@ -3676,27 +3427,29 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         # Build query conditions
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(days=days_back)
-        cutoff_str = cutoff.strftime('%Y-%m-%dT00:00:00')
+        cutoff_str = cutoff.strftime("%Y-%m-%dT00:00:00")
 
         conditions = [
-            {'FieldNo': generated_field_no, 'Condition': f'>= {cutoff_str}'},
+            {"FieldNo": generated_field_no, "Condition": f">= {cutoff_str}"},
         ]
         if application_filter:
             if application_field_no is None:
                 raise ValueError(
                     "Cannot filter by application: 'Application' text field not found in category 1."
                 )
-            conditions.append({'FieldNo': application_field_no, 'Condition': application_filter})
+            conditions.append(
+                {"FieldNo": application_field_no, "Condition": application_filter}
+            )
 
         query = {
-            'CategoryNo': 1,
-            'Condition': conditions,
-            'MaxRows': max_docs,
+            "CategoryNo": 1,
+            "Condition": conditions,
+            "MaxRows": max_docs,
         }
 
         query_result = client.execute_single_query(query)
-        qr = query_result.get('QueryResult') or {}
-        rows = qr.get('ResultRows') or []
+        qr = query_result.get("QueryResult") or {}
+        rows = qr.get("ResultRows") or []
 
         documents = []
         fetch_errors = []
@@ -3704,159 +3457,180 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         doc_meta: List[Dict[str, Any]] = []
 
         for row in rows:
-            doc_no = row.get('DocNo')
+            doc_no = row.get("DocNo")
             if not doc_no:
                 continue
             try:
-                doc = client.get_document(int(doc_no), include_streams_data=True, include_index_data=False)
-                streams_info = doc.get('StreamsInfo') or []
+                doc = client.get_document(
+                    int(doc_no), include_streams_data=True, include_index_data=False
+                )
+                streams_info = doc.get("StreamsInfo") or []
                 doc_entries: List[Dict[str, Any]] = []
                 raw_texts: List[str] = []
-                doc_application = ''
-                doc_server = ''
+                doc_application = ""
+                doc_server = ""
 
                 for stream in streams_info:
-                    b64_data = stream.get('StreamDataBase64JSON') or stream.get('FileDataBase64JSON')
+                    b64_data = stream.get("StreamDataBase64JSON") or stream.get(
+                        "FileDataBase64JSON"
+                    )
                     if not b64_data:
                         continue
                     raw_bytes = base64.b64decode(b64_data)
-                    if raw_bytes.startswith(b'\xef\xbb\xbf'):
+                    if raw_bytes.startswith(b"\xef\xbb\xbf"):
                         raw_bytes = raw_bytes[3:]
-                    text = raw_bytes.decode('utf-8', errors='replace')
+                    text = raw_bytes.decode("utf-8", errors="replace")
                     if include_raw:
                         raw_texts.append(text)
                     parsed = MCPServer._parse_log_text(text, include_raw=include_raw)
-                    header = parsed.get('header', {})
-                    if not doc_application and header.get('application'):
-                        doc_application = header['application']
-                    if not doc_server and header.get('server'):
-                        doc_server = header['server']
-                    doc_entries.extend(parsed.get('entries', []))
+                    header = parsed.get("header", {})
+                    if not doc_application and header.get("application"):
+                        doc_application = header["application"]
+                    if not doc_server and header.get("server"):
+                        doc_server = header["server"]
+                    doc_entries.extend(parsed.get("entries", []))
 
-                if severity_filter == 'errors_only':
+                if severity_filter == "errors_only":
                     doc_entries = [
-                        e for e in doc_entries
-                        if e.get('error_code', '0').strip() not in ('', '0')
+                        e
+                        for e in doc_entries
+                        if e.get("error_code", "0").strip() not in ("", "0")
                     ]
                 all_entries.extend(doc_entries)
 
                 # Extract first date from entries for doc metadata
-                doc_date = ''
+                doc_date = ""
                 for e in doc_entries:
-                    ts = e.get('timestamp', '')
+                    ts = e.get("timestamp", "")
                     if ts:
-                        doc_date = ts.split(',')[0].split('T')[0].strip()
+                        doc_date = ts.split(",")[0].split("T")[0].strip()
                         break
 
-                doc_meta.append({
-                    'doc_no': int(doc_no),
-                    'application': doc_application,
-                    'server': doc_server,
-                    'date': doc_date,
-                    'entry_count': len(doc_entries),
-                })
+                doc_meta.append(
+                    {
+                        "doc_no": int(doc_no),
+                        "application": doc_application,
+                        "server": doc_server,
+                        "date": doc_date,
+                        "entry_count": len(doc_entries),
+                    }
+                )
 
-                if output_mode == 'full':
+                if output_mode == "full":
                     doc_result: Dict[str, Any] = {
-                        'doc_no': doc_no,
-                        'metadata': {k: row.get(k) for k in row if k != 'DocNo'},
-                        'entry_count': len(doc_entries),
-                        'entries': doc_entries,
+                        "doc_no": doc_no,
+                        "metadata": {k: row.get(k) for k in row if k != "DocNo"},
+                        "entry_count": len(doc_entries),
+                        "entries": doc_entries,
                     }
                     if include_raw:
-                        doc_result['raw_streams'] = raw_texts
+                        doc_result["raw_streams"] = raw_texts
                     documents.append(doc_result)
 
             except Exception as exc:
-                fetch_errors.append({'doc_no': doc_no, 'error': str(exc)})
+                fetch_errors.append({"doc_no": doc_no, "error": str(exc)})
 
         # Branch on output mode
-        if output_mode == 'full':
+        if output_mode == "full":
             result: Dict[str, Any] = {
-                'status': 'ok',
-                'documents': documents,
-                'summary': {
-                    'total_documents': len(documents),
-                    'total_entries': len(all_entries),
-                    'days_back': days_back,
-                    'query_rows_returned': len(rows),
+                "status": "ok",
+                "documents": documents,
+                "summary": {
+                    "total_documents": len(documents),
+                    "total_entries": len(all_entries),
+                    "days_back": days_back,
+                    "query_rows_returned": len(rows),
                 },
             }
             if fetch_errors:
-                result['fetch_errors'] = fetch_errors
+                result["fetch_errors"] = fetch_errors
             return result
 
         # Summary or analysis mode
-        summary = MCPServer._summarize_log_entries(all_entries, doc_meta, compact=(output_mode == 'analysis'))
+        summary = MCPServer._summarize_log_entries(
+            all_entries, doc_meta, compact=(output_mode == "analysis")
+        )
         result = {
-            'status': 'ok',
+            "status": "ok",
             **summary,
         }
         if fetch_errors:
-            result['fetch_errors'] = fetch_errors
+            result["fetch_errors"] = fetch_errors
         return result
 
-    def _get_login_history(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        days_back = int(args.get('days_back', 7))
-        username = args.get('username')
-        max_entries = int(args.get('max_entries', 1000))
-        output_mode = args.get('output_mode', 'analysis')
+    def _get_login_history(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        days_back = int(args.get("days_back", 7))
+        username = args.get("username")
+        max_entries = int(args.get("max_entries", 1000))
+        output_mode = args.get("output_mode", "analysis")
 
         # Compute TimestampFrom
         from datetime import datetime, timedelta, timezone
+
         ts_from = datetime.now(timezone.utc) - timedelta(days=days_back)
-        timestamp_from = ts_from.strftime('%Y-%m-%dT%H:%M:%S')
+        timestamp_from = ts_from.strftime("%Y-%m-%dT%H:%M:%S")
 
         if username:
             # --- Single-user mode: resolve and fetch for one user ---
-            best_user, candidates, needs_confirmation = self._resolve_user_from_query(username, tenant, client)
+            best_user, candidates, needs_confirmation = self._resolve_user_from_query(
+                username, tenant, client
+            )
             if not best_user:
-                return {'status': 'error', 'error': f'No user found matching "{username}".'}
+                return {
+                    "status": "error",
+                    "error": f'No user found matching "{username}".',
+                }
             if needs_confirmation:
                 return {
-                    'status': 'needs_confirmation',
-                    'message': f'Ambiguous username "{username}". Please confirm or be more specific.',
-                    'candidates': candidates,
+                    "status": "needs_confirmation",
+                    "message": f'Ambiguous username "{username}". Please confirm or be more specific.',
+                    "candidates": candidates,
                 }
-            user_no = best_user.get('UserId')
+            user_no = best_user.get("UserId")
             resolved_user_info = {
-                'UserId': best_user.get('UserId'),
-                'UserName': best_user.get('UserName'),
-                'DisplayName': best_user.get('DisplayName'),
-                'SMTP': best_user.get('SMTP'),
+                "UserId": best_user.get("UserId"),
+                "UserName": best_user.get("UserName"),
+                "DisplayName": best_user.get("DisplayName"),
+                "SMTP": best_user.get("SMTP"),
             }
 
             # Domain/AD accounts resolve to UserId 0 — login history is not available for them
             if user_no == 0:
                 return {
-                    'status': 'ok',
-                    'warning': (
+                    "status": "ok",
+                    "warning": (
                         f'User "{resolved_user_info["DisplayName"]}" is a domain account (UserId=0). '
-                        'Login history is only available for native Therefore accounts, not domain/AD accounts.'
+                        "Login history is only available for native Therefore accounts, not domain/AD accounts."
                     ),
-                    'tenant': tenant,
-                    'days_back': days_back,
-                    'total_entries': 0,
-                    'resolved_user': resolved_user_info,
+                    "tenant": tenant,
+                    "days_back": days_back,
+                    "total_entries": 0,
+                    "resolved_user": resolved_user_info,
                 }
 
-            resp = client.get_login_history(max_entries=max_entries, timestamp_from=timestamp_from, user_no=user_no)
-            entries = resp.get('Entries') or []
+            resp = client.get_login_history(
+                max_entries=max_entries, timestamp_from=timestamp_from, user_no=user_no
+            )
+            entries = resp.get("Entries") or []
             # Tag entries with user identity
             for entry in entries:
-                entry['_UserNo'] = user_no
-                entry['_DisplayName'] = resolved_user_info['DisplayName']
-                entry['_UserName'] = resolved_user_info['UserName']
+                entry["_UserNo"] = user_no
+                entry["_DisplayName"] = resolved_user_info["DisplayName"]
+                entry["_UserName"] = resolved_user_info["UserName"]
 
-            result = self._build_login_history_result(entries, tenant, days_back, output_mode, all_users_mode=False)
-            result['resolved_user'] = resolved_user_info
+            result = self._build_login_history_result(
+                entries, tenant, days_back, output_mode, all_users_mode=False
+            )
+            result["resolved_user"] = resolved_user_info
             return result
         else:
             # --- All-users mode: enumerate users and fetch per-user ---
-            users_resp = client.execute_users_query(query='', flags=5)
-            all_users = users_resp.get('Users') or []
+            users_resp = client.execute_users_query(query="", flags=5)
+            all_users = users_resp.get("Users") or []
             # Filter out service accounts
-            active_users = [u for u in all_users if not u.get('ServiceAccount', False)]
+            active_users = [u for u in all_users if not u.get("ServiceAccount", False)]
 
             entries: List[Dict[str, Any]] = []
             users_queried = 0
@@ -3864,24 +3638,28 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
             def fetch_user_history(user: Dict[str, Any]) -> List[Dict[str, Any]]:
-                uid = user.get('UserId')
+                uid = user.get("UserId")
                 try:
                     resp = client.get_login_history(
                         max_entries=max_entries,
                         timestamp_from=timestamp_from,
                         user_no=uid,
                     )
-                    user_entries = resp.get('Entries') or []
+                    user_entries = resp.get("Entries") or []
                     for entry in user_entries:
-                        entry['_UserNo'] = uid
-                        entry['_DisplayName'] = user.get('DisplayName') or user.get('UserName') or str(uid)
-                        entry['_UserName'] = user.get('UserName') or str(uid)
+                        entry["_UserNo"] = uid
+                        entry["_DisplayName"] = (
+                            user.get("DisplayName") or user.get("UserName") or str(uid)
+                        )
+                        entry["_UserName"] = user.get("UserName") or str(uid)
                     return user_entries
                 except Exception:
                     return []
 
             with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = {executor.submit(fetch_user_history, u): u for u in active_users}
+                futures = {
+                    executor.submit(fetch_user_history, u): u for u in active_users
+                }
                 for future in as_completed(futures):
                     users_queried += 1
                     user_entries = future.result()
@@ -3890,11 +3668,13 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                         entries.extend(user_entries)
 
             # Sort combined entries by timestamp descending
-            entries.sort(key=lambda e: e.get('Timestamp', ''), reverse=True)
+            entries.sort(key=lambda e: e.get("Timestamp", ""), reverse=True)
 
-            result = self._build_login_history_result(entries, tenant, days_back, output_mode, all_users_mode=True)
-            result['users_queried'] = users_queried
-            result['users_with_logins'] = users_with_logins
+            result = self._build_login_history_result(
+                entries, tenant, days_back, output_mode, all_users_mode=True
+            )
+            result["users_queried"] = users_queried
+            result["users_with_logins"] = users_with_logins
             return result
 
     def _build_login_history_result(
@@ -3906,153 +3686,164 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         all_users_mode: bool,
     ) -> Dict[str, Any]:
         result: Dict[str, Any] = {
-            'status': 'ok',
-            'tenant': tenant,
-            'days_back': days_back,
-            'total_entries': len(entries),
+            "status": "ok",
+            "tenant": tenant,
+            "days_back": days_back,
+            "total_entries": len(entries),
         }
 
         # Full mode — return raw entries
-        if output_mode == 'full':
-            result['entries'] = entries
+        if output_mode == "full":
+            result["entries"] = entries
             return result
 
         # Analysis mode
         successes = 0
         failures = 0
-        daily: Dict[str, Dict[str, int]] = {}       # date -> {success, failure}
-        by_client: Dict[str, int] = {}               # client+version -> count
-        by_ip: Dict[str, int] = {}                   # IP -> count
-        by_node: Dict[str, int] = {}                 # node -> count
-        by_error: Dict[int, Dict[str, Any]] = {}     # error_code -> {count, examples}
-        by_user: Dict[str, Dict[str, Any]] = {}      # display_name -> {user_no, username, success, failure}
+        daily: Dict[str, Dict[str, int]] = {}  # date -> {success, failure}
+        by_client: Dict[str, int] = {}  # client+version -> count
+        by_ip: Dict[str, int] = {}  # IP -> count
+        by_node: Dict[str, int] = {}  # node -> count
+        by_error: Dict[int, Dict[str, Any]] = {}  # error_code -> {count, examples}
+        by_user: Dict[
+            str, Dict[str, Any]
+        ] = {}  # display_name -> {user_no, username, success, failure}
 
         for entry in entries:
-            error_code = entry.get('ErrorCode', 0)
-            is_success = (error_code == 0)
+            error_code = entry.get("ErrorCode", 0)
+            is_success = error_code == 0
             if is_success:
                 successes += 1
             else:
                 failures += 1
 
             # Daily breakdown
-            ts = entry.get('Timestamp') or ''
-            day = ts[:10] if len(ts) >= 10 else 'unknown'
+            ts = entry.get("Timestamp") or ""
+            day = ts[:10] if len(ts) >= 10 else "unknown"
             if day not in daily:
-                daily[day] = {'success': 0, 'failure': 0}
-            daily[day]['success' if is_success else 'failure'] += 1
+                daily[day] = {"success": 0, "failure": 0}
+            daily[day]["success" if is_success else "failure"] += 1
 
             # Client breakdown
-            client_name = entry.get('Client') or 'unknown'
-            version_str = entry.get('ClientVersionString') or ''
-            client_key = f'{client_name} {version_str}'.strip() if version_str else client_name
+            client_name = entry.get("Client") or "unknown"
+            version_str = entry.get("ClientVersionString") or ""
+            client_key = (
+                f"{client_name} {version_str}".strip() if version_str else client_name
+            )
             by_client[client_key] = by_client.get(client_key, 0) + 1
 
             # IP breakdown
-            ip = entry.get('IPAddress') or 'unknown'
+            ip = entry.get("IPAddress") or "unknown"
             by_ip[ip] = by_ip.get(ip, 0) + 1
 
             # Node breakdown
-            node = entry.get('NodeName') or 'unknown'
+            node = entry.get("NodeName") or "unknown"
             by_node[node] = by_node.get(node, 0) + 1
 
             # Per-user breakdown
-            display_name = entry.get('_DisplayName') or 'unknown'
+            display_name = entry.get("_DisplayName") or "unknown"
             if display_name not in by_user:
                 by_user[display_name] = {
-                    'user_no': entry.get('_UserNo'),
-                    'username': entry.get('_UserName') or '',
-                    'success': 0,
-                    'failure': 0,
+                    "user_no": entry.get("_UserNo"),
+                    "username": entry.get("_UserName") or "",
+                    "success": 0,
+                    "failure": 0,
                 }
-            by_user[display_name]['success' if is_success else 'failure'] += 1
+            by_user[display_name]["success" if is_success else "failure"] += 1
 
             # Error breakdown
             if not is_success:
                 if error_code not in by_error:
-                    by_error[error_code] = {'count': 0, 'examples': []}
-                by_error[error_code]['count'] += 1
-                if len(by_error[error_code]['examples']) < 3:
-                    by_error[error_code]['examples'].append({
-                        'timestamp': ts,
-                        'client': client_key,
-                        'ip': ip,
-                        'node': node,
-                        'user': display_name,
-                    })
+                    by_error[error_code] = {"count": 0, "examples": []}
+                by_error[error_code]["count"] += 1
+                if len(by_error[error_code]["examples"]) < 3:
+                    by_error[error_code]["examples"].append(
+                        {
+                            "timestamp": ts,
+                            "client": client_key,
+                            "ip": ip,
+                            "node": node,
+                            "user": display_name,
+                        }
+                    )
 
         total = successes + failures
-        result['summary'] = {
-            'total_logins': total,
-            'successes': successes,
-            'failures': failures,
-            'failure_rate_pct': round(failures / total * 100, 1) if total else 0,
+        result["summary"] = {
+            "total_logins": total,
+            "successes": successes,
+            "failures": failures,
+            "failure_rate_pct": round(failures / total * 100, 1) if total else 0,
         }
 
         # Daily activity sorted by date
-        result['daily_activity'] = [
-            {'date': d, **counts}
-            for d, counts in sorted(daily.items())
+        result["daily_activity"] = [
+            {"date": d, **counts} for d, counts in sorted(daily.items())
         ]
 
         # Per-user breakdown sorted by total logins desc
         if all_users_mode:
-            result['by_user'] = [
+            result["by_user"] = [
                 {
-                    'display_name': name,
-                    'user_no': info['user_no'],
-                    'username': info['username'],
-                    'success': info['success'],
-                    'failure': info['failure'],
-                    'total': info['success'] + info['failure'],
+                    "display_name": name,
+                    "user_no": info["user_no"],
+                    "username": info["username"],
+                    "success": info["success"],
+                    "failure": info["failure"],
+                    "total": info["success"] + info["failure"],
                 }
                 for name, info in sorted(
                     by_user.items(),
-                    key=lambda x: x[1]['success'] + x[1]['failure'],
+                    key=lambda x: x[1]["success"] + x[1]["failure"],
                     reverse=True,
                 )
             ]
 
         # Client breakdown sorted by count desc
-        result['by_client'] = [
-            {'client': k, 'count': v}
+        result["by_client"] = [
+            {"client": k, "count": v}
             for k, v in sorted(by_client.items(), key=lambda x: x[1], reverse=True)
         ]
 
         # IP breakdown top 20
-        result['by_ip'] = [
-            {'ip': k, 'count': v}
+        result["by_ip"] = [
+            {"ip": k, "count": v}
             for k, v in sorted(by_ip.items(), key=lambda x: x[1], reverse=True)[:20]
         ]
 
         # Node breakdown sorted by count desc
-        result['by_node'] = [
-            {'node': k, 'count': v}
+        result["by_node"] = [
+            {"node": k, "count": v}
             for k, v in sorted(by_node.items(), key=lambda x: x[1], reverse=True)
         ]
 
         # Error breakdown sorted by count desc
         if by_error:
-            result['errors'] = [
-                {'error_code': code, 'count': info['count'], 'examples': info['examples']}
-                for code, info in sorted(by_error.items(), key=lambda x: x[1]['count'], reverse=True)
+            result["errors"] = [
+                {
+                    "error_code": code,
+                    "count": info["count"],
+                    "examples": info["examples"],
+                }
+                for code, info in sorted(
+                    by_error.items(), key=lambda x: x[1]["count"], reverse=True
+                )
             ]
 
         return result
 
     # Semantic names for pipe-delimited log fields (by positional index)
     _LOG_FIELD_NAMES = {
-        0: 'timestamp',
-        1: 'user',
-        2: 'source',
-        3: 'action',
-        4: 'error_code',
-        5: 'doc_no',
-        6: 'version_no',
-        7: 'category',
+        0: "timestamp",
+        1: "user",
+        2: "source",
+        3: "action",
+        4: "error_code",
+        5: "doc_no",
+        6: "version_no",
+        7: "category",
         # 8 is variable/unused — kept as f8
-        9: 'detail',
-        10: 'extra_info',
+        9: "detail",
+        10: "extra_info",
     }
 
     @staticmethod
@@ -4068,8 +3859,8 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 data_start = i + 1
                 found_blank = True
                 break
-            if ':' in line:
-                key, _, val = line.partition(':')
+            if ":" in line:
+                key, _, val = line.partition(":")
                 header[key.strip().lower()] = val.strip()
         if not found_blank:
             # No blank separator — treat everything as data, discard partial header
@@ -4082,36 +3873,40 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             if not line:
                 continue
 
-            parts = line.split('|')
+            parts = line.split("|")
 
             # Pipe-delimited log line (6+ fields)
             if len(parts) >= 6:
                 entry: Dict[str, Any] = {}
                 if include_raw:
-                    entry['raw'] = line
+                    entry["raw"] = line
                 for idx, val in enumerate(parts):
-                    name = MCPServer._LOG_FIELD_NAMES.get(idx, f'f{idx}')
+                    name = MCPServer._LOG_FIELD_NAMES.get(idx, f"f{idx}")
                     entry[name] = val.strip()
                 if header:
-                    entry['application'] = header.get('application', '')
-                    entry['server'] = header.get('server', '')
+                    entry["application"] = header.get("application", "")
+                    entry["server"] = header.get("server", "")
                 entries.append(entry)
 
             # Non-pipe line starting with a timestamp (e.g. Content Connector logs)
             elif len(parts) <= 2:
-                match = re.match(r'^(\d{4}[-/]\d{2}[-/]\d{2}[,T]?\s*\d{2}:\d{2}:\d{2})\s+(.*)$', line)
+                match = re.match(
+                    r"^(\d{4}[-/]\d{2}[-/]\d{2}[,T]?\s*\d{2}:\d{2}:\d{2})\s+(.*)$", line
+                )
                 if match:
-                    entries.append({
-                        'timestamp': match.group(1),
-                        'message': match.group(2),
-                    })
+                    entries.append(
+                        {
+                            "timestamp": match.group(1),
+                            "message": match.group(2),
+                        }
+                    )
                 else:
                     # Unparsed line — include raw so the calling LLM can still use it
-                    entries.append({'raw': line})
+                    entries.append({"raw": line})
 
         return {
-            'header': header,
-            'entries': entries,
+            "header": header,
+            "entries": entries,
         }
 
     @staticmethod
@@ -4139,40 +3934,45 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         service_events: List[Dict[str, Any]] = []
 
         # For compact mode: group errors by (error_code, action)
-        error_groups: Dict[tuple, Dict[str, Any]] = defaultdict(lambda: {
-            'count': 0,
-            'users': set(),
-            'first_seen': '',
-            'last_seen': '',
-            'daily_distribution': Counter(),
-            'example_detail': '',
-        })
+        error_groups: Dict[tuple, Dict[str, Any]] = defaultdict(
+            lambda: {
+                "count": 0,
+                "users": set(),
+                "first_seen": "",
+                "last_seen": "",
+                "daily_distribution": Counter(),
+                "example_detail": "",
+            }
+        )
 
         service_actions = {
-            'Server Start', 'Server Stop',
-            'Content Connector Start', 'Content Connector Stop',
-            'Migrate Start', 'Migrate Stop',
+            "Server Start",
+            "Server Stop",
+            "Content Connector Start",
+            "Content Connector Stop",
+            "Migrate Start",
+            "Migrate Stop",
         }
 
         for entry in all_entries:
-            action = entry.get('action', '')
-            error_code = entry.get('error_code', '0')
-            timestamp = entry.get('timestamp', '')
-            user = entry.get('user', '')
+            action = entry.get("action", "")
+            error_code = entry.get("error_code", "0")
+            timestamp = entry.get("timestamp", "")
+            user = entry.get("user", "")
 
             # Count actions
             if action:
                 action_counts[action] += 1
 
             # Extract date from timestamp (format: "YYYY-MM-DD, HH:MM:SS" or similar)
-            date_str = ''
+            date_str = ""
             if timestamp:
-                date_str = timestamp.split(',')[0].split('T')[0].strip()
+                date_str = timestamp.split(",")[0].split("T")[0].strip()
             if date_str:
                 daily_events[date_str] = daily_events.get(date_str, 0) + 1
 
             # Track errors (non-zero, non-empty error_code)
-            is_error = error_code and error_code.strip() and error_code.strip() != '0'
+            is_error = error_code and error_code.strip() and error_code.strip() != "0"
             if is_error:
                 code = error_code.strip()
                 if date_str:
@@ -4183,36 +3983,38 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
                 # Build detail string
                 detail_parts = []
-                if entry.get('detail'):
-                    detail_parts.append(entry['detail'])
-                if entry.get('extra_info'):
-                    detail_parts.append(entry['extra_info'])
-                detail = '; '.join(detail_parts) if detail_parts else ''
+                if entry.get("detail"):
+                    detail_parts.append(entry["detail"])
+                if entry.get("extra_info"):
+                    detail_parts.append(entry["extra_info"])
+                detail = "; ".join(detail_parts) if detail_parts else ""
 
                 if compact:
                     # Accumulate into group
                     group_key = (code, action)
                     grp = error_groups[group_key]
-                    grp['count'] += 1
+                    grp["count"] += 1
                     if user and user.strip():
-                        grp['users'].add(user.strip())
-                    if not grp['first_seen'] or timestamp < grp['first_seen']:
-                        grp['first_seen'] = timestamp
-                    if not grp['last_seen'] or timestamp > grp['last_seen']:
-                        grp['last_seen'] = timestamp
+                        grp["users"].add(user.strip())
+                    if not grp["first_seen"] or timestamp < grp["first_seen"]:
+                        grp["first_seen"] = timestamp
+                    if not grp["last_seen"] or timestamp > grp["last_seen"]:
+                        grp["last_seen"] = timestamp
                     if date_str:
-                        grp['daily_distribution'][date_str] += 1
-                    if detail and not grp['example_detail']:
-                        grp['example_detail'] = detail
+                        grp["daily_distribution"][date_str] += 1
+                    if detail and not grp["example_detail"]:
+                        grp["example_detail"] = detail
                 else:
-                    error_entries.append({
-                        'timestamp': timestamp,
-                        'application': entry.get('application', ''),
-                        'action': action,
-                        'error_code': code,
-                        'user': user,
-                        'detail': detail,
-                    })
+                    error_entries.append(
+                        {
+                            "timestamp": timestamp,
+                            "application": entry.get("application", ""),
+                            "action": action,
+                            "error_code": code,
+                            "user": user,
+                            "detail": detail,
+                        }
+                    )
 
             # Track user activity (skip empty/system users)
             if user and user.strip():
@@ -4220,29 +4022,36 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
             # Track service events
             if action in service_actions:
-                service_events.append({
-                    'timestamp': timestamp,
-                    'application': entry.get('application', ''),
-                    'server': entry.get('server', ''),
-                    'event': action,
-                })
+                service_events.append(
+                    {
+                        "timestamp": timestamp,
+                        "application": entry.get("application", ""),
+                        "server": entry.get("server", ""),
+                        "event": action,
+                    }
+                )
 
         # Build daily_activity sorted descending by date
-        all_dates = sorted(set(list(daily_events.keys()) + list(daily_errors.keys())), reverse=True)
+        all_dates = sorted(
+            set(list(daily_events.keys()) + list(daily_errors.keys())), reverse=True
+        )
         daily_activity = [
-            {'date': d, 'events': daily_events.get(d, 0), 'errors': daily_errors.get(d, 0)}
+            {
+                "date": d,
+                "events": daily_events.get(d, 0),
+                "errors": daily_errors.get(d, 0),
+            }
             for d in all_dates
         ]
 
         # Determine period
-        period_from = all_dates[-1] if all_dates else ''
-        period_to = all_dates[0] if all_dates else ''
+        period_from = all_dates[-1] if all_dates else ""
+        period_to = all_dates[0] if all_dates else ""
 
         # User activity — capped at top 20 in compact mode
         top_n = 20 if compact else None
         user_activity = [
-            {'user': u, 'actions': c}
-            for u, c in user_counts.most_common(top_n)
+            {"user": u, "actions": c} for u, c in user_counts.most_common(top_n)
         ]
 
         # Action counts — capped at top 20 in compact mode
@@ -4251,48 +4060,54 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         total_errors = sum(error_by_code.values())
 
         result_analysis: Dict[str, Any] = {
-            'period': {'from': period_from, 'to': period_to},
-            'total_entries': len(all_entries),
-            'total_errors': total_errors,
-            'action_counts': action_counts_dict,
-            'daily_activity': daily_activity,
-            'error_summary': {
-                'by_code': dict(error_by_code.most_common()),
-                'by_action': dict(error_by_action.most_common()),
+            "period": {"from": period_from, "to": period_to},
+            "total_entries": len(all_entries),
+            "total_errors": total_errors,
+            "action_counts": action_counts_dict,
+            "daily_activity": daily_activity,
+            "error_summary": {
+                "by_code": dict(error_by_code.most_common()),
+                "by_action": dict(error_by_action.most_common()),
             },
-            'user_activity': user_activity,
-            'service_events': service_events,
+            "user_activity": user_activity,
+            "service_events": service_events,
         }
 
         result: Dict[str, Any] = {
-            'analysis': result_analysis,
-            'documents': doc_metadata,
+            "analysis": result_analysis,
+            "documents": doc_metadata,
         }
 
         if compact:
             # Build grouped error list sorted by count descending
             grouped_errors = []
             for (code, action), grp in sorted(
-                error_groups.items(), key=lambda x: x[1]['count'], reverse=True
+                error_groups.items(), key=lambda x: x[1]["count"], reverse=True
             ):
-                grouped_errors.append({
-                    'error_code': code,
-                    'action': action,
-                    'count': grp['count'],
-                    'example_detail': grp['example_detail'],
-                    'users': sorted(grp['users']) if grp['users'] else ['(none)'],
-                    'first_seen': grp['first_seen'],
-                    'last_seen': grp['last_seen'],
-                    'daily_distribution': dict(sorted(grp['daily_distribution'].items())),
-                })
-            result['grouped_errors'] = grouped_errors
+                grouped_errors.append(
+                    {
+                        "error_code": code,
+                        "action": action,
+                        "count": grp["count"],
+                        "example_detail": grp["example_detail"],
+                        "users": sorted(grp["users"]) if grp["users"] else ["(none)"],
+                        "first_seen": grp["first_seen"],
+                        "last_seen": grp["last_seen"],
+                        "daily_distribution": dict(
+                            sorted(grp["daily_distribution"].items())
+                        ),
+                    }
+                )
+            result["grouped_errors"] = grouped_errors
         else:
-            result['errors'] = error_entries
+            result["errors"] = error_entries
 
         return result
 
     @staticmethod
-    def _normalize_enum_value(value: Any, mapping: Dict[str, int], field_name: str) -> Optional[int]:
+    def _normalize_enum_value(
+        value: Any, mapping: Dict[str, int], field_name: str
+    ) -> Optional[int]:
         if value is None:
             return None
         if isinstance(value, bool):
@@ -4303,66 +4118,68 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             text = value.strip()
             if text.isdigit():
                 return int(text)
-            key = re.sub(r'[^a-z0-9]+', '', text.lower())
+            key = re.sub(r"[^a-z0-9]+", "", text.lower())
             if key in mapping:
                 return mapping[key]
-        raise ValueError(f'Invalid {field_name} value: {value}')
+        raise ValueError(f"Invalid {field_name} value: {value}")
 
-    def _normalize_conversion_options(self, options: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _normalize_conversion_options(
+        self, options: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         if not options:
             return None
 
         # Normalize keys to expected WebAPI names.
         key_map = {
-            'annotationmode': 'AnnotationMode',
-            'convertto': 'ConvertTo',
-            'signaturemode': 'SignatureMode',
-            'certificatename': 'CertificateName',
-            'timestamppwd': 'TimeStampPwd',
-            'timestampserver': 'TimeStampServer',
-            'timestampuser': 'TimeStampUser',
-            'multipagestreamname': 'MultipageStreamName',
+            "annotationmode": "AnnotationMode",
+            "convertto": "ConvertTo",
+            "signaturemode": "SignatureMode",
+            "certificatename": "CertificateName",
+            "timestamppwd": "TimeStampPwd",
+            "timestampserver": "TimeStampServer",
+            "timestampuser": "TimeStampUser",
+            "multipagestreamname": "MultipageStreamName",
         }
 
         normalized: Dict[str, Any] = {}
         for k, v in options.items():
-            key = re.sub(r'[^a-z0-9]+', '', str(k).lower())
+            key = re.sub(r"[^a-z0-9]+", "", str(k).lower())
             out_key = key_map.get(key, k)
             normalized[out_key] = v
 
         convert_to_map = {
-            'original': 0,
-            'singletiff': 1,
-            'singlepdf': 2,
-            'multipagetiff': 3,
-            'multipagepdf': 4,
-            'searchablepdf': 5,
-            'searchablepdfa': 6,
-            'jpeg': 50,
-            'jpg': 50,
+            "original": 0,
+            "singletiff": 1,
+            "singlepdf": 2,
+            "multipagetiff": 3,
+            "multipagepdf": 4,
+            "searchablepdf": 5,
+            "searchablepdfa": 6,
+            "jpeg": 50,
+            "jpg": 50,
         }
         annotation_mode_map = {
-            'default': 0,
-            'merge': 1,
-            'hide': 2,
+            "default": 0,
+            "merge": 1,
+            "hide": 2,
         }
         signature_mode_map = {
-            'nosignature': 0,
-            'signatureonly': 1,
-            'signatureandtimestamp': 2,
+            "nosignature": 0,
+            "signatureonly": 1,
+            "signatureandtimestamp": 2,
         }
 
-        if 'ConvertTo' in normalized:
-            normalized['ConvertTo'] = self._normalize_enum_value(
-                normalized.get('ConvertTo'), convert_to_map, 'ConvertTo'
+        if "ConvertTo" in normalized:
+            normalized["ConvertTo"] = self._normalize_enum_value(
+                normalized.get("ConvertTo"), convert_to_map, "ConvertTo"
             )
-        if 'AnnotationMode' in normalized:
-            normalized['AnnotationMode'] = self._normalize_enum_value(
-                normalized.get('AnnotationMode'), annotation_mode_map, 'AnnotationMode'
+        if "AnnotationMode" in normalized:
+            normalized["AnnotationMode"] = self._normalize_enum_value(
+                normalized.get("AnnotationMode"), annotation_mode_map, "AnnotationMode"
             )
-        if 'SignatureMode' in normalized:
-            normalized['SignatureMode'] = self._normalize_enum_value(
-                normalized.get('SignatureMode'), signature_mode_map, 'SignatureMode'
+        if "SignatureMode" in normalized:
+            normalized["SignatureMode"] = self._normalize_enum_value(
+                normalized.get("SignatureMode"), signature_mode_map, "SignatureMode"
             )
 
         return normalized
@@ -4370,28 +4187,30 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
     @staticmethod
     def _normalize_stream_insert_mode(value: Any) -> int:
         mapping = {
-            'append': 0,
-            'prepend': 1,
+            "append": 0,
+            "prepend": 1,
         }
-        normalized = MCPServer._normalize_enum_value(value, mapping, 'NewStreamInsertMode')
+        normalized = MCPServer._normalize_enum_value(
+            value, mapping, "NewStreamInsertMode"
+        )
         return int(normalized) if normalized is not None else 0
 
     def _normalize_workflow_flags(self, value: Any) -> int:
         mapping = {
-            'defaultinstances': 0,
-            'runninginstances': 1,
-            'finishedinstances': 2,
-            'allinstances': 3,
-            'errorinstances': 4,
-            'overdueinstances': 8,
-            'running': 1,
-            'finished': 2,
-            'all': 3,
-            'error': 4,
-            'overdue': 8,
-            'default': 0,
+            "defaultinstances": 0,
+            "runninginstances": 1,
+            "finishedinstances": 2,
+            "allinstances": 3,
+            "errorinstances": 4,
+            "overdueinstances": 8,
+            "running": 1,
+            "finished": 2,
+            "all": 3,
+            "error": 4,
+            "overdue": 8,
+            "default": 0,
         }
-        normalized = self._normalize_enum_value(value, mapping, 'WorkflowFlags')
+        normalized = self._normalize_enum_value(value, mapping, "WorkflowFlags")
         if normalized is None:
             return 0
         return int(normalized)
@@ -4406,7 +4225,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
     @staticmethod
     def _get_local_tz() -> timezone:
-        tz_name = os.environ.get('THEREFORE_LOCAL_TZ')
+        tz_name = os.environ.get("THEREFORE_LOCAL_TZ")
         if tz_name:
             if ZoneInfo is not None:
                 try:
@@ -4424,7 +4243,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         text = str(value).strip()
         if not text:
             return None
-        if text.startswith('/Date(') and text.endswith(')/'):
+        if text.startswith("/Date(") and text.endswith(")/"):
             try:
                 ms = int(text[6:-2])
             except ValueError:
@@ -4437,24 +4256,24 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 return None
         # ISO8601 variants
         pattern = re.compile(
-            r'^(?P<date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})'
-            r'(?P<frac>\.\d+)?'
-            r'(?P<tz>Z|[+-]\d{2}:\d{2})?$'
+            r"^(?P<date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})"
+            r"(?P<frac>\.\d+)?"
+            r"(?P<tz>Z|[+-]\d{2}:\d{2})?$"
         )
         match = pattern.match(text)
         if not match:
             return None
-        base = match.group('date')
-        frac = match.group('frac') or ''
-        tz = match.group('tz') or '+00:00'
-        if tz == 'Z':
-            tz = '+00:00'
+        base = match.group("date")
+        frac = match.group("frac") or ""
+        tz = match.group("tz") or "+00:00"
+        if tz == "Z":
+            tz = "+00:00"
         if frac:
             # trim to microseconds (6 digits)
             frac_digits = frac[1:]
             if len(frac_digits) > 6:
                 frac_digits = frac_digits[:6]
-            frac = '.' + frac_digits
+            frac = "." + frac_digits
         iso = f"{base}{frac}{tz}"
         try:
             return datetime.fromisoformat(iso)
@@ -4472,19 +4291,19 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             local_dt = dt.astimezone(local_tz)
         except Exception:
             local_dt = dt.astimezone(timezone.utc)
-        tz_name = local_dt.tzname() or ''
+        tz_name = local_dt.tzname() or ""
         if not tz_name:
             offset = local_dt.utcoffset()
             if offset is None:
-                tz_name = 'UTC'
+                tz_name = "UTC"
             else:
                 total_seconds = int(offset.total_seconds())
-                sign = '+' if total_seconds >= 0 else '-'
+                sign = "+" if total_seconds >= 0 else "-"
                 total_seconds = abs(total_seconds)
                 hours = total_seconds // 3600
                 minutes = (total_seconds % 3600) // 60
-                tz_name = f'UTC{sign}{hours:02d}:{minutes:02d}'
-        return local_dt.strftime('%Y-%m-%d %H:%M:%S ') + tz_name
+                tz_name = f"UTC{sign}{hours:02d}:{minutes:02d}"
+        return local_dt.strftime("%Y-%m-%d %H:%M:%S ") + tz_name
 
     @staticmethod
     def _debug_log(path: Optional[str], payload: Dict[str, Any]) -> None:
@@ -4496,38 +4315,44 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             pass
         try:
             payload = dict(payload)
-            payload.setdefault('ts', datetime.now(timezone.utc).isoformat())
-            with open(path, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(payload, ensure_ascii=False) + '\n')
+            payload.setdefault("ts", datetime.now(timezone.utc).isoformat())
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=False) + "\n")
         except Exception:
             # best-effort logging only
             return
 
     def _extract_user_values(self, user: Dict[str, Any]) -> List[str]:
         values = []
-        for key in ('UserName', 'DisplayName', 'SMTP'):
+        for key in ("UserName", "DisplayName", "SMTP"):
             val = user.get(key)
             if isinstance(val, str) and val.strip():
                 values.append(val.strip())
         return values
 
-    def _resolve_user_from_query(self, query: str, tenant: str, client: ThereforeClient, flags: int = 5) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]], bool]:
-        query = (query or '').strip()
+    def _resolve_user_from_query(
+        self, query: str, tenant: str, client: ThereforeClient, flags: int = 5
+    ) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]], bool]:
+        query = (query or "").strip()
         if not query:
             return None, [], False
         domain_names = []
         try:
             domain_info = client.get_domain_info() or {}
-            domain_names = domain_info.get('DomainNames') or []
+            domain_names = domain_info.get("DomainNames") or []
         except Exception:
             domain_names = []
 
         try:
-            resp = client.execute_users_query(query=query, domain_names=domain_names, flags=flags)
+            resp = client.execute_users_query(
+                query=query, domain_names=domain_names, flags=flags
+            )
         except Exception:
-            resp = client.execute_users_query(query=query, domain_names=None, flags=flags)
+            resp = client.execute_users_query(
+                query=query, domain_names=None, flags=flags
+            )
 
-        users = resp.get('Users') or []
+        users = resp.get("Users") or []
         if not users:
             return None, [], False
 
@@ -4535,32 +4360,38 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         scored = []
         for u in users:
             candidate = {
-                'UserId': u.get('UserId'),
-                'UserName': u.get('UserName'),
-                'DisplayName': u.get('DisplayName'),
-                'SMTP': u.get('SMTP'),
-                'DomainName': u.get('DomainName'),
+                "UserId": u.get("UserId"),
+                "UserName": u.get("UserName"),
+                "DisplayName": u.get("DisplayName"),
+                "SMTP": u.get("SMTP"),
+                "DomainName": u.get("DomainName"),
             }
             score = max(
-                self._score(query, str(u.get('DisplayName') or '')),
-                self._score(query, str(u.get('UserName') or '')),
-                self._score(query, str(u.get('SMTP') or '')),
+                self._score(query, str(u.get("DisplayName") or "")),
+                self._score(query, str(u.get("UserName") or "")),
+                self._score(query, str(u.get("SMTP") or "")),
             )
             scored.append((score, candidate, u))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         best_score, best_candidate, best_full = scored[0]
         needs_confirmation = True
-        if best_score >= 0.75 and (len(scored) == 1 or best_score - scored[1][0] >= 0.15):
+        if best_score >= 0.75 and (
+            len(scored) == 1 or best_score - scored[1][0] >= 0.15
+        ):
             needs_confirmation = False
 
         candidates = []
         for score, candidate, _ in scored[:5]:
             cand = dict(candidate)
-            cand['score'] = round(score, 4)
+            cand["score"] = round(score, 4)
             candidates.append(cand)
 
-        return (best_full if not needs_confirmation else best_full), candidates, needs_confirmation
+        return (
+            (best_full if not needs_confirmation else best_full),
+            candidates,
+            needs_confirmation,
+        )
 
     def _resolve_group_membership(
         self,
@@ -4576,20 +4407,22 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             if name in membership:
                 continue
             try:
-                resp = client.get_users_from_group(group_name=name, domain_name=domain_name)
+                resp = client.get_users_from_group(
+                    group_name=name, domain_name=domain_name
+                )
             except Exception:
                 membership[name] = False
                 continue
-            users = resp.get('Users') or []
+            users = resp.get("Users") or []
             found = False
             for user in users:
-                if self._match_user_value(user.get('UserName'), match_values):
+                if self._match_user_value(user.get("UserName"), match_values):
                     found = True
                     break
-                if self._match_user_value(user.get('DisplayName'), match_values):
+                if self._match_user_value(user.get("DisplayName"), match_values):
                     found = True
                     break
-                if self._match_user_value(user.get('SMTP'), match_values):
+                if self._match_user_value(user.get("SMTP"), match_values):
                     found = True
                     break
             membership[name] = found
@@ -4634,10 +4467,10 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if not name:
             return []
         candidates = [name]
-        if '\\' in name:
-            candidates.append(name.split('\\', 1)[1])
-        if '/' in name:
-            candidates.append(name.split('/', 1)[1])
+        if "\\" in name:
+            candidates.append(name.split("\\", 1)[1])
+        if "/" in name:
+            candidates.append(name.split("/", 1)[1])
         # Deduplicate while preserving order.
         seen = set()
         result = []
@@ -4649,49 +4482,69 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
     def _summarize_workflow_instance(self, resp: Dict[str, Any]) -> Dict[str, Any]:
         summary: Dict[str, Any] = {}
-        wf = resp.get('WorkflowInstance') or {}
-        linked_docs = resp.get('LinkedDocuments') or []
-        current_task = wf.get('CurrentTask') or {}
+        wf = resp.get("WorkflowInstance") or {}
+        linked_docs = resp.get("LinkedDocuments") or []
+        current_task = wf.get("CurrentTask") or {}
 
-        summary['InstanceNo'] = wf.get('InstanceNo')
-        summary['TokenNo'] = wf.get('TokenNo')
-        summary['WorkflowNo'] = wf.get('WorkflowNo')
-        summary['ProcessNo'] = wf.get('ProcessNo')
-        summary['ProcessName'] = wf.get('ProcessName')
-        summary['VersionNo'] = wf.get('VersionNo')
+        summary["InstanceNo"] = wf.get("InstanceNo")
+        summary["TokenNo"] = wf.get("TokenNo")
+        summary["WorkflowNo"] = wf.get("WorkflowNo")
+        summary["ProcessNo"] = wf.get("ProcessNo")
+        summary["ProcessName"] = wf.get("ProcessName")
+        summary["VersionNo"] = wf.get("VersionNo")
 
-        summary['AssignedTo'] = wf.get('AssignedTo')
-        summary['AssignedToUsers'] = wf.get('AssignedToUsers')
-        summary['OriginallyAssignedToUsers'] = wf.get('OriginallyAssignedToUsers')
-        summary['Claimed'] = wf.get('Claimed')
-        summary['IsAssignedToUser'] = wf.get('IsAssignedToUser')
-        summary['IsProcessOwner'] = wf.get('IsProcessOwner')
+        summary["AssignedTo"] = wf.get("AssignedTo")
+        summary["AssignedToUsers"] = wf.get("AssignedToUsers")
+        summary["OriginallyAssignedToUsers"] = wf.get("OriginallyAssignedToUsers")
+        summary["Claimed"] = wf.get("Claimed")
+        summary["IsAssignedToUser"] = wf.get("IsAssignedToUser")
+        summary["IsProcessOwner"] = wf.get("IsProcessOwner")
 
-        summary['CurrTaskName'] = wf.get('CurrTaskName') or current_task.get('Name')
-        summary['CurrTaskNo'] = wf.get('CurrTaskNo') or current_task.get('TaskNo')
-        summary['CurrTaskType'] = wf.get('CurrTaskType') or current_task.get('Type')
-        summary['CurrTaskId'] = wf.get('CurrTaskId') or current_task.get('CurrTaskId')
-        summary['CurrTaskGUID'] = wf.get('CurrTaskGUID') or current_task.get('CurrTaskGUID')
+        summary["CurrTaskName"] = wf.get("CurrTaskName") or current_task.get("Name")
+        summary["CurrTaskNo"] = wf.get("CurrTaskNo") or current_task.get("TaskNo")
+        summary["CurrTaskType"] = wf.get("CurrTaskType") or current_task.get("Type")
+        summary["CurrTaskId"] = wf.get("CurrTaskId") or current_task.get("CurrTaskId")
+        summary["CurrTaskGUID"] = wf.get("CurrTaskGUID") or current_task.get(
+            "CurrTaskGUID"
+        )
 
-        summary['TaskStartDate'] = wf.get('TaskStartDateISO8601') or wf.get('TaskStartDate')
-        summary['TaskDueDate'] = wf.get('TaskDueDateISO8601') or wf.get('TaskDueDate')
-        summary['ProcessStartDate'] = wf.get('ProcessStartDateISO8601') or wf.get('ProcessStartDate')
-        summary['ProcessDueDate'] = wf.get('ProcessDueDateISO8601') or wf.get('ProcessDueDate')
+        summary["TaskStartDate"] = wf.get("TaskStartDateISO8601") or wf.get(
+            "TaskStartDate"
+        )
+        summary["TaskDueDate"] = wf.get("TaskDueDateISO8601") or wf.get("TaskDueDate")
+        summary["ProcessStartDate"] = wf.get("ProcessStartDateISO8601") or wf.get(
+            "ProcessStartDate"
+        )
+        summary["ProcessDueDate"] = wf.get("ProcessDueDateISO8601") or wf.get(
+            "ProcessDueDate"
+        )
 
-        summary['TaskStartLocal'] = self._format_local_datetime(summary['TaskStartDate'])
-        summary['TaskDueLocal'] = self._format_local_datetime(summary['TaskDueDate'])
-        summary['ProcessStartLocal'] = self._format_local_datetime(summary['ProcessStartDate'])
-        summary['ProcessDueLocal'] = self._format_local_datetime(summary['ProcessDueDate'])
+        summary["TaskStartLocal"] = self._format_local_datetime(
+            summary["TaskStartDate"]
+        )
+        summary["TaskDueLocal"] = self._format_local_datetime(summary["TaskDueDate"])
+        summary["ProcessStartLocal"] = self._format_local_datetime(
+            summary["ProcessStartDate"]
+        )
+        summary["ProcessDueLocal"] = self._format_local_datetime(
+            summary["ProcessDueDate"]
+        )
 
-        summary['LinkedDocumentsCount'] = len(linked_docs)
-        summary['LinkedDocNos'] = [
-            doc.get('DocNo') for doc in linked_docs if isinstance(doc, dict) and doc.get('DocNo') is not None
+        summary["LinkedDocumentsCount"] = len(linked_docs)
+        summary["LinkedDocNos"] = [
+            doc.get("DocNo")
+            for doc in linked_docs
+            if isinstance(doc, dict) and doc.get("DocNo") is not None
         ][:10]
 
-        summary['ErrorString'] = wf.get('ErrorString')
-        summary['ErrorInfo'] = wf.get('ErrorInfo')
-        summary['ErrorTimestamp'] = wf.get('ErrorTimestampISO8601') or wf.get('ErrorTimestamp')
-        summary['ErrorTimestampLocal'] = self._format_local_datetime(summary['ErrorTimestamp'])
+        summary["ErrorString"] = wf.get("ErrorString")
+        summary["ErrorInfo"] = wf.get("ErrorInfo")
+        summary["ErrorTimestamp"] = wf.get("ErrorTimestampISO8601") or wf.get(
+            "ErrorTimestamp"
+        )
+        summary["ErrorTimestampLocal"] = self._format_local_datetime(
+            summary["ErrorTimestamp"]
+        )
 
         return summary
 
@@ -4708,14 +4561,18 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         thread_local = threading.local()
 
         def get_worker_client() -> ThereforeClient:
-            worker = getattr(thread_local, 'client', None)
+            worker = getattr(thread_local, "client", None)
             if worker is None:
                 # Reuse a client per thread to avoid repeated SSL/context setup.
                 worker = ThereforeClient(client.config)
                 thread_local.client = worker
             return worker
 
-        def fetch_with_timing(key: Tuple[int, int]) -> Tuple[Tuple[int, int], Optional[Dict[str, Any]], float, Optional[Exception]]:
+        def fetch_with_timing(
+            key: Tuple[int, int],
+        ) -> Tuple[
+            Tuple[int, int], Optional[Dict[str, Any]], float, Optional[Exception]
+        ]:
             instance_no, token_no = key
             worker = get_worker_client()
             start = time.time()
@@ -4733,10 +4590,10 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         keys = []
         seen = set()
         for task in tasks:
-            instance_no = task.get('InstanceNo')
+            instance_no = task.get("InstanceNo")
             if instance_no is None:
                 continue
-            token_no = int(task.get('TokenNo') or 0)
+            token_no = int(task.get("TokenNo") or 0)
             key = (int(instance_no), token_no)
             if key in seen:
                 continue
@@ -4745,11 +4602,14 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
         details: Dict[Tuple[int, int], Dict[str, Any]] = {}
         errors: List[Dict[str, Any]] = []
-        self._debug_log(debug_log_path, {
-            'event': 'instance_details_start',
-            'requested': len(keys),
-            'max_workers': max_workers,
-        })
+        self._debug_log(
+            debug_log_path,
+            {
+                "event": "instance_details_start",
+                "requested": len(keys),
+                "max_workers": max_workers,
+            },
+        )
 
         if not keys:
             return details, errors
@@ -4759,21 +4619,29 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             for key in keys:
                 k, resp, elapsed, err = fetch_with_timing(key)
                 if err:
-                    errors.append({'instance_no': key[0], 'token_no': key[1], 'error': str(err)})
+                    errors.append(
+                        {"instance_no": key[0], "token_no": key[1], "error": str(err)}
+                    )
                 elif resp is not None:
                     details[k] = resp
                 if debug_log_path and len(details) % max(1, debug_progress_every) == 0:
-                    self._debug_log(debug_log_path, {
-                        'event': 'instance_details_progress',
-                        'completed': len(details) + len(errors),
-                        'loaded': len(details),
-                        'failed': len(errors),
-                    })
-            self._debug_log(debug_log_path, {
-                'event': 'instance_details_done',
-                'loaded': len(details),
-                'failed': len(errors),
-            })
+                    self._debug_log(
+                        debug_log_path,
+                        {
+                            "event": "instance_details_progress",
+                            "completed": len(details) + len(errors),
+                            "loaded": len(details),
+                            "failed": len(errors),
+                        },
+                    )
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "instance_details_done",
+                    "loaded": len(details),
+                    "failed": len(errors),
+                },
+            )
             return details, errors
 
         max_cap = min(use_workers, len(keys))
@@ -4784,13 +4652,16 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         ewma_latency: Optional[float] = None
 
         if debug_log_path:
-            self._debug_log(debug_log_path, {
-                'event': 'instance_details_adaptive_start',
-                'max_workers_cap': max_cap,
-                'initial_workers': current_workers,
-                'min_workers': min_workers,
-                'ramp_step': ramp_step,
-            })
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "instance_details_adaptive_start",
+                    "max_workers_cap": max_cap,
+                    "initial_workers": current_workers,
+                    "min_workers": min_workers,
+                    "ramp_step": ramp_step,
+                },
+            )
 
         pending = deque(keys)
         in_flight: Dict[Any, Tuple[int, int]] = {}
@@ -4799,6 +4670,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         window_latency = 0.0
 
         with ThreadPoolExecutor(max_workers=max_cap) as executor:
+
             def submit_one() -> bool:
                 if not pending:
                     return False
@@ -4816,23 +4688,38 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     key = in_flight.pop(future)
                     k, resp, elapsed, err = future.result()
                     if err:
-                        errors.append({'instance_no': key[0], 'token_no': key[1], 'error': str(err)})
+                        errors.append(
+                            {
+                                "instance_no": key[0],
+                                "token_no": key[1],
+                                "error": str(err),
+                            }
+                        )
                         window_errors += 1
                     elif resp is not None:
                         details[k] = resp
                     window_count += 1
                     window_latency += float(elapsed or 0.0)
 
-                    if debug_log_path and (len(details) + len(errors)) % max(1, debug_progress_every) == 0:
-                        self._debug_log(debug_log_path, {
-                            'event': 'instance_details_progress',
-                            'completed': len(details) + len(errors),
-                            'loaded': len(details),
-                            'failed': len(errors),
-                            'current_workers': current_workers,
-                        })
+                    if (
+                        debug_log_path
+                        and (len(details) + len(errors)) % max(1, debug_progress_every)
+                        == 0
+                    ):
+                        self._debug_log(
+                            debug_log_path,
+                            {
+                                "event": "instance_details_progress",
+                                "completed": len(details) + len(errors),
+                                "loaded": len(details),
+                                "failed": len(errors),
+                                "current_workers": current_workers,
+                            },
+                        )
 
-                should_adjust = window_count >= window_size or (not pending and not in_flight)
+                should_adjust = window_count >= window_size or (
+                    not pending and not in_flight
+                )
                 if should_adjust and window_count > 0:
                     avg_latency = window_latency / max(1, window_count)
                     error_rate = window_errors / max(1, window_count)
@@ -4844,25 +4731,41 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
                     new_workers = current_workers
                     if error_rate > 0.02:
-                        new_workers = max(min_workers, int(max(1, current_workers * 0.75)))
-                    elif ewma_latency and avg_latency > ewma_latency * 1.5 and current_workers > min_workers:
-                        new_workers = max(min_workers, current_workers - max(1, current_workers // 4))
-                    elif error_rate == 0 and ewma_latency and avg_latency <= ewma_latency * 1.1 and current_workers < max_cap:
+                        new_workers = max(
+                            min_workers, int(max(1, current_workers * 0.75))
+                        )
+                    elif (
+                        ewma_latency
+                        and avg_latency > ewma_latency * 1.5
+                        and current_workers > min_workers
+                    ):
+                        new_workers = max(
+                            min_workers, current_workers - max(1, current_workers // 4)
+                        )
+                    elif (
+                        error_rate == 0
+                        and ewma_latency
+                        and avg_latency <= ewma_latency * 1.1
+                        and current_workers < max_cap
+                    ):
                         new_workers = min(max_cap, current_workers + ramp_step)
 
                     if new_workers != current_workers:
                         current_workers = new_workers
                         window_size = max(current_workers * 5, 50)
                         if debug_log_path:
-                            self._debug_log(debug_log_path, {
-                                'event': 'instance_details_throttle',
-                                'current_workers': current_workers,
-                                'error_rate': round(error_rate, 4),
-                                'avg_latency_ms': int(avg_latency * 1000),
-                                'ewma_latency_ms': int((ewma_latency or 0) * 1000),
-                                'pending': len(pending),
-                                'in_flight': len(in_flight),
-                            })
+                            self._debug_log(
+                                debug_log_path,
+                                {
+                                    "event": "instance_details_throttle",
+                                    "current_workers": current_workers,
+                                    "error_rate": round(error_rate, 4),
+                                    "avg_latency_ms": int(avg_latency * 1000),
+                                    "ewma_latency_ms": int((ewma_latency or 0) * 1000),
+                                    "pending": len(pending),
+                                    "in_flight": len(in_flight),
+                                },
+                            )
 
                     window_count = 0
                     window_errors = 0
@@ -4871,11 +4774,14 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 while len(in_flight) < current_workers and pending:
                     submit_one()
 
-        self._debug_log(debug_log_path, {
-            'event': 'instance_details_done',
-            'loaded': len(details),
-            'failed': len(errors),
-        })
+        self._debug_log(
+            debug_log_path,
+            {
+                "event": "instance_details_done",
+                "loaded": len(details),
+                "failed": len(errors),
+            },
+        )
         return details, errors
 
     def _attach_instance_details(
@@ -4885,89 +4791,106 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         errors: List[Dict[str, Any]],
         detail_mode: str,
     ) -> None:
-        if detail_mode not in ('summary', 'full'):
+        if detail_mode not in ("summary", "full"):
             return
-        error_map = {(e.get('instance_no'), e.get('token_no')): e.get('error') for e in errors}
+        error_map = {
+            (e.get("instance_no"), e.get("token_no")): e.get("error") for e in errors
+        }
         for task in tasks:
-            instance_no = task.get('InstanceNo')
+            instance_no = task.get("InstanceNo")
             if instance_no is None:
                 continue
-            token_no = int(task.get('TokenNo') or 0)
+            token_no = int(task.get("TokenNo") or 0)
             key = (int(instance_no), token_no)
             if key in error_map:
-                task['WorkflowInstanceError'] = error_map.get(key)
+                task["WorkflowInstanceError"] = error_map.get(key)
             detail = details.get(key)
             if not detail:
                 continue
-            if detail_mode == 'full':
-                task['WorkflowInstance'] = detail.get('WorkflowInstance')
-                task['LinkedDocuments'] = detail.get('LinkedDocuments')
+            if detail_mode == "full":
+                task["WorkflowInstance"] = detail.get("WorkflowInstance")
+                task["LinkedDocuments"] = detail.get("LinkedDocuments")
             else:
-                task['WorkflowInstanceSummary'] = self._summarize_workflow_instance(detail)
+                task["WorkflowInstanceSummary"] = self._summarize_workflow_instance(
+                    detail
+                )
 
-    def _get_workflow_instances_core(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
-        debug_enabled = bool(args.get('debug', False))
-        debug_log_path = args.get('debug_log_path')
-        debug_progress_every = int(args.get('debug_progress_every') or 500)
-        two_phase = bool(args.get('two_phase', False))
-        fetch_details = bool(args.get('fetch_details', False))
-        debug_info: Dict[str, Any] = {
-            'workflow_query': {},
-            'instance_details': {},
-            'filtering': {},
-        } if debug_enabled else {}
+    def _get_workflow_instances_core(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        debug_enabled = bool(args.get("debug", False))
+        debug_log_path = args.get("debug_log_path")
+        debug_progress_every = int(args.get("debug_progress_every") or 500)
+        two_phase = bool(args.get("two_phase", False))
+        fetch_details = bool(args.get("fetch_details", False))
+        debug_info: Dict[str, Any] = (
+            {
+                "workflow_query": {},
+                "instance_details": {},
+                "filtering": {},
+            }
+            if debug_enabled
+            else {}
+        )
         if debug_log_path:
-            self._debug_log(debug_log_path, {
-                'event': 'start',
-                'workflow_flags': args.get('workflow_flags'),
-                'task_filter': args.get('task_filter'),
-                'max_rows': args.get('max_rows'),
-                'detail_mode': args.get('instance_detail_mode'),
-            })
-        task_filter = args.get('task_filter')
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "start",
+                    "workflow_flags": args.get("workflow_flags"),
+                    "task_filter": args.get("task_filter"),
+                    "max_rows": args.get("max_rows"),
+                    "detail_mode": args.get("instance_detail_mode"),
+                },
+            )
+        task_filter = args.get("task_filter")
         if isinstance(task_filter, str) and task_filter.strip():
             workflow_flags = self._normalize_workflow_flags(task_filter)
         else:
-            workflow_flags = self._normalize_workflow_flags(args.get('workflow_flags', 'RunningInstances'))
-        if args.get('max_rows') is None:
+            workflow_flags = self._normalize_workflow_flags(
+                args.get("workflow_flags", "RunningInstances")
+            )
+        if args.get("max_rows") is None:
             max_rows = self._default_workflow_max_rows(client)
         else:
-            max_rows = int(args.get('max_rows'))
-        filter_to_user_requested = bool(args.get('filter_to_user', True))
+            max_rows = int(args.get("max_rows"))
+        filter_to_user_requested = bool(args.get("filter_to_user", True))
         filter_to_user = filter_to_user_requested
-        include_unfiltered = bool(args.get('include_unfiltered', False))
-        include_overdue_summary = bool(args.get('include_overdue_summary', True))
-        resolve_group_membership = bool(args.get('resolve_group_membership', True))
-        assignee_values = self._coerce_str_list(args.get('assignee_values')) or []
+        include_unfiltered = bool(args.get("include_unfiltered", False))
+        include_overdue_summary = bool(args.get("include_overdue_summary", True))
+        resolve_group_membership = bool(args.get("resolve_group_membership", True))
+        assignee_values = self._coerce_str_list(args.get("assignee_values")) or []
         assignee_values.extend(self.tenant_assignee_aliases.get(tenant, []))
 
-        detail_mode = str(args.get('instance_detail_mode') or 'summary').strip().lower()
-        if detail_mode not in ('none', 'summary', 'full'):
-            detail_mode = 'summary'
-        max_instance_workers = args.get('max_instance_workers')
+        detail_mode = str(args.get("instance_detail_mode") or "summary").strip().lower()
+        if detail_mode not in ("none", "summary", "full"):
+            detail_mode = "summary"
+        max_instance_workers = args.get("max_instance_workers")
         if max_instance_workers is None:
             max_instance_workers = 8 if (two_phase and fetch_details) else 4
         max_instance_workers = int(max_instance_workers)
-        is_access_mask_needed = bool(args.get('is_access_mask_needed', False))
-        load_history = bool(args.get('load_history', False))
+        is_access_mask_needed = bool(args.get("is_access_mask_needed", False))
+        load_history = bool(args.get("load_history", False))
 
         if two_phase and not fetch_details:
-            detail_mode = 'none'
+            detail_mode = "none"
             filter_to_user = False
 
-        user_query = args.get('user_query')
-        user_query_flags = int(args.get('user_query_flags', 5))
+        user_query = args.get("user_query")
+        user_query_flags = int(args.get("user_query_flags", 5))
         user_candidates = []
         user_needs_confirmation = False
         if isinstance(user_query, str) and user_query.strip():
-            user, user_candidates, user_needs_confirmation = self._resolve_user_from_query(
-                user_query, tenant, client, flags=user_query_flags
+            user, user_candidates, user_needs_confirmation = (
+                self._resolve_user_from_query(
+                    user_query, tenant, client, flags=user_query_flags
+                )
             )
             if user is None:
                 user = {}
         else:
             connected = client.get_connected_user(False) or {}
-            user = connected.get('User') or {}
+            user = connected.get("User") or {}
 
         user_values = self._extract_user_values(user)
         match_values = []
@@ -4980,40 +4903,48 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
         start = time.time()
         try:
-            resp = client.execute_workflow_query_for_all(workflow_flags=workflow_flags, max_rows=max_rows)
+            resp = client.execute_workflow_query_for_all(
+                workflow_flags=workflow_flags, max_rows=max_rows
+            )
         except Exception as exc:
             if debug_enabled:
-                debug_info['workflow_query'] = {
-                    'workflow_flags': workflow_flags,
-                    'max_rows': max_rows,
-                    'duration_ms': int((time.time() - start) * 1000),
-                    'error': str(exc),
+                debug_info["workflow_query"] = {
+                    "workflow_flags": workflow_flags,
+                    "max_rows": max_rows,
+                    "duration_ms": int((time.time() - start) * 1000),
+                    "error": str(exc),
                 }
-                self._debug_log(debug_log_path, {
-                    'event': 'workflow_query_error',
-                    'workflow_flags': workflow_flags,
-                    'max_rows': max_rows,
-                    'error': str(exc),
-                })
-                return {'error': str(exc), 'debug': debug_info}
+                self._debug_log(
+                    debug_log_path,
+                    {
+                        "event": "workflow_query_error",
+                        "workflow_flags": workflow_flags,
+                        "max_rows": max_rows,
+                        "error": str(exc),
+                    },
+                )
+                return {"error": str(exc), "debug": debug_info}
             raise
         if debug_enabled:
-            debug_info['workflow_query'] = {
-                'workflow_flags': workflow_flags,
-                'max_rows': max_rows,
-                'duration_ms': int((time.time() - start) * 1000),
+            debug_info["workflow_query"] = {
+                "workflow_flags": workflow_flags,
+                "max_rows": max_rows,
+                "duration_ms": int((time.time() - start) * 1000),
             }
         if debug_log_path:
-            self._debug_log(debug_log_path, {
-                'event': 'workflow_query_done',
-                'workflow_flags': workflow_flags,
-                'max_rows': max_rows,
-                'duration_ms': int((time.time() - start) * 1000),
-            })
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "workflow_query_done",
+                    "workflow_flags": workflow_flags,
+                    "max_rows": max_rows,
+                    "duration_ms": int((time.time() - start) * 1000),
+                },
+            )
         tasks, user_field_labels, _ = self._extract_workflow_tasks(resp)
         max_rows_reached = len(tasks) == max_rows
 
-        need_instance_details = detail_mode != 'none' or filter_to_user
+        need_instance_details = detail_mode != "none" or filter_to_user
         details: Dict[Tuple[int, int], Dict[str, Any]] = {}
         detail_errors: List[Dict[str, Any]] = []
         if need_instance_details and tasks:
@@ -5028,30 +4959,33 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 debug_progress_every=debug_progress_every,
             )
             if debug_enabled:
-                debug_info['instance_details'] = {
-                    'mode': detail_mode,
-                    'requested': len(tasks),
-                    'loaded': len(details),
-                    'failed': len(detail_errors),
-                    'duration_ms': int((time.time() - details_start) * 1000),
-                    'errors_sample': detail_errors[:10],
+                debug_info["instance_details"] = {
+                    "mode": detail_mode,
+                    "requested": len(tasks),
+                    "loaded": len(details),
+                    "failed": len(detail_errors),
+                    "duration_ms": int((time.time() - details_start) * 1000),
+                    "errors_sample": detail_errors[:10],
                 }
             if debug_log_path:
-                self._debug_log(debug_log_path, {
-                    'event': 'instance_details_done',
-                    'requested': len(tasks),
-                    'loaded': len(details),
-                    'failed': len(detail_errors),
-                    'duration_ms': int((time.time() - details_start) * 1000),
-                })
+                self._debug_log(
+                    debug_log_path,
+                    {
+                        "event": "instance_details_done",
+                        "requested": len(tasks),
+                        "loaded": len(details),
+                        "failed": len(detail_errors),
+                        "duration_ms": int((time.time() - details_start) * 1000),
+                    },
+                )
 
         # Precompute group membership for AssignedTo values.
         group_membership: Dict[str, bool] = {}
         group_candidates: List[str] = []
         if filter_to_user and resolve_group_membership and user_values and details:
             for key, detail in details.items():
-                wf = (detail or {}).get('WorkflowInstance') or {}
-                assigned_to = wf.get('AssignedTo')
+                wf = (detail or {}).get("WorkflowInstance") or {}
+                assigned_to = wf.get("AssignedTo")
                 if not assigned_to:
                     continue
                 if self._match_user_value(assigned_to, match_values):
@@ -5060,7 +4994,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     if cand not in group_candidates:
                         group_candidates.append(cand)
             if group_candidates:
-                domain_name = user.get('DomainName') if isinstance(user, dict) else None
+                domain_name = user.get("DomainName") if isinstance(user, dict) else None
                 group_membership = self._resolve_group_membership(
                     client, group_candidates, user_values, domain_name=domain_name
                 )
@@ -5069,46 +5003,58 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         filter_applied = False
         unresolved_instances: List[Dict[str, Any]] = []
         if filter_to_user:
-            if not match_values and not user.get('UserId') and not user.get('UserNo'):
+            if not match_values and not user.get("UserId") and not user.get("UserNo"):
                 filtered_tasks = tasks
                 filter_applied = False
             elif not details:
                 filtered_tasks = []
                 filter_applied = True
             else:
-                user_id = user.get('UserId') or user.get('UserNo') or user.get('UserID')
+                user_id = user.get("UserId") or user.get("UserNo") or user.get("UserID")
                 try:
                     user_id = int(user_id) if user_id is not None else None
                 except (TypeError, ValueError):
                     user_id = None
                 filtered = []
                 for task in tasks:
-                    instance_no = task.get('InstanceNo')
+                    instance_no = task.get("InstanceNo")
                     if instance_no is None:
                         continue
-                    token_no = int(task.get('TokenNo') or 0)
+                    token_no = int(task.get("TokenNo") or 0)
                     key = (int(instance_no), token_no)
                     detail = details.get(key)
                     if not detail:
-                        unresolved_instances.append({'instance_no': key[0], 'token_no': key[1]})
+                        unresolved_instances.append(
+                            {"instance_no": key[0], "token_no": key[1]}
+                        )
                         continue
-                    wf = (detail or {}).get('WorkflowInstance') or {}
+                    wf = (detail or {}).get("WorkflowInstance") or {}
                     matched = False
-                    if not user_query and wf.get('IsAssignedToUser') is True:
+                    if not user_query and wf.get("IsAssignedToUser") is True:
                         matched = True
                     if not matched and user_id is not None:
-                        assigned_users = self._coerce_int_list(wf.get('AssignedToUsers'))
+                        assigned_users = self._coerce_int_list(
+                            wf.get("AssignedToUsers")
+                        )
                         if user_id in assigned_users:
                             matched = True
                     if not matched:
-                        assigned_to = wf.get('AssignedTo')
-                        if assigned_to and self._match_user_value(assigned_to, match_values):
+                        assigned_to = wf.get("AssignedTo")
+                        if assigned_to and self._match_user_value(
+                            assigned_to, match_values
+                        ):
                             matched = True
-                        elif assigned_to and resolve_group_membership and group_membership:
+                        elif (
+                            assigned_to
+                            and resolve_group_membership
+                            and group_membership
+                        ):
                             if group_membership.get(assigned_to):
                                 matched = True
                             else:
-                                for cand in self._group_name_candidates(str(assigned_to)):
+                                for cand in self._group_name_candidates(
+                                    str(assigned_to)
+                                ):
                                     if group_membership.get(cand):
                                         matched = True
                                         break
@@ -5117,76 +5063,90 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 filtered_tasks = filtered
                 filter_applied = True
         if debug_enabled:
-            debug_info['filtering'] = {
-                'filter_to_user': filter_to_user,
-                'filter_to_user_requested': filter_to_user_requested,
-                'filter_applied': filter_applied,
-                'total_tasks': len(tasks),
-                'filtered_tasks': len(filtered_tasks),
-                'user_id': user.get('UserId') or user.get('UserNo') or user.get('UserID'),
-                'match_values_count': len(match_values),
-                'group_candidates': len(group_candidates),
-                'group_matches': len([k for k, v in group_membership.items() if v]),
-                'unresolved_instances': len(unresolved_instances),
+            debug_info["filtering"] = {
+                "filter_to_user": filter_to_user,
+                "filter_to_user_requested": filter_to_user_requested,
+                "filter_applied": filter_applied,
+                "total_tasks": len(tasks),
+                "filtered_tasks": len(filtered_tasks),
+                "user_id": user.get("UserId")
+                or user.get("UserNo")
+                or user.get("UserID"),
+                "match_values_count": len(match_values),
+                "group_candidates": len(group_candidates),
+                "group_matches": len([k for k, v in group_membership.items() if v]),
+                "unresolved_instances": len(unresolved_instances),
             }
         if debug_log_path:
-            self._debug_log(debug_log_path, {
-                'event': 'filtering_done',
-                'filter_to_user': filter_to_user,
-                'filter_applied': filter_applied,
-                'total_tasks': len(tasks),
-                'filtered_tasks': len(filtered_tasks),
-                'group_candidates': len(group_candidates),
-                'group_matches': len([k for k, v in group_membership.items() if v]),
-                'unresolved_instances': len(unresolved_instances),
-            })
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "filtering_done",
+                    "filter_to_user": filter_to_user,
+                    "filter_applied": filter_applied,
+                    "total_tasks": len(tasks),
+                    "filtered_tasks": len(filtered_tasks),
+                    "group_candidates": len(group_candidates),
+                    "group_matches": len([k for k, v in group_membership.items() if v]),
+                    "unresolved_instances": len(unresolved_instances),
+                },
+            )
 
-        if need_instance_details and detail_mode in ('summary', 'full'):
-            self._attach_instance_details(filtered_tasks, details, detail_errors, detail_mode)
+        if need_instance_details and detail_mode in ("summary", "full"):
+            self._attach_instance_details(
+                filtered_tasks, details, detail_errors, detail_mode
+            )
             if include_unfiltered and filtered_tasks != tasks:
-                self._attach_instance_details(tasks, details, detail_errors, detail_mode)
+                self._attach_instance_details(
+                    tasks, details, detail_errors, detail_mode
+                )
 
         output: Dict[str, Any] = {
-            'user': user,
-            'user_query': user_query,
-            'user_candidates': user_candidates,
-            'user_needs_confirmation': user_needs_confirmation,
-            'workflow_flags': workflow_flags,
-            'task_filter': task_filter,
-            'max_rows': max_rows,
-            'max_rows_reached': max_rows_reached,
-            'total_count': len(tasks),
-            'filter_to_user': filter_to_user,
-            'filter_to_user_requested': filter_to_user_requested,
-            'filter_applied': filter_applied,
-            'assignee_values': assignee_values,
-            'user_field_labels': user_field_labels,
-            'group_membership_matches': [k for k, v in group_membership.items() if v],
-            'instance_detail_mode': detail_mode,
-            'instance_details_requested': need_instance_details,
-            'instance_details_loaded': len(details),
-            'instance_details_failed': len(detail_errors),
-            'instance_detail_errors': detail_errors,
-            'unresolved_instances': unresolved_instances,
-            'task_count': len(filtered_tasks),
-            'instances': filtered_tasks,
-            'two_phase': two_phase,
-            'fetch_details': fetch_details,
-            'suggested_max_instance_workers': 8 if two_phase and not fetch_details else None,
-            'debug': debug_info if debug_enabled else None,
+            "user": user,
+            "user_query": user_query,
+            "user_candidates": user_candidates,
+            "user_needs_confirmation": user_needs_confirmation,
+            "workflow_flags": workflow_flags,
+            "task_filter": task_filter,
+            "max_rows": max_rows,
+            "max_rows_reached": max_rows_reached,
+            "total_count": len(tasks),
+            "filter_to_user": filter_to_user,
+            "filter_to_user_requested": filter_to_user_requested,
+            "filter_applied": filter_applied,
+            "assignee_values": assignee_values,
+            "user_field_labels": user_field_labels,
+            "group_membership_matches": [k for k, v in group_membership.items() if v],
+            "instance_detail_mode": detail_mode,
+            "instance_details_requested": need_instance_details,
+            "instance_details_loaded": len(details),
+            "instance_details_failed": len(detail_errors),
+            "instance_detail_errors": detail_errors,
+            "unresolved_instances": unresolved_instances,
+            "task_count": len(filtered_tasks),
+            "instances": filtered_tasks,
+            "two_phase": two_phase,
+            "fetch_details": fetch_details,
+            "suggested_max_instance_workers": 8
+            if two_phase and not fetch_details
+            else None,
+            "debug": debug_info if debug_enabled else None,
         }
         if debug_log_path:
-            self._debug_log(debug_log_path, {
-                'event': 'done',
-                'task_count': len(filtered_tasks),
-                'max_rows_reached': max_rows_reached,
-                'note': output.get('note'),
-            })
+            self._debug_log(
+                debug_log_path,
+                {
+                    "event": "done",
+                    "task_count": len(filtered_tasks),
+                    "max_rows_reached": max_rows_reached,
+                    "note": output.get("note"),
+                },
+            )
 
         overdue_keys = set()
         if include_overdue_summary:
             overdue_resp = client.execute_workflow_query_for_all(
-                workflow_flags=self._normalize_workflow_flags('overdue'),
+                workflow_flags=self._normalize_workflow_flags("overdue"),
                 max_rows=max_rows,
             )
             overdue_all, _, _ = self._extract_workflow_tasks(overdue_resp)
@@ -5197,58 +5157,78 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             for task in filtered_tasks:
                 key = self._task_key(task)
                 is_overdue = key in overdue_keys
-                task['IsOverdue'] = is_overdue
-                task['ScheduleStatus'] = 'overdue' if is_overdue else 'on_schedule'
+                task["IsOverdue"] = is_overdue
+                task["ScheduleStatus"] = "overdue" if is_overdue else "on_schedule"
                 if is_overdue:
                     overdue += 1
                 else:
                     on_schedule += 1
 
-            output['overdue_count'] = overdue
-            output['on_schedule_count'] = on_schedule
-            output['overdue_tasks_count'] = overdue
+            output["overdue_count"] = overdue
+            output["on_schedule_count"] = on_schedule
+            output["overdue_tasks_count"] = overdue
             if overdue > 0:
-                output['highlight'] = {
-                    'message': f'{overdue} overdue task(s) found.',
-                    'overdue_count': overdue,
-                    'on_schedule_count': on_schedule,
+                output["highlight"] = {
+                    "message": f"{overdue} overdue task(s) found.",
+                    "overdue_count": overdue,
+                    "on_schedule_count": on_schedule,
                 }
 
         if include_unfiltered and filtered_tasks != tasks:
-            output['all_tasks_count'] = len(tasks)
-            output['all_tasks'] = tasks
+            output["all_tasks_count"] = len(tasks)
+            output["all_tasks"] = tasks
 
         if two_phase and not fetch_details:
-            output['note'] = 'Two-phase mode: returning overall counts only. Re-run with fetch_details=true to filter by assignment.'
-        elif filter_to_user and not match_values and not user.get('UserId') and not user.get('UserNo'):
-            output['note'] = 'No assignee values available for filtering.'
+            output["note"] = (
+                "Two-phase mode: returning overall counts only. Re-run with fetch_details=true to filter by assignment."
+            )
+        elif (
+            filter_to_user
+            and not match_values
+            and not user.get("UserId")
+            and not user.get("UserNo")
+        ):
+            output["note"] = "No assignee values available for filtering."
         elif filter_to_user and filter_applied and not filtered_tasks and tasks:
-            output['note'] = 'No tasks matched the user assignment from GetWorkflowInstance.'
+            output["note"] = (
+                "No tasks matched the user assignment from GetWorkflowInstance."
+            )
         if max_rows_reached:
-            output['note'] = 'Reached max_rows; results may be truncated. Increase max_rows to fetch more.'
+            output["note"] = (
+                "Reached max_rows; results may be truncated. Increase max_rows to fetch more."
+            )
 
         return output
 
     @staticmethod
     def _task_key(task: Dict[str, Any]) -> Tuple[Any, Any, Any]:
         return (
-            task.get('InstanceNo'),
-            task.get('TokenNo'),
-            task.get('WorkflowNo'),
+            task.get("InstanceNo"),
+            task.get("TokenNo"),
+            task.get("WorkflowNo"),
         )
 
-    def _extract_workflow_tasks(self, resp: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[str], set]:
-        results = resp.get('WorkflowQueryResultList') or []
+    def _extract_workflow_tasks(
+        self, resp: Dict[str, Any]
+    ) -> Tuple[List[Dict[str, Any]], List[str], set]:
+        results = resp.get("WorkflowQueryResultList") or []
         tasks: List[Dict[str, Any]] = []
         user_field_indexes = set()
         user_field_labels: List[str] = []
-        user_field_pattern = re.compile(r'(user|assignee|assigned|owner)', re.IGNORECASE)
+        user_field_pattern = re.compile(
+            r"(user|assignee|assigned|owner)", re.IGNORECASE
+        )
 
         for result in results:
-            columns = result.get('Columns') or []
+            columns = result.get("Columns") or []
             col_labels: List[str] = []
             for col in columns:
-                label = col.get('Caption') or col.get('IndexDataFieldName') or col.get('ColName') or ''
+                label = (
+                    col.get("Caption")
+                    or col.get("IndexDataFieldName")
+                    or col.get("ColName")
+                    or ""
+                )
                 col_labels.append(label)
 
             for idx, label in enumerate(col_labels):
@@ -5257,174 +5237,193 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                     if label not in user_field_labels:
                         user_field_labels.append(label)
 
-            for row in (result.get('ResultRows') or []):
-                row_values = row.get('IndexValues') or []
+            for row in result.get("ResultRows") or []:
+                row_values = row.get("IndexValues") or []
                 mapped = {}
                 for idx, label in enumerate(col_labels):
                     if idx < len(row_values):
                         mapped[label] = row_values[idx]
                 entry = {
-                    'CaseDefNo': result.get('CaseDefNo'),
-                    'CaseDefName': result.get('CaseDefName'),
-                    'CategoryNo': result.get('CategoryNo'),
-                    'CategoryName': result.get('CategoryName'),
-                    'ProcessNo': result.get('ProcessNo'),
-                    'ProcessName': result.get('ProcessName'),
-                    'WorkflowNo': row.get('WorkflowNo'),
-                    'InstanceNo': row.get('InstanceNo'),
-                    'TokenNo': row.get('TokenNo'),
-                    'Status': row.get('Status'),
-                    'IndexValues': mapped,
+                    "CaseDefNo": result.get("CaseDefNo"),
+                    "CaseDefName": result.get("CaseDefName"),
+                    "CategoryNo": result.get("CategoryNo"),
+                    "CategoryName": result.get("CategoryName"),
+                    "ProcessNo": result.get("ProcessNo"),
+                    "ProcessName": result.get("ProcessName"),
+                    "WorkflowNo": row.get("WorkflowNo"),
+                    "InstanceNo": row.get("InstanceNo"),
+                    "TokenNo": row.get("TokenNo"),
+                    "Status": row.get("Status"),
+                    "IndexValues": mapped,
                 }
-                for key in ('DocNo', 'VersionNo', 'Size'):
+                for key in ("DocNo", "VersionNo", "Size"):
                     if key in row:
                         entry[key] = row.get(key)
                 tasks.append(entry)
 
         return tasks, user_field_labels, user_field_indexes
 
-    def _get_my_workflow_tasks(self, args: Dict[str, Any], tenant: str, client: ThereforeClient) -> Dict[str, Any]:
+    def _get_my_workflow_tasks(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
         args = dict(args or {})
-        if args.get('filter_to_user') is None:
-            args['filter_to_user'] = True
+        if args.get("filter_to_user") is None:
+            args["filter_to_user"] = True
         output = self._get_workflow_instances_core(args, tenant, client)
         # preserve legacy key
-        output['tasks'] = output.get('instances', [])
+        output["tasks"] = output.get("instances", [])
         return output
 
     def _normalize_statistics_query_type(self, value: Any) -> int:
         mapping = {
-            'undefined': 0,
-            'workflowinstancesbyprocess': 100,
-            'workflowinstancesbytask': 101,
-            'workflowinstancesrunningbyprocess': 102,
-            'workflowinstancesrunningbytask': 103,
-            'workflowinstancesfinishedbyprocess': 104,
-            'workflowinstancesfinishedbytask': 105,
-            'workflowoverdueinstancesbyprocess': 106,
-            'workflowoverdueinstancesbytask': 107,
-            'workflowerrorinstancesbyprocess': 108,
-            'workflowerrorinstancesbytask': 109,
-            'documentscreatedbycategory': 200,
-            'documentscheckedoutbycategory': 201,
-            'documentscreatedtodaybycategory': 202,
-            'documentscreatedthisweekbycategory': 203,
-            'documentscreatedthismonthbycategory': 204,
-            'documentscreatedthisyearbycategory': 205,
-            'documentscreatedlastweekbycategory': 206,
-            'documentscreatedlastmonthbycategory': 207,
-            'documentscreatedlastyearbycategory': 208,
-            'taskstodo': 400,
-            'tasksstarted': 401,
-            'tasksdone': 402,
-            'tasksallbystate': 403,
-            'tasksoverduetodo': 404,
-            'tasksoverduestarted': 405,
+            "undefined": 0,
+            "workflowinstancesbyprocess": 100,
+            "workflowinstancesbytask": 101,
+            "workflowinstancesrunningbyprocess": 102,
+            "workflowinstancesrunningbytask": 103,
+            "workflowinstancesfinishedbyprocess": 104,
+            "workflowinstancesfinishedbytask": 105,
+            "workflowoverdueinstancesbyprocess": 106,
+            "workflowoverdueinstancesbytask": 107,
+            "workflowerrorinstancesbyprocess": 108,
+            "workflowerrorinstancesbytask": 109,
+            "documentscreatedbycategory": 200,
+            "documentscheckedoutbycategory": 201,
+            "documentscreatedtodaybycategory": 202,
+            "documentscreatedthisweekbycategory": 203,
+            "documentscreatedthismonthbycategory": 204,
+            "documentscreatedthisyearbycategory": 205,
+            "documentscreatedlastweekbycategory": 206,
+            "documentscreatedlastmonthbycategory": 207,
+            "documentscreatedlastyearbycategory": 208,
+            "taskstodo": 400,
+            "tasksstarted": 401,
+            "tasksdone": 402,
+            "tasksallbystate": 403,
+            "tasksoverduetodo": 404,
+            "tasksoverduestarted": 405,
         }
-        normalized = self._normalize_enum_value(value, mapping, 'QueryType')
+        normalized = self._normalize_enum_value(value, mapping, "QueryType")
         if normalized is None:
-            raise ValueError('QueryType is required')
+            raise ValueError("QueryType is required")
         return int(normalized)
 
     def _cache_path(self, template: str, tenant: str) -> str:
-        safe = re.sub(r'[^a-z0-9]+', '_', tenant.lower()) or 'default'
+        safe = re.sub(r"[^a-z0-9]+", "_", tenant.lower()) or "default"
         return template.format(tenant=safe)
 
-    def _get_cached_categories(self, tenant: str, client: ThereforeClient) -> List[Dict[str, Any]]:
+    def _get_cached_categories(
+        self, tenant: str, client: ThereforeClient
+    ) -> List[Dict[str, Any]]:
         now = time.time()
-        if tenant in self._category_cache and (now - self._category_cache_ts.get(tenant, 0)) < self._category_cache_ttl:
-            return self._category_cache[tenant]['items']
+        if (
+            tenant in self._category_cache
+            and (now - self._category_cache_ts.get(tenant, 0))
+            < self._category_cache_ttl
+        ):
+            return self._category_cache[tenant]["items"]
 
         cache_path = self._cache_path(self._category_cache_path, tenant)
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 cached = json.load(f)
-            if (now - cached.get('ts', 0)) < self._category_cache_ttl:
+            if (now - cached.get("ts", 0)) < self._category_cache_ttl:
                 self._category_cache[tenant] = cached
-                self._category_cache_ts[tenant] = cached.get('ts', now)
-                return cached.get('items') or []
+                self._category_cache_ts[tenant] = cached.get("ts", now)
+                return cached.get("items") or []
         except Exception:
             pass
 
         tree = client.get_categories_tree({})
-        items = tree.get('TreeItems') or []
+        items = tree.get("TreeItems") or []
         flat = self._flatten_tree(items)
-        payload = {'ts': now, 'items': flat}
+        payload = {"ts": now, "items": flat}
         self._category_cache[tenant] = payload
         self._category_cache_ts[tenant] = now
         try:
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-            with open(cache_path, 'w', encoding='utf-8') as f:
+            with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
         except Exception:
             pass
         return flat
 
-    def _get_cached_keyword_dictionaries(self, tenant: str, client: ThereforeClient) -> List[Dict[str, Any]]:
+    def _get_cached_keyword_dictionaries(
+        self, tenant: str, client: ThereforeClient
+    ) -> List[Dict[str, Any]]:
         now = time.time()
-        if tenant in self._keyword_dict_cache and (now - self._keyword_dict_cache_ts.get(tenant, 0)) < self._keyword_dict_cache_ttl:
-            return self._keyword_dict_cache[tenant]['items']
+        if (
+            tenant in self._keyword_dict_cache
+            and (now - self._keyword_dict_cache_ts.get(tenant, 0))
+            < self._keyword_dict_cache_ttl
+        ):
+            return self._keyword_dict_cache[tenant]["items"]
 
         cache_path = self._cache_path(self._keyword_dict_cache_path, tenant)
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 cached = json.load(f)
-            if (now - cached.get('ts', 0)) < self._keyword_dict_cache_ttl:
+            if (now - cached.get("ts", 0)) < self._keyword_dict_cache_ttl:
                 self._keyword_dict_cache[tenant] = cached
-                self._keyword_dict_cache_ts[tenant] = cached.get('ts', now)
-                return cached.get('items') or []
+                self._keyword_dict_cache_ts[tenant] = cached.get("ts", now)
+                return cached.get("items") or []
         except Exception:
             pass
 
         resp = client.get_objects(flags=0, obj_type=22)
         items = self._extract_object_items(resp)
-        payload = {'ts': now, 'items': items}
+        payload = {"ts": now, "items": items}
         self._keyword_dict_cache[tenant] = payload
         self._keyword_dict_cache_ts[tenant] = now
         try:
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-            with open(cache_path, 'w', encoding='utf-8') as f:
+            with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
         except Exception:
             pass
         return items
 
-    def _get_cached_fields(self, tenant: str, category_no: int, client: ThereforeClient) -> List[Dict[str, Any]]:
+    def _get_cached_fields(
+        self, tenant: str, category_no: int, client: ThereforeClient
+    ) -> List[Dict[str, Any]]:
         now = time.time()
         tenant_cache = self._field_cache.setdefault(tenant, {})
         tenant_ts = self._field_cache_ts.setdefault(tenant, {})
 
-        if category_no in tenant_cache and (now - tenant_ts.get(category_no, 0)) < self._field_cache_ttl:
-            return tenant_cache[category_no]['fields']
+        if (
+            category_no in tenant_cache
+            and (now - tenant_ts.get(category_no, 0)) < self._field_cache_ttl
+        ):
+            return tenant_cache[category_no]["fields"]
 
         cache_path = self._cache_path(self._field_cache_path, tenant)
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 cached = json.load(f)
             item = cached.get(str(category_no))
-            if item and (now - item.get('ts', 0)) < self._field_cache_ttl:
+            if item and (now - item.get("ts", 0)) < self._field_cache_ttl:
                 tenant_cache[category_no] = item
-                tenant_ts[category_no] = item.get('ts', now)
-                return item.get('fields') or []
+                tenant_ts[category_no] = item.get("ts", now)
+                return item.get("fields") or []
         except Exception:
             pass
 
         info = client.get_category_info(category_no)
-        fields = info.get('CategoryFields') or []
-        payload = {'ts': now, 'fields': fields}
+        fields = info.get("CategoryFields") or []
+        payload = {"ts": now, "fields": fields}
         tenant_cache[category_no] = payload
         tenant_ts[category_no] = now
 
         disk_cache = {}
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 disk_cache = json.load(f)
         except Exception:
             disk_cache = {}
         disk_cache[str(category_no)] = payload
         try:
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-            with open(cache_path, 'w', encoding='utf-8') as f:
+            with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(disk_cache, f, indent=2)
         except Exception:
             pass
@@ -5434,40 +5433,46 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 def _parse_aliases(raw: Optional[str]) -> List[str]:
     if not raw:
         return []
-    parts = [p.strip() for p in re.split(r'[;,]+', raw) if p.strip()]
+    parts = [p.strip() for p in re.split(r"[;,]+", raw) if p.strip()]
     return parts
 
 
-def load_clients() -> Tuple[Dict[str, ThereforeClient], Optional[str], Dict[str, str], Dict[str, List[str]]]:
-    default_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.local')
-    env_path = os.environ.get('THEREFORE_ENV_PATH', default_env_path)
+def load_clients() -> Tuple[
+    Dict[str, ThereforeClient], Optional[str], Dict[str, str], Dict[str, List[str]]
+]:
+    default_env_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.local"
+    )
+    env_path = os.environ.get("THEREFORE_ENV_PATH", default_env_path)
     env_values = load_env(env_path)
     configs, default_tenant, tenant_labels = build_tenant_configs_from_env(env_values)
     clients: Dict[str, ThereforeClient] = {}
     tenant_aliases: Dict[str, List[str]] = {}
     for key, cfg in configs.items():
         if not cfg.base_url:
-            raise RuntimeError(f'THEREFORE_BASE_URL is required for tenant {tenant_labels.get(key, key)}')
+            raise RuntimeError(
+                f"THEREFORE_BASE_URL is required for tenant {tenant_labels.get(key, key)}"
+            )
         clients[key] = ThereforeClient(cfg)
         label = tenant_labels.get(key, key)
         prefix = f"THEREFORE_{str(label).upper()}_"
         raw = (
-            env_values.get(prefix + 'ASSIGNEE_ALIASES')
-            or env_values.get(prefix + 'USER_GROUPS')
-            or env_values.get('THEREFORE_ASSIGNEE_ALIASES')
-            or env_values.get('THEREFORE_USER_GROUPS')
+            env_values.get(prefix + "ASSIGNEE_ALIASES")
+            or env_values.get(prefix + "USER_GROUPS")
+            or env_values.get("THEREFORE_ASSIGNEE_ALIASES")
+            or env_values.get("THEREFORE_USER_GROUPS")
         )
         tenant_aliases[key] = _parse_aliases(raw)
     return clients, default_tenant, tenant_labels, tenant_aliases
 
 
-def run_stdio_mode(server: 'MCPServer') -> None:
+def run_stdio_mode(server: "MCPServer") -> None:
     """Run the server in stdio mode (MCP standard)."""
     while True:
         try:
             msg = _read_message()
         except json.JSONDecodeError as e:
-            _write_message(_error_response(None, -32700, f'Parse error: {e}'))
+            _write_message(_error_response(None, -32700, f"Parse error: {e}"))
             continue
         if msg is None:
             break
@@ -5476,16 +5481,19 @@ def run_stdio_mode(server: 'MCPServer') -> None:
             _write_message(response)
 
 
-def _build_http_app(server: 'MCPServer') -> 'FastAPI':
+def _build_http_app(server: "MCPServer") -> "FastAPI":
     """Build the FastAPI app for HTTP mode with MCP SSE transport."""
     if not HAS_FASTAPI:
-        raise RuntimeError("FastAPI is required for HTTP mode. Install with: pip install fastapi uvicorn")
+        raise RuntimeError(
+            "FastAPI is required for HTTP mode. Install with: pip install fastapi uvicorn"
+        )
 
     app = FastAPI(title="Therefore MCP HTTP Server")
 
     # Bearer token auth — skip for health check
-    auth_token = os.environ.get('THEREFORE_MCP_AUTH_TOKEN', '').strip()
+    auth_token = os.environ.get("THEREFORE_MCP_AUTH_TOKEN", "").strip()
     if auth_token:
+
         @app.middleware("http")
         async def check_auth(request: Request, call_next):
             if request.url.path == "/health":
@@ -5567,7 +5575,9 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
     # -- Streamable HTTP transport (MCP 2025-03-26) --
     # Tracks sessions by Mcp-Session-Id header.
     # Each session has an optional asyncio.Queue for the GET SSE stream.
-    _mcp_sessions: Dict[str, Optional[asyncio.Queue]] = {}  # session_id -> queue or None
+    _mcp_sessions: Dict[
+        str, Optional[asyncio.Queue]
+    ] = {}  # session_id -> queue or None
 
     @app.get("/mcp")
     async def streamable_http_get(request: Request):
@@ -5582,7 +5592,9 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
         accept = request.headers.get("accept", "")
         if "text/event-stream" not in accept:
             return JSONResponse(
-                _error_response(None, -32000, "Accept header must include text/event-stream"),
+                _error_response(
+                    None, -32000, "Accept header must include text/event-stream"
+                ),
                 status_code=406,
             )
 
@@ -5704,18 +5716,23 @@ def _build_http_app(server: 'MCPServer') -> 'FastAPI':
     return app
 
 
-def run_http_mode(server: 'MCPServer', host: str, port: int) -> None:
+def run_http_mode(server: "MCPServer", host: str, port: int) -> None:
     """Run the server in HTTP-only mode using FastAPI."""
     app = _build_http_app(server)
-    auth_enabled = bool(os.environ.get('THEREFORE_MCP_AUTH_TOKEN', '').strip())
-    print(f"Starting Therefore MCP server in HTTP mode on {host}:{port}", file=sys.stderr)
-    print(f"Auth: {'Bearer token' if auth_enabled else 'NONE (set THEREFORE_MCP_AUTH_TOKEN to enable)'}", file=sys.stderr)
+    auth_enabled = bool(os.environ.get("THEREFORE_MCP_AUTH_TOKEN", "").strip())
+    print(
+        f"Starting Therefore MCP server in HTTP mode on {host}:{port}", file=sys.stderr
+    )
+    print(
+        f"Auth: {'Bearer token' if auth_enabled else 'NONE (set THEREFORE_MCP_AUTH_TOKEN to enable)'}",
+        file=sys.stderr,
+    )
     print(f"Access at: http://{host}:{port}", file=sys.stderr)
     print(f"Health check: http://{host}:{port}/health", file=sys.stderr)
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 
-def _start_http_background(server: 'MCPServer', host: str, port: int) -> None:
+def _start_http_background(server: "MCPServer", host: str, port: int) -> None:
     """Start the HTTP server in a daemon thread (for dual stdio+http mode)."""
     app = _build_http_app(server)
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
@@ -5731,19 +5748,19 @@ def main() -> None:
         "--stdio",
         action="store_true",
         default=False,
-        help="Run in stdio mode (default if no mode specified)"
+        help="Run in stdio mode (default if no mode specified)",
     )
     parser.add_argument(
         "--http",
         type=int,
         metavar="PORT",
-        help="Run in HTTP mode on specified port (e.g., --http 8000)"
+        help="Run in HTTP mode on specified port (e.g., --http 8000)",
     )
     parser.add_argument(
         "--host",
         type=str,
         default="0.0.0.0",
-        help="HTTP host to bind to (default: 0.0.0.0)"
+        help="HTTP host to bind to (default: 0.0.0.0)",
     )
 
     args = parser.parse_args()
@@ -5755,8 +5772,10 @@ def main() -> None:
     # Debug startup diagnostics (stderr only)
     any_debug = any(c.config.debug for c in clients.values())
     if any_debug:
+
         def _dbg(msg: str) -> None:
             print(f"[THEREFORE] {msg}", file=sys.stderr, flush=True)
+
         _dbg("--- startup diagnostics ---")
         for key, client in clients.items():
             label = tenant_labels.get(key, key)
@@ -5789,5 +5808,5 @@ def main() -> None:
         run_stdio_mode(server)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
