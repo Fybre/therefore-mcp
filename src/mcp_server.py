@@ -86,6 +86,697 @@ def _tool_content(obj: Any) -> Dict[str, Any]:
     return {"content": [{"type": "text", "text": json.dumps(obj, indent=2)}]}
 
 
+# Operation registry: maps (tool_name, operation) to parameter info
+OPERATION_REGISTRY = {
+    # therefore_system operations
+    ("therefore_system", "get_customer_id"): {
+        "description": "Get the tenant customer/client/system ID",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_connected_user"): {
+        "description": "Get the currently connected user information",
+        "required": [],
+        "optional": {"create": "boolean - create connection if needed"},
+    },
+    ("therefore_system", "get_version"): {
+        "description": "Get the Therefore WebAPI server version",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_connection_token"): {
+        "description": "Get a connection token for the current session",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_domain_info"): {
+        "description": "Get domain configuration information",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_discovery_info"): {
+        "description": "Get client discovery information",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_permission_constants"): {
+        "description": "Get permission constant definitions",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_role_permission_constants"): {
+        "description": "Get role permission constant definitions",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_system", "get_objects_list"): {
+        "description": "Get a list of Therefore objects by IDs",
+        "required": ["load_items_list"],
+        "optional": {},
+    },
+    ("therefore_system", "get_objects"): {
+        "description": "Get Therefore objects by type",
+        "required": ["obj_type", "flags"],
+        "optional": {},
+    },
+    ("therefore_system", "get_statistics"): {
+        "description": "Execute a statistics query",
+        "required": [],
+        "optional": {
+            "query_type": "integer or string - statistics query type",
+            "restrict_to_obj_no": "integer - restrict to object number",
+            "restrict_to_user": "boolean - restrict to user",
+        },
+    },
+    ("therefore_system", "get_logfiles"): {
+        "description": "Get server log files",
+        "required": [],
+        "optional": {
+            "days_back": "integer - how many days back",
+            "application_filter": "string - filter by application",
+            "max_docs": "integer - max documents to retrieve",
+            "include_raw": "boolean - include raw log data",
+            "output_mode": "string - output format",
+            "severity_filter": "string - filter by severity level",
+        },
+    },
+    ("therefore_system", "get_login_history"): {
+        "description": "Get login history for a user",
+        "required": [],
+        "optional": {
+            "username": "string - username to query",
+            "max_entries": "integer - max history entries",
+        },
+    },
+    ("therefore_system", "call_endpoint"): {
+        "description": "Call a custom Therefore API endpoint",
+        "required": ["endpoint"],
+        "optional": {"payload": "object - request payload"},
+    },
+    # therefore_categories operations
+    ("therefore_categories", "get_tree"): {
+        "description": "Get the category tree/hierarchy",
+        "required": [],
+        "optional": {"payload": "object - optional request payload"},
+    },
+    ("therefore_categories", "get_info"): {
+        "description": "Get detailed information about a category",
+        "required": ["category_no"],
+        "optional": {},
+    },
+    ("therefore_categories", "resolve"): {
+        "description": "Resolve a category by name/query",
+        "required": ["query"],
+        "optional": {
+            "max_results": "integer - max results to return",
+            "min_score": "number - minimum match score",
+            "include_non_categories": "boolean - include non-category results",
+            "confirm_threshold": "number - confirmation threshold",
+        },
+    },
+    ("therefore_categories", "list_fields"): {
+        "description": "List all fields for a category",
+        "required": ["category_no"],
+        "optional": {},
+    },
+    ("therefore_categories", "resolve_field"): {
+        "description": "Resolve a field by name within a category",
+        "required": ["category_no", "query"],
+        "optional": {
+            "confirm_threshold": "number - confirmation threshold",
+            "field_type_hint": "integer - expected field type",
+        },
+    },
+    ("therefore_categories", "get_referenced_table_info"): {
+        "description": "Get information about a referenced table field",
+        "required": ["data_type_no"],
+        "optional": {},
+    },
+    ("therefore_categories", "generate_config"): {
+        "description": "Generate a category configuration XML",
+        "required": ["spec_or_description"],
+        "optional": {
+            "spec": "object - JSON specification",
+            "description": "string - natural language description",
+            "baseline_path": "string - path to baseline XML",
+            "api_check": "boolean - check against API",
+            "output_path": "string - output file path",
+        },
+    },
+    # therefore_documents operations
+    ("therefore_documents", "get"): {
+        "description": "Get a document by number",
+        "required": ["doc_no"],
+        "optional": {
+            "include_index_data": "boolean - include index data (default true)",
+            "include_streams_info": "boolean - include streams info",
+            "include_streams_data": "boolean - include streams data",
+            "include_checkout_status": "boolean - include checkout status",
+            "include_access_mask": "boolean - include access mask",
+        },
+    },
+    ("therefore_documents", "get_index_data"): {
+        "description": "Get document index data",
+        "required": ["doc_no"],
+        "optional": {},
+    },
+    ("therefore_documents", "get_properties"): {
+        "description": "Get document properties",
+        "required": ["doc_no"],
+        "optional": {
+            "version_no": "integer - version number",
+            "is_doc_title_needed": "boolean - include document title",
+        },
+    },
+    ("therefore_documents", "get_history"): {
+        "description": "Get document history",
+        "required": ["doc_no"],
+        "optional": {},
+    },
+    ("therefore_documents", "get_checkout_status"): {
+        "description": "Get document checkout status",
+        "required": ["doc_no"],
+        "optional": {},
+    },
+    ("therefore_documents", "get_versions"): {
+        "description": "Get document versions",
+        "required": ["doc_no"],
+        "optional": {},
+    },
+    ("therefore_documents", "get_converted_streams"): {
+        "description": "Get converted document streams",
+        "required": ["doc_no"],
+        "optional": {
+            "convert_to": "string or integer - conversion format",
+            "annotation_mode": "string or integer - annotation mode",
+            "signature_mode": "string or integer - signature mode",
+            "certificate_name": "string - certificate name",
+            "time_stamp_server": "string - timestamp server URL",
+            "time_stamp_user": "string - timestamp username",
+            "time_stamp_pwd": "string - timestamp password",
+            "multipage_stream_name": "string - multipage stream name",
+            "stream_nos": "array of integers - stream numbers",
+            "retrieve_reason": "string - retrieval reason",
+            "archive_converted_files": "boolean - archive converted files",
+            "custom_archive_file_name": "string - custom archive filename",
+        },
+    },
+    ("therefore_documents", "create"): {
+        "description": "Create a new document",
+        "required": ["category_no", "streams_or_content"],
+        "optional": {
+            "streams": "array - file streams",
+            "content_text": "string - text content",
+            "content_filename": "string - filename for text content",
+            "index_data_items": "array - index data values",
+            "check_in_comments": "string - check-in comments",
+            "with_auto_append_mode": "integer - auto append mode",
+            "do_fill_dependent_fields": "boolean - fill dependent fields (default true)",
+            "run_webclient_flow": "boolean - run web client flow (default true)",
+        },
+    },
+    ("therefore_documents", "update"): {
+        "description": "Update a document",
+        "required": ["doc_no"],
+        "optional": {
+            "updates": "array - update items",
+            "stream_nos_to_delete": "array - stream numbers to delete",
+            "streams_to_rename": "array - streams to rename",
+            "conversion_options": "object - conversion options",
+        },
+    },
+    ("therefore_documents", "update_index_data"): {
+        "description": "Update document index data",
+        "required": ["doc_no", "index_data_items"],
+        "optional": {},
+    },
+    ("therefore_documents", "add_streams"): {
+        "description": "Add streams to a document",
+        "required": ["doc_no", "streams"],
+        "optional": {"conversion_options": "object - conversion options"},
+    },
+    ("therefore_documents", "delete"): {
+        "description": "Delete a document",
+        "required": ["doc_no"],
+        "optional": {},
+    },
+    ("therefore_documents", "copy"): {
+        "description": "Copy a document",
+        "required": ["doc_no"],
+        "optional": {
+            "target_category_no": "integer - target category number",
+            "index_data_items": "array - index data for the copy",
+        },
+    },
+    ("therefore_documents", "check_out"): {
+        "description": "Check out a document",
+        "required": ["doc_no"],
+        "optional": {"version_no": "integer - version number"},
+    },
+    ("therefore_documents", "check_in"): {
+        "description": "Check in a document",
+        "required": ["doc_no"],
+        "optional": {
+            "check_in_comments": "string - check-in comments",
+            "version_no": "integer - version number",
+        },
+    },
+    ("therefore_documents", "undo_check_out"): {
+        "description": "Undo document checkout",
+        "required": ["doc_no"],
+        "optional": {"version_no": "integer - version number"},
+    },
+    ("therefore_documents", "add_comment"): {
+        "description": "Add a comment to a document",
+        "required": ["doc_no", "comment_text"],
+        "optional": {"version_no": "integer - version number"},
+    },
+    ("therefore_documents", "get_comments"): {
+        "description": "Get document comments",
+        "required": ["doc_no"],
+        "optional": {"version_no": "integer - version number"},
+    },
+    # therefore_query operations
+    ("therefore_query", "search"): {
+        "description": "Execute a document search query",
+        "required": ["query"],
+        "optional": {"full_text": "string - full text search"},
+    },
+    ("therefore_query", "search_async"): {
+        "description": "Execute an async document search query",
+        "required": ["query"],
+        "optional": {
+            "full_text": "string - full text search",
+            "row_block_size": "integer - row block size (default 1000)",
+            "max_rows": "integer - max rows (default 2147483647)",
+            "auto_fetch_all": "boolean - auto fetch all rows (default true)",
+        },
+    },
+    ("therefore_query", "search_multi"): {
+        "description": "Execute multiple async queries",
+        "required": ["queries"],
+        "optional": {
+            "full_text": "string - full text search",
+            "row_block_size": "integer - row block size (default 1000)",
+            "max_rows": "integer - max rows (default 2147483647)",
+            "auto_fetch_all": "boolean - auto fetch all rows (default true)",
+        },
+    },
+    ("therefore_query", "search_fulltext"): {
+        "description": "Execute a full text search",
+        "required": ["search"],
+        "optional": {
+            "categories": "array - category numbers",
+            "max_rows": "integer - max rows (default 100)",
+            "include_index_data": "boolean - include index data",
+            "case_no": "integer - case number",
+        },
+    },
+    ("therefore_query", "get_next_rows"): {
+        "description": "Get next rows from an async query",
+        "required": ["query_id", "row_block_size"],
+        "optional": {},
+    },
+    ("therefore_query", "get_next_multi_rows"): {
+        "description": "Get next rows from a multi query",
+        "required": ["query_id", "row_block_size"],
+        "optional": {},
+    },
+    ("therefore_query", "release"): {
+        "description": "Release an async query session",
+        "required": ["query_id"],
+        "optional": {},
+    },
+    ("therefore_query", "release_multi"): {
+        "description": "Release a multi query session",
+        "required": ["query_id"],
+        "optional": {},
+    },
+    # therefore_workflow operations
+    ("therefore_workflow", "query_all"): {
+        "description": "Query all workflow instances",
+        "required": [],
+        "optional": {
+            "workflow_flags": "integer or string - workflow flags",
+            "max_rows": "integer - max rows",
+            "include_instance_details": "boolean - include instance details",
+            "instance_detail_mode": "string - detail mode (summary/full)",
+            "max_instance_workers": "integer - max workers for details",
+            "is_access_mask_needed": "boolean - include access mask",
+            "load_history": "boolean - load history",
+            "debug": "boolean - enable debug mode",
+            "debug_log_path": "string - debug log file path",
+            "debug_progress_every": "integer - debug progress interval",
+        },
+    },
+    ("therefore_workflow", "query_process"): {
+        "description": "Query workflow instances for a specific process",
+        "required": ["process_no"],
+        "optional": {
+            "workflow_flags": "integer or string - workflow flags",
+            "max_rows": "integer - max rows",
+            "include_instance_details": "boolean - include instance details",
+            "instance_detail_mode": "string - detail mode",
+            "max_instance_workers": "integer - max workers",
+            "is_access_mask_needed": "boolean - include access mask",
+            "load_history": "boolean - load history",
+            "debug": "boolean - enable debug",
+            "debug_log_path": "string - debug log path",
+            "debug_progress_every": "integer - debug progress interval",
+        },
+    },
+    ("therefore_workflow", "get_my_tasks"): {
+        "description": "Get my workflow tasks",
+        "required": [],
+        "optional": {
+            "task_filter": "string - task filter",
+            "filter_to_user": "boolean - filter to current user",
+            "include_unfiltered": "boolean - include unfiltered",
+            "include_overdue_summary": "boolean - include overdue summary",
+            "assignee_values": "array - assignee values",
+            "resolve_group_membership": "boolean - resolve groups",
+            "user_query": "string - user query",
+            "user_query_flags": "integer - user query flags",
+            "two_phase": "boolean - two phase fetch",
+            "fetch_details": "boolean - fetch details",
+        },
+    },
+    ("therefore_workflow", "get_my_instances"): {
+        "description": "Get my workflow instances",
+        "required": [],
+        "optional": {
+            "workflow_flags": "integer - workflow flags",
+            "max_rows": "integer - max rows",
+            "include_instance_details": "boolean - include details",
+            "instance_detail_mode": "string - detail mode",
+        },
+    },
+    ("therefore_workflow", "get_all_instances"): {
+        "description": "Get all workflow instances",
+        "required": [],
+        "optional": {
+            "workflow_flags": "integer - workflow flags",
+            "max_rows": "integer - max rows",
+            "include_instance_details": "boolean - include details",
+            "instance_detail_mode": "string - detail mode",
+        },
+    },
+    ("therefore_workflow", "get_user_instances"): {
+        "description": "Get workflow instances for a user",
+        "required": [],
+        "optional": {
+            "workflow_flags": "integer - workflow flags",
+            "max_rows": "integer - max rows",
+            "include_instance_details": "boolean - include details",
+            "instance_detail_mode": "string - detail mode",
+        },
+    },
+    ("therefore_workflow", "get_instance"): {
+        "description": "Get a specific workflow instance",
+        "required": ["instance_no"],
+        "optional": {
+            "token_no": "integer - token number",
+            "is_access_mask_needed": "boolean - include access mask",
+            "load_history": "boolean - load history",
+        },
+    },
+    ("therefore_workflow", "get_process"): {
+        "description": "Get workflow process definition",
+        "required": ["process_no"],
+        "optional": {
+            "version_no": "integer - version number",
+            "load_tasks": "boolean - load tasks (default true)",
+            "is_access_mask_needed": "boolean - include access mask",
+        },
+    },
+    ("therefore_workflow", "get_task_settings"): {
+        "description": "Get workflow task settings",
+        "required": ["task_no", "process_no"],
+        "optional": {
+            "version_no": "integer - version number",
+            "setting_names": "array - setting names to retrieve",
+        },
+    },
+    ("therefore_workflow", "get_history"): {
+        "description": "Get workflow instance history",
+        "required": ["instance_no"],
+        "optional": {
+            "block_size": "integer - block size (default 1000)",
+            "include_routing_info": "boolean - include routing info (default true)",
+            "max_creation_date": "string - max creation date",
+            "seq_pos": "integer - sequence position",
+        },
+    },
+    ("therefore_workflow", "get_linked"): {
+        "description": "Get workflows linked to a document",
+        "required": ["doc_no"],
+        "optional": {"wf_doc_link_type": "integer - link type"},
+    },
+    ("therefore_workflow", "complete_task"): {
+        "description": "Complete a workflow task",
+        "required": ["workflow_instance_token", "task_no"],
+        "optional": {
+            "user_decision": "string - user decision",
+            "index_data_items": "array - index data updates",
+        },
+    },
+    ("therefore_workflow", "claim"): {
+        "description": "Claim a workflow instance",
+        "required": ["workflow_instance_token"],
+        "optional": {"task_no": "integer - task number"},
+    },
+    ("therefore_workflow", "disclaim"): {
+        "description": "Disclaim a workflow instance",
+        "required": ["workflow_instance_token"],
+        "optional": {"task_no": "integer - task number"},
+    },
+    ("therefore_workflow", "delegate"): {
+        "description": "Delegate a workflow instance",
+        "required": ["workflow_instance_token", "user_id"],
+        "optional": {"task_no": "integer - task number"},
+    },
+    ("therefore_workflow", "create_case"): {
+        "description": "Create a case",
+        "required": ["case_definition_no"],
+        "optional": {"index_data_items": "array - index data"},
+    },
+    ("therefore_workflow", "get_case"): {
+        "description": "Get case information",
+        "required": ["case_no"],
+        "optional": {},
+    },
+    ("therefore_workflow", "get_case_documents"): {
+        "description": "Get documents in a case",
+        "required": ["case_no"],
+        "optional": {"max_rows": "integer - max rows (default 1000)"},
+    },
+    ("therefore_workflow", "get_case_history"): {
+        "description": "Get case history",
+        "required": ["case_no"],
+        "optional": {},
+    },
+    # therefore_users operations
+    ("therefore_users", "search"): {
+        "description": "Search for users",
+        "required": ["query"],
+        "optional": {
+            "domain_names": "array - domain names to search",
+            "flags": "integer - search flags (default 5)",
+        },
+    },
+    ("therefore_users", "get_from_group"): {
+        "description": "Get users from a group",
+        "required": ["group_id_or_name"],
+        "optional": {
+            "group_id": "integer - group ID",
+            "group_name": "string - group name",
+            "domain_name": "string - domain name",
+        },
+    },
+    ("therefore_users", "get_details"): {
+        "description": "Get user details",
+        "required": ["user_or_group_id"],
+        "optional": {},
+    },
+    ("therefore_users", "create"): {
+        "description": "Create a new user",
+        "required": ["user_name", "full_name"],
+        "optional": {
+            "email": "string - email address",
+            "password": "string - password",
+            "domain_name": "string - domain name",
+        },
+    },
+    ("therefore_users", "update_groups"): {
+        "description": "Update user group assignments",
+        "required": ["user_id"],
+        "optional": {"group_ids": "array - group IDs"},
+    },
+    ("therefore_users", "get_groups"): {
+        "description": "Get user group assignments",
+        "required": ["user_id"],
+        "optional": {},
+    },
+    ("therefore_users", "set_password"): {
+        "description": "Set user password",
+        "required": ["user_id", "new_password"],
+        "optional": {},
+    },
+    ("therefore_users", "change_password"): {
+        "description": "Change current user password",
+        "required": ["old_password", "new_password"],
+        "optional": {},
+    },
+    ("therefore_users", "reset_password"): {
+        "description": "Reset user password",
+        "required": ["user_id"],
+        "optional": {"send_email": "boolean - send email (default true)"},
+    },
+    ("therefore_users", "delete_portal"): {
+        "description": "Delete a portal user",
+        "required": ["user_id"],
+        "optional": {},
+    },
+    ("therefore_users", "save_portal"): {
+        "description": "Save portal user settings",
+        "required": ["user_id"],
+        "optional": {
+            "user_name": "string - username",
+            "full_name": "string - full name",
+            "email": "string - email",
+            "is_active": "boolean - active status",
+        },
+    },
+    ("therefore_users", "move_license"): {
+        "description": "Move a license from one user to another",
+        "required": ["source_user_id", "target_user_id"],
+        "optional": {},
+    },
+    ("therefore_users", "get_settings"): {
+        "description": "Get user settings",
+        "required": ["user_id"],
+        "optional": {},
+    },
+    ("therefore_users", "set_settings"): {
+        "description": "Set user settings",
+        "required": ["user_id", "settings"],
+        "optional": {},
+    },
+    # therefore_keywords operations
+    ("therefore_keywords", "get_by_field"): {
+        "description": "Get keywords for a field",
+        "required": ["field_no"],
+        "optional": {
+            "category_no": "integer - category number",
+            "case_definition_no": "integer - case definition number",
+            "dependent_field_filter_value": "string - dependent field filter",
+            "show_deactivated_keywords": "boolean - show deactivated",
+            "index_data_items": "array - index data for dependent fields",
+            "skip_loading_keyword_nos": "boolean - skip loading keyword numbers",
+            "max_rows": "integer - max rows",
+        },
+    },
+    ("therefore_keywords", "get_by_dictionary"): {
+        "description": "Get keywords from a dictionary by number",
+        "required": ["key_dic_no"],
+        "optional": {
+            "filter_value": "string - filter value",
+            "max_values": "integer - max values",
+            "include_deactivated_keywords": "boolean - include deactivated",
+        },
+    },
+    ("therefore_keywords", "get_by_name"): {
+        "description": "Get keywords from a dictionary by name",
+        "required": ["dictionary_name"],
+        "optional": {
+            "max_results": "integer - max results",
+            "min_score": "number - min match score",
+            "confirm_threshold": "number - confirmation threshold",
+            "filter_value": "string - filter value",
+            "max_values": "integer - max values",
+            "include_deactivated_keywords": "boolean - include deactivated",
+        },
+    },
+    ("therefore_keywords", "validate"): {
+        "description": "Validate keywords for a field",
+        "required": ["field_no"],
+        "optional": {
+            "keywords": "array - keywords to validate",
+            "is_filter_mode": "boolean - filter mode",
+        },
+    },
+    ("therefore_keywords", "add"): {
+        "description": "Add a keyword to a dictionary",
+        "required": ["keyword_name", "dictionary_no_or_name"],
+        "optional": {
+            "dictionary_no": "integer - dictionary number",
+            "dictionary_name": "string - dictionary name",
+            "dictionary_type_no": "integer - dictionary type",
+            "is_keyword_deactivated": "boolean - deactivated status",
+            "check_existing": "boolean - check if exists",
+            "ignore_if_exists": "boolean - ignore if exists",
+        },
+    },
+    ("therefore_keywords", "update"): {
+        "description": "Update a keyword",
+        "required": ["keyword_id"],
+        "optional": {
+            "new_keyword_name": "string - new keyword name",
+            "is_keyword_deactivated": "boolean - deactivated status",
+        },
+    },
+    ("therefore_keywords", "delete"): {
+        "description": "Delete a keyword",
+        "required": ["keyword_id"],
+        "optional": {},
+    },
+    ("therefore_keywords", "deactivate"): {
+        "description": "Deactivate a keyword",
+        "required": ["keyword_id"],
+        "optional": {},
+    },
+    # therefore_knowledge operations
+    ("therefore_knowledge", "search"): {
+        "description": "Search the Therefore API knowledge base",
+        "required": ["query"],
+        "optional": {"limit": "integer - max results (default 5)"},
+    },
+    ("therefore_knowledge", "get_workflow"): {
+        "description": "Get a workflow guide",
+        "required": ["workflow_name"],
+        "optional": {},
+    },
+    ("therefore_knowledge", "get_field_types"): {
+        "description": "Get field type information",
+        "required": ["field_type"],
+        "optional": {},
+    },
+    ("therefore_knowledge", "get_pattern"): {
+        "description": "Get a common coding pattern",
+        "required": ["pattern_name"],
+        "optional": {},
+    },
+    ("therefore_knowledge", "get_quirks"): {
+        "description": "Get API quirks and workarounds",
+        "required": [],
+        "optional": {"search_term": "string - search filter"},
+    },
+    ("therefore_knowledge", "list_all"): {
+        "description": "List all available knowledge resources",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_knowledge", "get_api_help"): {
+        "description": "Get live API documentation from Therefore server",
+        "required": [],
+        "optional": {
+            "api_operation": "string - specific operation name",
+            "format": "string - output format (text/html)",
+        },
+    },
+}
+
+
 def build_tools() -> List[Dict[str, Any]]:
     """
     Build the 9 grouped MCP tool definitions.
@@ -95,16 +786,14 @@ def build_tools() -> List[Dict[str, Any]]:
     return [
         {
             "name": "ask_therefore_expert",
-            "description": """Ask the Therefore API expert assistant for guidance on Therefore operations (supports multi-tenant: use 'tenant' parameter to target specific tenant).
+            "description": """START HERE for any Therefore operation. Describe what you want to do and this returns the exact tool, operation, and parameters needed.
 
-Use this when you need help understanding Therefore concepts, choosing the right operation,
-or troubleshooting issues with therefore_system, therefore_categories, therefore_documents,
-therefore_query, therefore_workflow, therefore_users, therefore_keywords, or therefore_knowledge tools.
+The expert routes your question to the right tool and operation, provides parameter details, and offers Therefore API guidance.
 
-The expert has deep knowledge of Therefore WebAPI patterns, workflows, field types, quirks, and best practices.
+Supports multi-tenant: use 'tenant' parameter to target specific tenant.
 
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"question": "how do I create a document?", "tenant": "demo"}""",
+Example: {"question": "how do I create a document?"}
+Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", call_with: {...}, all_parameters: {...}}""",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -126,13 +815,7 @@ Example: {"question": "how do I create a document?", "tenant": "demo"}""",
         },
         {
             "name": "therefore_system",
-            "description": """System-level operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-get_customer_id, get_connected_user, get_version, get_connection_token,
-get_domain_info, get_discovery_info, get_permission_constants, get_role_permission_constants,
-get_objects_list, get_objects (requires obj_type), get_statistics, get_logfiles, get_login_history, call_endpoint (requires endpoint).
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "get_customer_id", "tenant": "demo"}""",
+            "description": "Therefore system operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -157,42 +840,16 @@ Example: {"operation": "get_customer_id", "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "create": {"type": "boolean"},
-                    "load_items_list": {"type": "array", "items": {"type": "object"}},
-                    "flags": {"type": "integer"},
-                    "obj_type": {"type": "integer"},
-                    "query_type": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
-                    "restrict_to_obj_no": {"type": "integer"},
-                    "restrict_to_user": {"type": "boolean"},
-                    "days_back": {"type": "integer"},
-                    "application_filter": {"type": "string"},
-                    "max_docs": {"type": "integer"},
-                    "include_raw": {"type": "boolean"},
-                    "output_mode": {"type": "string"},
-                    "severity_filter": {"type": "string"},
-                    "username": {"type": "string"},
-                    "max_entries": {"type": "integer"},
-                    "endpoint": {"type": "string"},
-                    "payload": {"type": "object"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_categories",
-            "description": """Category operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-get_tree, get_info (requires category_no), resolve (requires query),
-list_fields (requires category_no), resolve_field (requires category_no, query),
-get_referenced_table_info (requires category_no, data_type_no), generate_config (requires spec or description).
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "get_tree", "tenant": "demo"}""",
+            "description": "Therefore category operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -210,39 +867,16 @@ Example: {"operation": "get_tree", "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "category_no": {"type": "integer"},
-                    "query": {"type": "string"},
-                    "max_results": {"type": "integer"},
-                    "min_score": {"type": "number"},
-                    "include_non_categories": {"type": "boolean"},
-                    "confirm_threshold": {"type": "number"},
-                    "field_type_hint": {"type": "integer"},
-                    "data_type_no": {"type": "integer"},
-                    "payload": {"type": "object"},
-                    "spec": {"type": "object"},
-                    "description": {"type": "string"},
-                    "baseline_path": {"type": "string"},
-                    "api_check": {"type": "boolean"},
-                    "output_path": {"type": "string"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_documents",
-            "description": """Document operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-get, get_index_data, get_properties, get_history, get_checkout_status, get_versions,
-get_converted_streams, create, update, update_index_data, add_streams, delete,
-copy, check_out, check_in, undo_check_out, add_comment, get_comments.
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "get", "doc_no": 123, "tenant": "demo"}""",
+            "description": "Therefore document operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -271,61 +905,16 @@ Example: {"operation": "get", "doc_no": 123, "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "doc_no": {"type": "integer"},
-                    "include_index_data": {"type": "boolean"},
-                    "include_streams_info": {"type": "boolean"},
-                    "include_streams_data": {"type": "boolean"},
-                    "include_checkout_status": {"type": "boolean"},
-                    "include_access_mask": {"type": "boolean"},
-                    "version_no": {"type": "integer"},
-                    "is_doc_title_needed": {"type": "boolean"},
-                    "convert_to": {},
-                    "annotation_mode": {},
-                    "signature_mode": {},
-                    "certificate_name": {"type": "string"},
-                    "time_stamp_server": {"type": "string"},
-                    "time_stamp_user": {"type": "string"},
-                    "time_stamp_pwd": {"type": "string"},
-                    "multipage_stream_name": {"type": "string"},
-                    "stream_nos": {"type": "array", "items": {"type": "integer"}},
-                    "retrieve_reason": {"type": "string"},
-                    "archive_converted_files": {"type": "boolean"},
-                    "custom_archive_file_name": {"type": "string"},
-                    "category_no": {"type": "integer"},
-                    "check_in_comments": {"type": "string"},
-                    "with_auto_append_mode": {"type": "integer"},
-                    "do_fill_dependent_fields": {"type": "boolean"},
-                    "streams": {"type": "array", "items": {"type": "object"}},
-                    "content_text": {"type": "string"},
-                    "content_filename": {"type": "string"},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}},
-                    "run_webclient_flow": {"type": "boolean"},
-                    "updates": {"type": "array", "items": {"type": "object"}},
-                    "stream_nos_to_delete": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                    },
-                    "streams_to_rename": {"type": "array", "items": {"type": "object"}},
-                    "conversion_options": {"type": "object"},
-                    "target_category_no": {"type": "integer"},
-                    "comment_text": {"type": "string"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_query",
-            "description": """Query operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-search, search_async, search_multi, search_fulltext, get_next_rows, get_next_multi_rows, release, release_multi.
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "search", "query": {...}, "tenant": "demo"}""",
+            "description": "Therefore query operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -344,36 +933,16 @@ Example: {"operation": "search", "query": {...}, "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "query": {"type": "object"},
-                    "queries": {"type": "array", "items": {"type": "object"}},
-                    "full_text": {"type": "string"},
-                    "row_block_size": {"type": "integer"},
-                    "max_rows": {"type": "integer"},
-                    "auto_fetch_all": {"type": "boolean"},
-                    "query_id": {"type": "integer"},
-                    "search": {"type": "string"},
-                    "categories": {"type": "array", "items": {"type": "integer"}},
-                    "include_index_data": {"type": "boolean"},
-                    "case_no": {"type": "integer"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_workflow",
-            "description": """Workflow operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-query_all, query_process, get_my_tasks, get_my_instances, get_all_instances, get_user_instances,
-get_instance, get_process, get_task_settings, get_history, get_linked, complete_task, claim, disclaim,
-delegate, create_case, get_case, get_case_documents, get_case_history.
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "get_my_tasks", "tenant": "demo"}""",
+            "description": "Therefore workflow operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -403,65 +972,16 @@ Example: {"operation": "get_my_tasks", "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "process_no": {"type": "integer"},
-                    "instance_no": {"type": "integer"},
-                    "workflow_flags": {
-                        "oneOf": [{"type": "string"}, {"type": "integer"}]
-                    },
-                    "max_rows": {"type": "integer"},
-                    "include_instance_details": {"type": "boolean"},
-                    "instance_detail_mode": {"type": "string"},
-                    "max_instance_workers": {"type": "integer"},
-                    "is_access_mask_needed": {"type": "boolean"},
-                    "load_history": {"type": "boolean"},
-                    "debug": {"type": "boolean"},
-                    "debug_log_path": {"type": "string"},
-                    "debug_progress_every": {"type": "integer"},
-                    "task_filter": {"type": "string"},
-                    "filter_to_user": {"type": "boolean"},
-                    "include_unfiltered": {"type": "boolean"},
-                    "include_overdue_summary": {"type": "boolean"},
-                    "assignee_values": {"type": "array", "items": {"type": "string"}},
-                    "resolve_group_membership": {"type": "boolean"},
-                    "user_query": {"type": "string"},
-                    "user_query_flags": {"type": "integer"},
-                    "two_phase": {"type": "boolean"},
-                    "fetch_details": {"type": "boolean"},
-                    "token_no": {"type": "integer"},
-                    "version_no": {"type": "integer"},
-                    "load_tasks": {"type": "boolean"},
-                    "task_no": {"type": "integer"},
-                    "setting_names": {"type": "array", "items": {"type": "string"}},
-                    "block_size": {"type": "integer"},
-                    "include_routing_info": {"type": "boolean"},
-                    "max_creation_date": {"type": "string"},
-                    "seq_pos": {"type": "integer"},
-                    "doc_no": {"type": "integer"},
-                    "wf_doc_link_type": {"type": "integer"},
-                    "workflow_instance_token": {"type": "string"},
-                    "user_decision": {"type": "string"},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}},
-                    "user_id": {"type": "integer"},
-                    "case_definition_no": {"type": "integer"},
-                    "case_no": {"type": "integer"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_users",
-            "description": """User operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-search, get_from_group, get_details, create, update_groups, get_groups, set_password, change_password,
-reset_password, delete_portal, save_portal, move_license, get_settings, set_settings.
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "search", "query": "admin", "tenant": "demo"}""",
+            "description": "Therefore user operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -486,43 +1006,16 @@ Example: {"operation": "search", "query": "admin", "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "query": {"type": "string"},
-                    "domain_names": {"type": "array", "items": {"type": "string"}},
-                    "flags": {"type": "integer"},
-                    "group_id": {"type": "integer"},
-                    "group_name": {"type": "string"},
-                    "domain_name": {"type": "string"},
-                    "user_or_group_id": {"type": "integer"},
-                    "user_name": {"type": "string"},
-                    "full_name": {"type": "string"},
-                    "email": {"type": "string"},
-                    "password": {"type": "string"},
-                    "user_id": {"type": "integer"},
-                    "group_ids": {"type": "array", "items": {"type": "integer"}},
-                    "new_password": {"type": "string"},
-                    "old_password": {"type": "string"},
-                    "send_email": {"type": "boolean"},
-                    "is_active": {"type": "boolean"},
-                    "source_user_id": {"type": "integer"},
-                    "target_user_id": {"type": "integer"},
-                    "settings": {"type": "object"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_keywords",
-            "description": """Keyword dictionary operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-get_by_field, get_by_dictionary, get_by_name, validate, add, update, delete, deactivate.
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "get_by_field", "field_no": 105, "tenant": "demo"}""",
+            "description": "Therefore keyword dictionary operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -541,49 +1034,16 @@ Example: {"operation": "get_by_field", "field_no": 105, "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "field_no": {"type": "integer"},
-                    "category_no": {"type": "integer"},
-                    "case_definition_no": {"type": "integer"},
-                    "dependent_field_filter_value": {"type": "string"},
-                    "show_deactivated_keywords": {"type": "boolean"},
-                    "skip_loading_keyword_nos": {"type": "boolean"},
-                    "max_rows": {"type": "integer"},
-                    "index_data_items": {"type": "array", "items": {"type": "object"}},
-                    "key_dic_no": {"type": "integer"},
-                    "filter_value": {"type": "string"},
-                    "max_values": {"type": "integer"},
-                    "include_deactivated_keywords": {"type": "boolean"},
-                    "dictionary_name": {"type": "string"},
-                    "max_results": {"type": "integer"},
-                    "min_score": {"type": "number"},
-                    "confirm_threshold": {"type": "number"},
-                    "keywords": {"type": "array", "items": {"type": "string"}},
-                    "is_filter_mode": {"type": "boolean"},
-                    "keyword_name": {"type": "string"},
-                    "dictionary_no": {"type": "integer"},
-                    "dictionary_type_no": {"type": "integer"},
-                    "is_keyword_deactivated": {"type": "boolean"},
-                    "check_existing": {"type": "boolean"},
-                    "ignore_if_exists": {"type": "boolean"},
-                    "new_keyword_name": {"type": "string"},
-                    "keyword_id": {"type": "integer"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
         {
             "name": "therefore_knowledge",
-            "description": """Knowledge base operations (supports multi-tenant: use 'tenant' parameter to target specific tenant):
-search, get_workflow, get_field_types, get_pattern, get_quirks, list_all, get_api_help.
-
-Common parameters: tenant (string) - specify tenant key like "demo"; tenant_hint (string) - auto-detect tenant.
-Example: {"operation": "get_quirks", "tenant": "demo"}""",
+            "description": "Therefore knowledge base operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -601,49 +1061,14 @@ Example: {"operation": "get_quirks", "tenant": "demo"}""",
                     },
                     "tenant": {
                         "type": "string",
-                        "description": "Tenant key to target (e.g., 'demo'). If omitted, uses default tenant.",
+                        "description": "Tenant key (e.g., 'demo'). Required.",
                     },
-                    "tenant_hint": {
-                        "type": "string",
-                        "description": "Free-text hint to auto-detect tenant (e.g., company name).",
-                    },
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer"},
-                    "workflow_name": {"type": "string"},
-                    "field_type": {},
-                    "pattern_name": {"type": "string"},
-                    "search_term": {"type": "string"},
-                    "format": {"type": "string"},
-                    "api_operation": {"type": "string"},
                 },
-                "required": ["operation"],
+                "required": ["operation", "tenant"],
+                "additionalProperties": True,
             },
         },
     ]
-
-    # Add optional tenant selection to all tools.
-    for tool in tools:
-        schema = tool.get("inputSchema")
-        if not schema or schema.get("type") != "object":
-            continue
-        props = schema.setdefault("properties", {})
-        if "tenant" not in props:
-            props["tenant"] = {
-                "type": "string",
-                "description": (
-                    "Tenant key to target. Once set, it becomes the default for subsequent calls "
-                    "(sticky). To switch tenants, explicitly pass a different tenant key. "
-                    "If omitted, uses the last-used tenant or the default."
-                ),
-            }
-        if "tenant_hint" not in props:
-            props["tenant_hint"] = {
-                "type": "string",
-                "description": (
-                    "Free-text hint to auto-detect the tenant (e.g. a company name or environment label). "
-                    "Used only when tenant is not explicitly provided. Matched against configured tenant labels."
-                ),
-            }
     return tools
 
 
@@ -1796,68 +2221,144 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         self, args: Dict[str, Any], tenant: str, client: ThereforeClient
     ) -> Dict[str, Any]:
         """
-        Lightweight knowledge search that suggests which tool to use.
-        Returns documentation + tool name, but does NOT execute tools.
-        This keeps the function simple and puts tool execution back in the AI's hands.
+        Expert router that returns the exact tool, operation, and parameters needed.
+        Uses OPERATION_REGISTRY for comprehensive parameter information.
         """
         question = args["question"].lower()
 
-        # Simple keyword -> tool+operation mapping (no execution, just suggestions)
+        # Expanded keyword -> tool+operation mapping
         tool_suggestions = {
+            # System operations
             "customer id": {"tool": "therefore_system", "operation": "get_customer_id"},
             "client id": {"tool": "therefore_system", "operation": "get_customer_id"},
             "system id": {"tool": "therefore_system", "operation": "get_customer_id"},
             "tenant id": {"tool": "therefore_system", "operation": "get_customer_id"},
+            "connected user": {"tool": "therefore_system", "operation": "get_connected_user"},
+            "version": {"tool": "therefore_system", "operation": "get_version"},
+            "logs": {"tool": "therefore_system", "operation": "get_logfiles"},
+            "log files": {"tool": "therefore_system", "operation": "get_logfiles"},
+            "login history": {"tool": "therefore_system", "operation": "get_login_history"},
+            "statistics": {"tool": "therefore_system", "operation": "get_statistics"},
+            "objects": {"tool": "therefore_system", "operation": "get_objects"},
+
+            # Category operations
             "categories": {"tool": "therefore_categories", "operation": "get_tree"},
             "category tree": {"tool": "therefore_categories", "operation": "get_tree"},
-            "list categories": {
-                "tool": "therefore_categories",
-                "operation": "get_tree",
-            },
-            "logs": {"tool": "therefore_system", "operation": "get_logfiles"},
-            "log summary": {"tool": "therefore_system", "operation": "get_logfiles"},
+            "list categories": {"tool": "therefore_categories", "operation": "get_tree"},
+            "category info": {"tool": "therefore_categories", "operation": "get_info"},
+            "fields": {"tool": "therefore_categories", "operation": "list_fields"},
+            "list fields": {"tool": "therefore_categories", "operation": "list_fields"},
+            "generate config": {"tool": "therefore_categories", "operation": "generate_config"},
+
+            # Document operations
+            "get document": {"tool": "therefore_documents", "operation": "get"},
+            "create document": {"tool": "therefore_documents", "operation": "create"},
+            "update document": {"tool": "therefore_documents", "operation": "update"},
+            "delete document": {"tool": "therefore_documents", "operation": "delete"},
+            "document history": {"tool": "therefore_documents", "operation": "get_history"},
+            "checkout": {"tool": "therefore_documents", "operation": "check_out"},
+            "checkin": {"tool": "therefore_documents", "operation": "check_in"},
+            "check out": {"tool": "therefore_documents", "operation": "check_out"},
+            "check in": {"tool": "therefore_documents", "operation": "check_in"},
+
+            # Query operations
+            "search": {"tool": "therefore_query", "operation": "search"},
+            "query": {"tool": "therefore_query", "operation": "search"},
+            "query documents": {"tool": "therefore_query", "operation": "search"},
+            "search documents": {"tool": "therefore_query", "operation": "search"},
+            "full text search": {"tool": "therefore_query", "operation": "search_fulltext"},
+
+            # Workflow operations
+            "workflow": {"tool": "therefore_workflow", "operation": "query_all"},
+            "my tasks": {"tool": "therefore_workflow", "operation": "get_my_tasks"},
+            "workflow tasks": {"tool": "therefore_workflow", "operation": "get_my_tasks"},
+            "complete task": {"tool": "therefore_workflow", "operation": "complete_task"},
+            "workflow instances": {"tool": "therefore_workflow", "operation": "get_all_instances"},
+
+            # User operations
             "users": {"tool": "therefore_users", "operation": "search"},
             "user list": {"tool": "therefore_users", "operation": "search"},
-            "connection": {
-                "tool": "therefore_system",
-                "operation": "get_connected_user",
-            },
-            "connected": {
-                "tool": "therefore_system",
-                "operation": "get_connected_user",
-            },
+            "search users": {"tool": "therefore_users", "operation": "search"},
+            "create user": {"tool": "therefore_users", "operation": "create"},
+            "user details": {"tool": "therefore_users", "operation": "get_details"},
+
+            # Keyword operations
+            "keywords": {"tool": "therefore_keywords", "operation": "get_by_field"},
+            "dictionary": {"tool": "therefore_keywords", "operation": "get_by_dictionary"},
+            "add keyword": {"tool": "therefore_keywords", "operation": "add"},
         }
 
-        # Check for direct tool suggestion
+        # Check for direct keyword match
         suggested_tool = None
+        suggested_operation = None
         for keyword, suggestion in tool_suggestions.items():
             if keyword in question:
-                suggested_tool = suggestion
+                suggested_tool = suggestion["tool"]
+                suggested_operation = suggestion["operation"]
                 break
+
+        # If no keyword match, try fuzzy matching operation names in the registry
+        if not suggested_tool:
+            best_match = None
+            best_score = 0
+            for (tool, op), info in OPERATION_REGISTRY.items():
+                # Check if any word in the question matches the operation name
+                op_words = op.replace("_", " ").lower()
+                desc_words = info["description"].lower()
+
+                # Simple word matching
+                question_words = set(question.split())
+                op_match_words = set(op_words.split())
+                desc_match_words = set(desc_words.split())
+
+                matches = len(question_words & op_match_words) + (len(question_words & desc_match_words) * 0.5)
+                if matches > best_score:
+                    best_score = matches
+                    best_match = (tool, op)
+
+            if best_match and best_score >= 1.0:
+                suggested_tool, suggested_operation = best_match
 
         # Search knowledge base
         from knowledge_tools import search_knowledge
-
         results = search_knowledge(question, limit=3)
 
-        # Build response
+        # Build response with comprehensive parameter info
         response = {"question": args["question"]}
 
-        if suggested_tool:
-            tool_name = suggested_tool["tool"]
-            operation = suggested_tool["operation"]
-            response["suggested_tool"] = tool_name
-            response["suggested_operation"] = operation
-            response["NEXT_ACTION"] = f"Call {tool_name} with operation: {operation}"
-            response["WARNING"] = (
-                "This is NOT the final answer - you must call the suggested tool to get actual data"
-            )
-            response["answer"] = (
-                f"⚠️ IMPORTANT: This is just a suggestion, NOT the answer!\n\n"
-                f'NEXT STEP: Call `{tool_name}` with `operation: "{operation}"` to get the actual data.\n\n'
-                f"DO NOT use call_endpoint - use the specific tool and operation instead."
-            )
+        if suggested_tool and suggested_operation:
+            # Get parameter info from registry
+            registry_key = (suggested_tool, suggested_operation)
+            param_info = OPERATION_REGISTRY.get(registry_key, {})
 
+            # Build call_with dict with required params (tenant is now required for all grouped tools)
+            call_with = {
+                "operation": suggested_operation,
+                "tenant": tenant or "<tenant-key>",  # Use current tenant or placeholder
+            }
+            for req_param in param_info.get("required", []):
+                call_with[req_param] = f"<required - {req_param}>"
+
+            response.update({
+                "suggested_tool": suggested_tool,
+                "suggested_operation": suggested_operation,
+                "description": param_info.get("description", ""),
+                "call_with": call_with,
+                "all_parameters": {
+                    "required": ["tenant"] + param_info.get("required", []),  # tenant is always required
+                    "optional": param_info.get("optional", {}),
+                },
+                "answer": (
+                    f"Call {suggested_tool} with:\n"
+                    f"  operation: {suggested_operation}\n"
+                    f"  tenant: {tenant or '<tenant-key>'}\n"
+                    f"  description: {param_info.get('description', '')}\n\n"
+                    f"Required params: tenant, {', '.join(param_info.get('required', [])) or 'none'}\n"
+                    f"Optional params: {len(param_info.get('optional', {}))} available"
+                )
+            })
+
+        # Add knowledge base results if found
         if results:
             top_result = results[0]
             response["documentation"] = self._format_knowledge_result(top_result)
@@ -1866,18 +2367,24 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             if not suggested_tool:
                 response["answer"] = self._format_knowledge_result(top_result)
 
+        # Fallback if nothing found
         if not suggested_tool and not results:
-            response["answer"] = (
-                "No direct match found. Try:\n"
-                "1. Use therefore_categories with operation: get_tree to explore available categories\n"
-                "2. Use therefore_system with operation: get_customer_id for customer/client/tenant ID\n"
-                "3. Use therefore_knowledge with operation: get_api_help for official API documentation"
-            )
-            response["suggested_tool"] = "therefore_categories"
-            response["suggested_operation"] = "get_tree"
-            response["NEXT_ACTION"] = (
-                "Call therefore_categories with operation: get_tree"
-            )
+            response.update({
+                "answer": (
+                    "No direct match found. Common starting points:\n"
+                    "• Get categories: therefore_categories → get_tree\n"
+                    "• Get customer ID: therefore_system → get_customer_id\n"
+                    "• Search documents: therefore_query → search\n"
+                    "• Get my tasks: therefore_workflow → get_my_tasks"
+                ),
+                "suggested_tool": "therefore_categories",
+                "suggested_operation": "get_tree",
+                "call_with": {
+                    "operation": "get_tree",
+                    "tenant": tenant or "<tenant-key>",
+                },
+                "all_parameters": {"required": ["tenant"], "optional": {"payload": "object - optional request payload"}},
+            })
 
         return response
 
