@@ -3,8 +3,14 @@
 cache/
 __pycache__/
 *.pyc
-.DS_Store
+**/.DS_Store
 .mcp.json
+
+# Entra / Therefore temporary tokens
+scripts/.entra_*.txt
+scripts/.therefore_jwt.txt
+scripts/.env.local
+scripts/.env
 
 # Runtime caches and debug output
 docs/notes/*_cache*.json
@@ -15,3 +21,6 @@ docs/reference/user/.env.local
 
 # Tenant-specific baseline/export configs (may contain client data)
 tools/config_generator/examples/*-TheConfiguration.xml
+
+# Auth Provider secrets
+services/auth-provider/tenants.json

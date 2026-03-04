@@ -1,4 +1,16 @@
 services:
+  therefore-auth-provider:
+    build:
+      context: ./services/auth-provider
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/auth-provider/tenants.json:/app/tenants.json:ro
+    restart: unless-stopped
+    profiles:
+      - auth
+      - http
+
   therefore-mcp:
     build: .
     env_file:

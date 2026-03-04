@@ -4,6 +4,7 @@ import json
 import os
 import re
 import ssl
+import urllib.parse
 import urllib.request
 import urllib.error
 import socket
@@ -21,6 +22,9 @@ class ThereforeConfig:
     username: Optional[str] = None
     password: Optional[str] = None
     tenant_name: Optional[str] = None
+    auth_provider_url: Optional[str] = None
+    user_mapping: Optional[str] = None
+    bridge_api_key: Optional[str] = None
     timeout_seconds: int = 20
     workflow_timeout_seconds: Optional[int] = None
     workflow_max_rows: Optional[int] = None
@@ -46,6 +50,7 @@ class ThereforeClient:
         self.config = config
         self.base_url = config.base_url.rstrip('/')
         self.ctx = ssl.create_default_context()
+        self._token_cache: Dict[str, str] = {}
         # Build a custom opener that tracks redirects when debug is on
         if config.debug:
             self._opener = urllib.request.build_opener(
@@ -59,6 +64,50 @@ class ThereforeClient:
         """Print a debug message to stderr, guarded by config.debug."""
         if self.config.debug:
             print(f"[THEREFORE] {message}", file=sys.stderr, flush=True)
+
+    def _get_s2s_token(self) -> str:
+        """Fetch a signed JWT from the centralized Auth Provider."""
+        if not self.config.auth_provider_url:
+            raise ValueError("S2S auth method requires THEREFORE_AUTH_PROVIDER_URL")
+        
+        # Determine the tenant key - either from config or from the base_url
+        tenant_key = self.config.tenant_name
+        if not tenant_key and 'thereforeonline.com' in self.base_url.lower():
+            parsed = urllib.parse.urlparse(self.base_url)
+            if parsed.hostname:
+                 tenant_key = parsed.hostname.split('.')[0]
+        
+        if not tenant_key:
+             # Fallback to 'default' if we cannot determine tenant
+             tenant_key = 'default'
+
+        # Basic cache based on tenant_key
+        if tenant_key in self._token_cache:
+             return self._token_cache[tenant_key]
+
+        provider_url = self.config.auth_provider_url.rstrip('/') + "/issue-token"
+        payload_data = {"tenant": tenant_key}
+        if self.config.user_mapping:
+             payload_data["user_hint"] = self.config.user_mapping
+
+        payload = json.dumps(payload_data).encode('utf-8')
+        req = urllib.request.Request(provider_url, data=payload, method='POST')
+        req.add_header('Content-Type', 'application/json')
+        if self.config.bridge_api_key:
+             req.add_header('X-Bridge-API-Key', self.config.bridge_api_key)
+        
+        self._log(f"Fetching S2S token for '{tenant_key}' (hint: {self.config.user_mapping or 'none'}) from {provider_url}")
+        try:
+            with urllib.request.urlopen(req, context=self.ctx, timeout=10) as r:
+                resp = json.loads(r.read().decode('utf-8'))
+                token = resp.get('access_token')
+                if not token:
+                    raise ValueError(f"No access_token in response from auth provider: {resp}")
+                self._token_cache[tenant_key] = token
+                return token
+        except Exception as e:
+            self._log(f"Error fetching S2S token: {e}")
+            raise ValueError(f"Failed to fetch S2S token from {provider_url}: {e}")
 
     def _headers(self) -> Dict[str, str]:
         headers = {
@@ -76,8 +125,23 @@ class ThereforeClient:
             if not self.config.password:
                 raise ValueError('Bearer auth requires password (token)')
             headers['Authorization'] = f'Bearer {self.config.password}'
-        if self.config.tenant_name:
-            headers['TenantName'] = self.config.tenant_name
+        elif method == 's2s':
+            token = self._get_s2s_token()
+            headers['Authorization'] = f'Bearer {token}'
+        
+        # Determine tenant name: explicit config takes precedence, then auto-extract from URL
+        tenant_name = self.config.tenant_name
+        if not tenant_name and 'thereforeonline.com' in self.base_url.lower():
+            # Auto-extract tenant from URL like https://tenant.thereforeonline.com
+            parsed = urllib.parse.urlparse(self.base_url)
+            if parsed.hostname and parsed.hostname.endswith('.thereforeonline.com'):
+                # Extract subdomain as tenant name
+                subdomain = parsed.hostname.split('.')[0]
+                if subdomain and subdomain != 'www':
+                    tenant_name = subdomain
+        
+        if tenant_name:
+            headers['TenantName'] = tenant_name
         return headers
 
     @staticmethod
@@ -1041,13 +1105,53 @@ class ThereforeClient:
         return self._post('ExecuteFullTextQuery', payload)
 
     def call_endpoint(self, endpoint: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Call an arbitrary Therefore WebAPI endpoint.
+        Auto-detects GET vs POST based on endpoint name.
+        """
         if not endpoint:
             raise ValueError('endpoint is required')
         path = str(endpoint).strip()
         if path.startswith(self.base_url):
             path = path[len(self.base_url):]
         path = path.lstrip('/')
-        return self._post(path, payload or {})
+
+        # Known GET endpoints (most Therefore endpoints use POST)
+        get_endpoints = {
+            'GetSystemCustomerId',
+            'GetDomainInfo',
+            'GetDocumentThumbnail',
+            'GetUploadedEFormFile',
+            'Confirm2FACode',
+        }
+
+        # Known binary/stream endpoints that return raw data (not JSON)
+        binary_endpoints = {
+            'GetDocumentStreamRaw',
+            'GetDocumentStreamFile',
+        }
+
+        # Check if this is a known GET endpoint (case-insensitive)
+        is_get_endpoint = any(path.lower() == ep.lower() for ep in get_endpoints)
+        is_binary_endpoint = any(path.lower() == ep.lower() for ep in binary_endpoints)
+
+        if is_get_endpoint:
+            if payload:
+                # GET endpoints shouldn't have payloads - log warning but proceed
+                import sys
+                print(f"Warning: {path} is a GET endpoint but payload was provided. Ignoring payload.",
+                      file=sys.stderr)
+            return self._get(path)
+        elif is_binary_endpoint:
+            # Binary endpoints return raw bytes - base64 encode for JSON compatibility
+            raw_bytes = self._post_raw(path, payload or {})
+            return {
+                "file_data_base64": base64.b64encode(raw_bytes).decode('ascii'),
+                "file_size_bytes": len(raw_bytes),
+                "note": f"Binary response from {path} encoded as base64",
+            }
+        else:
+            return self._post(path, payload or {})
 
     def execute_statistics_query(
         self,
@@ -1332,6 +1436,167 @@ class ThereforeClient:
             payload['UserNo'] = int(user_no)
         return self._post('GetLoginHistory', payload)
 
+    def get_connection_token_from_adfs(
+        self,
+        security_token: str,
+        connect_mode: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Exchange an ADFS/Entra security token for a Therefore connection token.
+        
+        This enables SSO authentication - obtain an ADFS/Entra token via your
+        identity provider, then exchange it for a Therefore session token.
+        
+        Args:
+            security_token: The ADFS/Entra security token (JWT or SAML assertion)
+            connect_mode: Connection mode - 'NoLicenseMove' (default), 'ConnectForSignOut', or 'MoveLicense'
+        
+        Returns:
+            {"Token": "...", "NodeFriendly": "..."}
+        """
+        # Map string connect_mode to integer values
+        connect_mode_map = {
+            'NoLicenseMove': 0,
+            'ConnectForSignOut': 1,
+            'MoveLicense': 3,
+        }
+        
+        payload: Dict[str, Any] = {
+            'SecurityToken': security_token,
+        }
+        if connect_mode is not None:
+            # Convert string to int if needed
+            if isinstance(connect_mode, str):
+                payload['ConnectMode'] = connect_mode_map.get(connect_mode, 0)
+            else:
+                payload['ConnectMode'] = int(connect_mode)
+        return self._post('GetConnectionTokenFromADFSToken', payload)
+
+    def get_document_stream(
+        self,
+        doc_no: int,
+        stream_no: int,
+        version_no: Optional[int] = None,
+        retrieve_reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get a document stream as base64-encoded JSON.
+        
+        Returns the file data as a byte array in JSON format.
+        For large files, consider using get_document_stream_raw() instead.
+        
+        Args:
+            doc_no: Document number
+            stream_no: Stream number (0 for first/default stream)
+            version_no: Optional version number
+            retrieve_reason: Optional reason for retrieval
+        
+        Returns:
+            {
+                "FileData": [byte array],
+                "FileName": "...",
+                "StreamNo": int
+            }
+        """
+        payload: Dict[str, Any] = {
+            'DocNo': int(doc_no),
+            'StreamNo': int(stream_no),
+        }
+        if version_no is not None:
+            payload['VersionNo'] = int(version_no)
+        if retrieve_reason is not None:
+            payload['RetrieveReason'] = retrieve_reason
+        return self._post('GetDocumentStream', payload)
+
+    def get_document_stream_raw(
+        self,
+        doc_no: int,
+        stream_no: int,
+        version_no: Optional[int] = None,
+        retrieve_reason: Optional[str] = None,
+        timeout_override: Optional[int] = None,
+    ) -> bytes:
+        """
+        Get a document stream as raw binary data.
+        
+        This returns the actual file content as bytes, suitable for large files
+        or when you need to save/stream the content directly without JSON overhead.
+        
+        Args:
+            doc_no: Document number
+            stream_no: Stream number (0 for first/default stream)
+            version_no: Optional version number
+            retrieve_reason: Optional reason for retrieval
+            timeout_override: Optional timeout in seconds (for large files)
+        
+        Returns:
+            Raw binary file content as bytes
+        """
+        payload: Dict[str, Any] = {
+            'DocNo': int(doc_no),
+            'StreamNo': int(stream_no),
+        }
+        if version_no is not None:
+            payload['VersionNo'] = int(version_no)
+        if retrieve_reason is not None:
+            payload['RetrieveReason'] = retrieve_reason
+        return self._post_raw('GetDocumentStreamRaw', payload, timeout_override=timeout_override)
+
+    def _post_raw(
+        self,
+        path: str,
+        payload: Dict[str, Any],
+        timeout_override: Optional[int] = None,
+    ) -> bytes:
+        """
+        POST to an endpoint and return raw binary response (not JSON parsed).
+        Used for endpoints that return file streams rather than JSON.
+        """
+        url = f"{self.base_url}/{path}"
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, method='POST')
+        for k, v in self._headers().items():
+            req.add_header(k, v)
+
+        self._log(f"POST {url} ({len(data)} bytes) -> expecting raw binary response")
+
+        timeout = self.config.timeout_seconds
+        if timeout_override is not None:
+            try:
+                timeout = max(1, int(timeout_override))
+            except ValueError:
+                timeout = self.config.timeout_seconds
+
+        t0 = _time.monotonic()
+        try:
+            with self._open(req, timeout=timeout) as r:
+                body = r.read()
+            elapsed_ms = (_time.monotonic() - t0) * 1000
+            self._log(f" <- {r.status} {r.reason} ({len(body)} bytes, {elapsed_ms:.0f}ms) [raw binary]")
+            return body
+        except urllib.error.HTTPError as exc:
+            elapsed_ms = (_time.monotonic() - t0) * 1000
+            try:
+                body = exc.read().decode('utf-8', errors='replace')
+            except Exception:
+                body = ''
+            detail = ''
+            if body:
+                try:
+                    err_json = json.loads(body)
+                    detail = err_json.get('Message') or err_json.get('message') or err_json.get('error') or body
+                except (json.JSONDecodeError, AttributeError):
+                    detail = body
+            self._log(f" <- {exc.code} {detail!r} ({len(body)} bytes, {elapsed_ms:.0f}ms)")
+            msg = f"HTTP {exc.code} from {path}"
+            if detail:
+                msg += f": {detail}"
+            raise type(exc)(exc.url, exc.code, msg, exc.headers, None) from None
+        except Exception as exc:
+            elapsed_ms = (_time.monotonic() - t0) * 1000
+            self._log(f" <- ERROR {type(exc).__name__}: {exc} ({elapsed_ms:.0f}ms)")
+            raise
+
     @staticmethod
     def make_stream_from_text(filename: str, text: str) -> Dict[str, Any]:
         data = base64.b64encode(text.encode('utf-8')).decode('ascii')
@@ -1407,6 +1672,9 @@ def build_config_from_env(env: Dict[str, str]) -> ThereforeConfig:
         username=clean(env.get('THEREFORE_USERNAME')),
         password=clean(env.get('THEREFORE_PASSWORD')),
         tenant_name=clean(env.get('THEREFORE_TENANTNAME')),
+        auth_provider_url=clean(env.get('THEREFORE_AUTH_PROVIDER_URL')),
+        user_mapping=clean(env.get('THEREFORE_USER_MAPPING')),
+        bridge_api_key=clean(env.get('THEREFORE_BRIDGE_API_KEY')),
         timeout_seconds=timeout_seconds,
         workflow_timeout_seconds=workflow_timeout_seconds,
         workflow_max_rows=workflow_max_rows,
@@ -1433,6 +1701,9 @@ def _build_tenant_env(env: Dict[str, str], tenant_key: str) -> Dict[str, str]:
         'THEREFORE_USERNAME': pick('USERNAME'),
         'THEREFORE_PASSWORD': pick('PASSWORD'),
         'THEREFORE_TENANTNAME': pick('TENANTNAME'),
+        'THEREFORE_AUTH_PROVIDER_URL': pick('AUTH_PROVIDER_URL'),
+        'THEREFORE_USER_MAPPING': pick('USER_MAPPING'),
+        'THEREFORE_BRIDGE_API_KEY': pick('BRIDGE_API_KEY'),
         'THEREFORE_SAFE_DOC_ID': pick('SAFE_DOC_ID'),
         'THEREFORE_SAFE_CATEGORY_ID': pick('SAFE_CATEGORY_ID'),
         'THEREFORE_ALLOW_WRITES': pick('ALLOW_WRITES'),

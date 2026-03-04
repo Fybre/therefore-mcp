@@ -1,0 +1,13 @@
+{
+  "tenant_key_here": {
+    "customer_id": "ASDNYY175N",
+    "shared_secret": "your-shared-secret-from-solution-designer",
+    "issuer": "Therefore-MCP-Bridge",
+    "user_mapping": "domain.onmicrosoft.com\default_user",
+    "bridge_api_key": "a-secure-random-key-the-mcp-server-must-provide",
+    "allowed_users": [
+      "domain.onmicrosoft.com\default_user",
+      "domain.onmicrosoft.com\another_user"
+    ]
+  }
+}
