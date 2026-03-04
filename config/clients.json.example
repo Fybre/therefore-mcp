@@ -1,0 +1,4 @@
+{
+  "client_api_key_1": ["demo", "tenant_a"],
+  "client_api_key_2": ["tenant_b"]
+}

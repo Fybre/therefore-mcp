@@ -109,6 +109,13 @@ OPERATION_REGISTRY = {
         "required": [],
         "optional": {},
     },
+    ("therefore_system", "get_connection_token_from_adfs"): {
+        "description": "Exchange an ADFS/Entra token for a Therefore connection token (SSO auth)",
+        "required": ["security_token"],
+        "optional": {
+            "connect_mode": "string - 'NoLicenseMove' (default), 'ConnectForSignOut', or 'MoveLicense'"
+        },
+    },
     ("therefore_system", "get_domain_info"): {
         "description": "Get domain configuration information",
         "required": [],
@@ -279,6 +286,23 @@ OPERATION_REGISTRY = {
             "retrieve_reason": "string - retrieval reason",
             "archive_converted_files": "boolean - archive converted files",
             "custom_archive_file_name": "string - custom archive filename",
+        },
+    },
+    ("therefore_documents", "get_stream"): {
+        "description": "Get a document stream as base64-encoded JSON",
+        "required": ["doc_no", "stream_no"],
+        "optional": {
+            "version_no": "integer - version number",
+            "retrieve_reason": "string - reason for retrieval",
+        },
+    },
+    ("therefore_documents", "get_stream_raw"): {
+        "description": "Get a document stream as raw binary data (for large files)",
+        "required": ["doc_no", "stream_no"],
+        "optional": {
+            "version_no": "integer - version number",
+            "retrieve_reason": "string - reason for retrieval",
+            "timeout_override": "integer - timeout in seconds for large files",
         },
     },
     ("therefore_documents", "create"): {
@@ -826,6 +850,7 @@ Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", 
                             "get_connected_user",
                             "get_version",
                             "get_connection_token",
+                            "get_connection_token_from_adfs",
                             "get_domain_info",
                             "get_discovery_info",
                             "get_permission_constants",
@@ -890,6 +915,8 @@ Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", 
                             "get_checkout_status",
                             "get_versions",
                             "get_converted_streams",
+                            "get_stream",
+                            "get_stream_raw",
                             "create",
                             "update",
                             "update_index_data",
@@ -1164,12 +1191,16 @@ class MCPServer:
         default_tenant: Optional[str],
         tenant_labels: Dict[str, str],
         tenant_assignee_aliases: Optional[Dict[str, List[str]]] = None,
+        client_access: Optional[Dict[str, List[str]]] = None,
     ):
         self.clients = clients
         self.default_tenant = default_tenant
         self._last_tenant: Optional[str] = default_tenant
         self.tenant_labels = tenant_labels
         self.tenant_assignee_aliases = tenant_assignee_aliases or {}
+        self.client_access = client_access or {}
+        self._current_client_key: Optional[str] = None
+        self._current_client_ip: Optional[str] = None
         self.tools = build_tools()
         self.prompts = build_prompts()
         cache_dir = os.environ.get("THEREFORE_CACHE_DIR") or os.path.join(
@@ -1346,8 +1377,42 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             ],
         }
 
+    def _audit_log(self, tool_name: str, tenant: str, args: Dict[str, Any]) -> None:
+        """Log tool execution for security auditing."""
+        client_label = "global_admin"
+        if self._current_client_key:
+            # Mask the token for the log (show only last 4 chars)
+            client_label = f"client_key(...{self._current_client_key[-4:]})"
+        
+        ip_label = self._current_client_ip or "unknown_ip"
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
+        # Scrub sensitive fields from args before logging
+        safe_args = args.copy()
+        for secret_key in ["password", "token", "security_token", "payload", "file_data_base64", "FileDataBase64JSON"]:
+             if secret_key in safe_args:
+                 safe_args[secret_key] = "[REDACTED]"
+        
+        # Handle nested streams in create_document
+        if "streams" in safe_args and isinstance(safe_args["streams"], list):
+             scrubbed_streams = []
+             for s in safe_args["streams"]:
+                 s_copy = s.copy()
+                 for sk in ["FileDataBase64JSON", "file_data_base64"]:
+                     if sk in s_copy:
+                         s_copy[sk] = "[REDACTED]"
+                 scrubbed_streams.append(s_copy)
+             safe_args["streams"] = scrubbed_streams
+
+        audit_msg = (
+            f"[AUDIT] {timestamp} | Client: {client_label} | IP: {ip_label} | "
+            f"Tenant: {tenant} | Tool: {tool_name} | Args: {json.dumps(safe_args)}"
+        )
+        print(audit_msg, file=sys.stderr, flush=True)
+
     def _call_tool(self, name: str, args: Dict[str, Any]) -> Any:
         tenant = self._resolve_tenant(args)
+        self._audit_log(name, tenant, args)
         client = self.clients[tenant]
         if name == "ask_therefore_expert":
             return self._ask_therefore_expert(args, tenant, client)
@@ -1379,6 +1444,11 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return client.get_web_api_server_version()
         if op == "get_connection_token":
             return client.get_connection_token()
+        if op == "get_connection_token_from_adfs":
+            return client.get_connection_token_from_adfs(
+                security_token=str(args["security_token"]),
+                connect_mode=args.get("connect_mode"),
+            )
         if op == "get_domain_info":
             return client.get_domain_info()
         if op == "get_discovery_info":
@@ -1459,6 +1529,27 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return client.get_document_versions(int(args["doc_no"]))
         if op == "get_converted_streams":
             return self._get_converted_doc_streams(args, tenant, client)
+        if op == "get_stream":
+            return client.get_document_stream(
+                doc_no=int(args["doc_no"]),
+                stream_no=int(args["stream_no"]),
+                version_no=args.get("version_no"),
+                retrieve_reason=args.get("retrieve_reason"),
+            )
+        if op == "get_stream_raw":
+            raw_bytes = client.get_document_stream_raw(
+                doc_no=int(args["doc_no"]),
+                stream_no=int(args["stream_no"]),
+                version_no=args.get("version_no"),
+                retrieve_reason=args.get("retrieve_reason"),
+                timeout_override=args.get("timeout_override"),
+            )
+            # Return base64-encoded for JSON serialization
+            return {
+                "file_data_base64": base64.b64encode(raw_bytes).decode('ascii'),
+                "file_size_bytes": len(raw_bytes),
+                "note": "File content returned as base64-encoded string. Use get_stream for structured JSON response with metadata.",
+            }
         if op == "create":
             category_no = int(args["category_no"])
             check_in_comments = args.get("check_in_comments", "")
@@ -2240,6 +2331,11 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "login history": {"tool": "therefore_system", "operation": "get_login_history"},
             "statistics": {"tool": "therefore_system", "operation": "get_statistics"},
             "objects": {"tool": "therefore_system", "operation": "get_objects"},
+            "adfs": {"tool": "therefore_system", "operation": "get_connection_token_from_adfs"},
+            "sso": {"tool": "therefore_system", "operation": "get_connection_token_from_adfs"},
+            "entra": {"tool": "therefore_system", "operation": "get_connection_token_from_adfs"},
+            "azure ad": {"tool": "therefore_system", "operation": "get_connection_token_from_adfs"},
+            "token exchange": {"tool": "therefore_system", "operation": "get_connection_token_from_adfs"},
 
             # Category operations
             "categories": {"tool": "therefore_categories", "operation": "get_tree"},
@@ -2256,6 +2352,11 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "update document": {"tool": "therefore_documents", "operation": "update"},
             "delete document": {"tool": "therefore_documents", "operation": "delete"},
             "document history": {"tool": "therefore_documents", "operation": "get_history"},
+            "download stream": {"tool": "therefore_documents", "operation": "get_stream"},
+            "document stream": {"tool": "therefore_documents", "operation": "get_stream"},
+            "get stream": {"tool": "therefore_documents", "operation": "get_stream"},
+            "download file": {"tool": "therefore_documents", "operation": "get_stream_raw"},
+            "raw stream": {"tool": "therefore_documents", "operation": "get_stream_raw"},
             "checkout": {"tool": "therefore_documents", "operation": "check_out"},
             "checkin": {"tool": "therefore_documents", "operation": "check_in"},
             "check out": {"tool": "therefore_documents", "operation": "check_out"},
@@ -2695,35 +2796,37 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         tenant_raw = (
             args.get("tenant") or args.get("tenant_name") or args.get("tenantName")
         )
+        key: Optional[str] = None
+        
         if tenant_raw:
             key = normalize_tenant_key(str(tenant_raw))
-            if key in self.clients:
-                self._last_tenant = key
-                return key
-            available = ", ".join(
-                self.tenant_labels.get(k, k) for k in self.clients.keys()
-            )
-            raise ValueError(
-                f'Unknown tenant "{tenant_raw}". Available tenants: {available}'
-            )
+        else:
+            inferred = self._infer_tenant_from_args(args)
+            if inferred:
+                key = inferred
+            elif self._last_tenant and self._last_tenant in self.clients:
+                key = self._last_tenant
+            elif self.default_tenant and self.default_tenant in self.clients:
+                key = self.default_tenant
+            elif len(self.clients) == 1:
+                key = next(iter(self.clients.keys()))
 
-        inferred = self._infer_tenant_from_args(args)
-        if inferred:
-            self._last_tenant = inferred
-            return inferred
+        if not key:
+             available = ", ".join(self.tenant_labels.get(k, k) for k in self.clients.keys())
+             raise ValueError(f"Multiple tenants configured. Please provide tenant. Available tenants: {available}")
 
-        if self._last_tenant and self._last_tenant in self.clients:
-            return self._last_tenant
+        # Enforce Client Access Control
+        if self._current_client_key and self.client_access:
+            allowed = self.client_access.get(self._current_client_key, [])
+            if key not in allowed:
+                raise ValueError(f"Access to tenant '{key}' is not allowed for this client key.")
 
-        if self.default_tenant and self.default_tenant in self.clients:
-            return self.default_tenant
-        if len(self.clients) == 1:
-            return next(iter(self.clients.keys()))
-
-        available = ", ".join(self.tenant_labels.get(k, k) for k in self.clients.keys())
-        raise ValueError(
-            f"Multiple tenants configured. Please provide tenant. Available tenants: {available}"
-        )
+        if key not in self.clients:
+            available = ", ".join(self.tenant_labels.get(k, k) for k in self.clients.keys())
+            raise ValueError(f'Unknown tenant "{key}". Available tenants: {available}')
+        
+        self._last_tenant = key
+        return key
 
     def _infer_tenant_from_args(self, args: Dict[str, Any]) -> Optional[str]:
         if not args or not self.clients or len(self.clients) == 1:
@@ -5998,22 +6101,42 @@ def _build_http_app(server: "MCPServer") -> "FastAPI":
     app = FastAPI(title="Therefore MCP HTTP Server")
 
     # Bearer token auth — skip for health check
-    auth_token = os.environ.get("THEREFORE_MCP_AUTH_TOKEN", "").strip()
-    if auth_token:
-
-        @app.middleware("http")
-        async def check_auth(request: Request, call_next):
-            if request.url.path == "/health":
-                return await call_next(request)
-            header = request.headers.get("authorization", "").strip()
-            scheme, _, token = header.partition(" ")
-            if scheme.lower() == "bearer" and token.strip() == auth_token:
-                return await call_next(request)
+    auth_token_global = os.environ.get("THEREFORE_MCP_AUTH_TOKEN", "").strip()
+    
+    @app.middleware("http")
+    async def check_auth(request: Request, call_next):
+        # Capture IP for auditing (prefer Cloudflare header if present)
+        server._current_client_ip = request.headers.get("cf-connecting-ip") or request.client.host
+        
+        if request.url.path == "/health":
+            return await call_next(request)
+        
+        header = request.headers.get("authorization", "").strip()
+        scheme, _, token = header.partition(" ")
+        token = token.strip()
+        
+        if scheme.lower() != "bearer" or not token:
             return JSONResponse(
-                {"error": "Unauthorized"},
+                {"error": "Unauthorized: Missing Bearer token"},
                 status_code=401,
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+        # 1. Check if token is in the client_access whitelist
+        if server.client_access and token in server.client_access:
+            server._current_client_key = token
+            return await call_next(request)
+        
+        # 2. Fallback to global auth token (which allows ALL tenants)
+        if auth_token_global and token == auth_token_global:
+            server._current_client_key = None # Global token has no restriction
+            return await call_next(request)
+
+        return JSONResponse(
+            {"error": "Unauthorized: Invalid token"},
+            status_code=401,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     # Session management: session_id -> asyncio.Queue
     _sessions: Dict[str, asyncio.Queue] = {}
@@ -6249,6 +6372,25 @@ def _start_http_background(server: "MCPServer", host: str, port: int) -> None:
     print(f"HTTP server started on {host}:{port}", file=sys.stderr)
 
 
+def load_client_access() -> Dict[str, List[str]]:
+    """Load client-to-tenant permissions from config/clients.json."""
+    config_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+        "config", "clients.json"
+    )
+    if not os.path.exists(config_path):
+        return {}
+    
+    try:
+        with open(config_path, "r") as f:
+            data = json.load(f)
+            # Normalize keys
+            return {k: [normalize_tenant_key(t) for t in v] for k, v in data.items()}
+    except Exception as e:
+        print(f"Warning: Failed to load client access config: {e}", file=sys.stderr)
+        return {}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Therefore MCP Server")
     parser.add_argument(
@@ -6274,7 +6416,11 @@ def main() -> None:
 
     # Load clients and create server
     clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
-    server = MCPServer(clients, default_tenant, tenant_labels, tenant_aliases)
+    client_access = load_client_access()
+    server = MCPServer(
+        clients, default_tenant, tenant_labels, tenant_aliases, 
+        client_access=client_access
+    )
 
     # Debug startup diagnostics (stderr only)
     any_debug = any(c.config.debug for c in clients.values())

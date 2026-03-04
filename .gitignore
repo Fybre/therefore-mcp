@@ -24,3 +24,6 @@ tools/config_generator/examples/*-TheConfiguration.xml
 
 # Auth Provider secrets
 services/auth-provider/tenants.json
+
+# MCP Server Client Access Control
+config/clients.json
