@@ -2796,34 +2796,47 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         tenant_raw = (
             args.get("tenant") or args.get("tenant_name") or args.get("tenantName")
         )
+        
+        # 1. Determine the scope of tenants this client is allowed to see
+        allowed_keys = list(self.clients.keys())
+        if self._current_client_key and self.client_access:
+            allowed_keys = self.client_access.get(self._current_client_key, [])
+        
+        if not allowed_keys:
+             raise ValueError("This client has no allowed tenants configured.")
+
         key: Optional[str] = None
         
+        # 2. If the user provided a tenant, validate it against their allowed list
         if tenant_raw:
             key = normalize_tenant_key(str(tenant_raw))
+            if key not in allowed_keys:
+                available = ", ".join(self.tenant_labels.get(k, k) for k in allowed_keys)
+                raise ValueError(f"Access to tenant '{tenant_raw}' is not allowed. Your available tenants: {available}")
+        
+        # 3. If no tenant was provided, try to infer it
         else:
+            # First, try to infer from other arguments (e.g. document ID hints)
             inferred = self._infer_tenant_from_args(args)
-            if inferred:
+            if inferred and inferred in allowed_keys:
                 key = inferred
-            elif self._last_tenant and self._last_tenant in self.clients:
+            
+            # Second, if the client ONLY has access to one tenant, use it as the "Smart Default"
+            elif len(allowed_keys) == 1:
+                key = allowed_keys[0]
+            
+            # Third, fallback to the last used tenant (if it's still in their allowed list)
+            elif self._last_tenant and self._last_tenant in allowed_keys:
                 key = self._last_tenant
-            elif self.default_tenant and self.default_tenant in self.clients:
-                key = self.default_tenant
-            elif len(self.clients) == 1:
-                key = next(iter(self.clients.keys()))
 
+        # 4. If we still don't have a key, we must ask the user to be explicit
         if not key:
-             available = ", ".join(self.tenant_labels.get(k, k) for k in self.clients.keys())
-             raise ValueError(f"Multiple tenants configured. Please provide tenant. Available tenants: {available}")
-
-        # Enforce Client Access Control
-        if self._current_client_key and self.client_access:
-            allowed = self.client_access.get(self._current_client_key, [])
-            if key not in allowed:
-                raise ValueError(f"Access to tenant '{key}' is not allowed for this client key.")
+             available = ", ".join(self.tenant_labels.get(k, k) for k in allowed_keys)
+             raise ValueError(f"Multiple tenants available. Please specify one: {available}")
 
         if key not in self.clients:
-            available = ", ".join(self.tenant_labels.get(k, k) for k in self.clients.keys())
-            raise ValueError(f'Unknown tenant "{key}". Available tenants: {available}')
+            # This should theoretically not happen if the allowed_keys are valid
+            raise ValueError(f"Tenant configuration for '{key}' is missing on this server.")
         
         self._last_tenant = key
         return key
