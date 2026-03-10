@@ -219,6 +219,16 @@ OPERATION_REGISTRY = {
         "required": ["data_type_no"],
         "optional": {},
     },
+    ("therefore_categories", "query_referenced_table"): {
+        "description": "Query rows in a referenced table with optional filter conditions",
+        "required": [],
+        "optional": {
+            "data_type_no": "integer - DataTypeNo of the referenced table",
+            "name": "string - name of the referenced table (used if data_type_no not supplied)",
+            "conditions": "array - filter conditions [{FieldNoOrName, Condition}]",
+            "max_rows": "integer - max rows to return (default 5000)",
+        },
+    },
     ("therefore_categories", "generate_config"): {
         "description": "Generate a category configuration XML",
         "required": ["spec_or_description"],
@@ -887,6 +897,7 @@ Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", 
                             "list_fields",
                             "resolve_field",
                             "get_referenced_table_info",
+                            "query_referenced_table",
                             "generate_config",
                         ],
                     },
@@ -1496,6 +1507,8 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return self._resolve_field(args, tenant, client)
         if op == "get_referenced_table_info":
             return client.get_referenced_table_info(int(args["data_type_no"]))
+        if op == "query_referenced_table":
+            return self._query_referenced_table(args, tenant, client)
         if op == "generate_config":
             return self._generate_category_config(args, tenant, client)
         raise ValueError(f"Unknown operation '{op}' for therefore_categories")
@@ -1595,7 +1608,6 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 with_auto_append_mode=with_auto_append_mode,
                 do_fill_dependent_fields=do_fill_dependent_fields,
                 run_webclient_flow=run_webclient_flow,
-                persist_evaluate_response_path="/Volumes/DataSSD/source/therefore-mcp/docs/notes/evaluate_conditional_properties.json",
             )
         if op == "update":
             return self._update_document(args, tenant, client)
@@ -3630,6 +3642,117 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "count": len(candidates[:max_results]),
             "candidates": candidates[:max_results],
             "needs_confirmation": needs_confirmation,
+        }
+
+    def _discover_referenced_table_by_name(
+        self, name: str, client: ThereforeClient
+    ) -> Optional[int]:
+        """
+        Find the DataTypeNo (TypeNo) for a referenced table by name.
+        Strategy:
+          1. GetObjects(obj_type=5) — works on some tenants.
+          2. Scan category fields for IsForeignDatatype TypeNos.
+          3. Parallel range probe GetReferencedTableInfo(n) for n in 1..256.
+        Returns the DataTypeNo or None if not found.
+        """
+        import concurrent.futures as _cf
+
+        name_lower = name.lower()
+
+        # --- Strategy 1: GetObjects ---
+        try:
+            resp = client.get_objects(flags=0, obj_type=5)
+            for item in resp.get("Items") or []:
+                if (item.get("Name") or "").lower() == name_lower:
+                    return int(item["ID"])
+        except Exception:
+            pass
+
+        # --- Strategy 2: collect TypeNos from category fields ---
+        candidate_type_nos: set = set()
+        try:
+            cats_tree = client.get_categories_tree()
+            def _flatten(items):
+                nos = []
+                for it in items:
+                    if it.get("ItemType") == 2:
+                        nos.append(it["ItemNo"])
+                    nos.extend(_flatten(it.get("ChildItems") or []))
+                return nos
+            for cat_no in _flatten(cats_tree.get("TreeItems") or []):
+                try:
+                    info = client.get_category_info(cat_no)
+                    for field in info.get("CategoryFields") or []:
+                        if field.get("IsForeignDatatype"):
+                            tn = field.get("TypeNo")
+                            if tn is not None:
+                                candidate_type_nos.add(int(tn))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        for tn in sorted(candidate_type_nos):
+            try:
+                info = client.get_referenced_table_info(tn)
+                if (info.get("Name") or "").lower() == name_lower:
+                    return tn
+            except Exception:
+                pass
+
+        # --- Strategy 3: parallel range probe 1..256 ---
+        probe_range = [n for n in range(1, 257) if n not in candidate_type_nos]
+
+        def _probe(n):
+            try:
+                info = client.get_referenced_table_info(n)
+                return n, (info.get("Name") or "")
+            except Exception:
+                return n, None
+
+        with _cf.ThreadPoolExecutor(max_workers=20) as pool:
+            for tn, tname in pool.map(_probe, probe_range):
+                if tname and tname.lower() == name_lower:
+                    return tn
+
+        return None
+
+    def _query_referenced_table(
+        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+    ) -> Dict[str, Any]:
+        import re as _re
+
+        data_type_no = args.get("data_type_no")
+        name = args.get("name")
+        conditions = args.get("conditions") or []
+        max_rows = int(args.get("max_rows", 5000))
+
+        if data_type_no is None:
+            if not name:
+                raise ValueError("Either data_type_no or name must be provided")
+            data_type_no = self._discover_referenced_table_by_name(name, client)
+            if data_type_no is None:
+                raise ValueError(f"Referenced table '{name}' not found")
+
+        data_type_no = int(data_type_no)
+        table_info = client.get_referenced_table_info(data_type_no)
+
+        # The actual category number is embedded in TableName (e.g. "TheCat43" → 43)
+        table_name_str = table_info.get("TableName") or ""
+        m = _re.search(r"\d+$", table_name_str)
+        category_no = int(m.group()) if m else data_type_no
+
+        query = {"CategoryNo": category_no, "Conditions": conditions}
+        result = client.execute_async_single_query_all(query, max_rows=max_rows)
+        rows = (result.get("QueryResult") or {}).get("ResultRows") or []
+
+        return {
+            "data_type_no": data_type_no,
+            "category_no": category_no,
+            "name": table_info.get("Name"),
+            "columns": table_info.get("Columns"),
+            "row_count": len(rows),
+            "rows": rows,
         }
 
     def _prepare_index_update(

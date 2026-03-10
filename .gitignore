@@ -27,3 +27,16 @@ services/auth-provider/tenants.json
 
 # MCP Server Client Access Control
 config/clients.json
+
+# Bridge secrets
+.env.mcpbridge
+
+# Personal/session-specific notes and drafts
+ADFS_SSO_RESUME.md
+GEMINI.md
+PERPLEXITY_ISSUE_FIXED.md
+SIMPLER_APPROACH.md
+SIMPLIFIED_IMPLEMENTATION.md
+
+# Generated test configs and artifacts
+docs/notes/generated_configs/

@@ -638,13 +638,6 @@ class ThereforeClient:
     def get_referenced_table_info(self, data_type_no: int) -> Dict[str, Any]:
         return self._post('GetReferencedTableInfo', {'DataTypeNo': data_type_no})
 
-    def get_objects(self, flags: int, obj_type: int, role_access_mask: int = 18446744073709551615) -> Dict[str, Any]:
-        return self._post('GetObjects', {
-            'Flags': flags,
-            'Type': obj_type,
-            'RoleAccessMask': role_access_mask,
-        })
-
     def get_document_index_data(self, doc_no: int) -> Dict[str, Any]:
         return self._post('GetDocumentIndexData', {
             'DocNo': doc_no,
@@ -698,11 +691,16 @@ class ThereforeClient:
     def get_objects_list(self, load_items_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         return self._post('GetObjectsList', {'LoadItemsList': load_items_list})
 
-    def get_objects(self, flags: int, obj_type: int) -> Dict[str, Any]:
-        return self._post('GetObjects', {
+    def get_objects(self, flags: int, obj_type: int, perm_type: int = 8, limit: int = 1000, skip: int = 0) -> Dict[str, Any]:
+        result = self._post(f'GetObjects?limit={limit}&skip={skip}', {
             'Flags': int(flags),
             'Type': int(obj_type),
+            'PermType': perm_type,
         })
+        # Normalise: web-client returns ItemList, older endpoint returns Items
+        if 'ItemList' in result and 'Items' not in result:
+            result['Items'] = result['ItemList']
+        return result
 
     def execute_users_query(
         self,
@@ -1774,7 +1772,6 @@ if __name__ == '__main__':
         with_auto_append_mode=0,
         do_fill_dependent_fields=True,
         run_webclient_flow=True,
-        persist_evaluate_response_path='/Volumes/DataSSD/source/therefore-mcp/docs/notes/evaluate_conditional_properties.json',
     )
 
     created = result['create_document']

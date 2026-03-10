@@ -1,0 +1,333 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-02-14",
+  "workflows": {
+    "query_documents_with_filter": {
+      "name": "Query Documents with Field Filter",
+      "description": "Search for documents in a category matching specific field criteria and iterate through results",
+      "use_cases": [
+        "Find all orders for a customer",
+        "Search invoices by date range",
+        "Filter documents by status"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "operation": "ExecuteAsyncSingleQuery",
+          "description": "Initiate async query with filter conditions",
+          "endpoint": "/ExecuteAsyncSingleQuery",
+          "request_template": {
+            "Query": {
+              "CategoryNo": "<category_number>",
+              "MaxRows": 10000,
+              "RowBlockSize": 1000,
+              "Conditions": [
+                {
+                  "FieldNoOrName": "<field_name>",
+                  "Condition": "<field_name> = '<value>'"
+                }
+              ]
+            }
+          },
+          "response_fields": {
+            "QueryId": "Required for subsequent calls",
+            "QueryResult.ResultRows": "Array of matching documents",
+            "QueryResult.Columns": "Field metadata for mapping IndexValues",
+            "HasRemainingRows": "true if more results exist"
+          }
+        },
+        {
+          "step": 2,
+          "operation": "GetNextSingleQueryRows",
+          "description": "Fetch additional result batches if HasRemainingRows is true",
+          "endpoint": "/GetNextSingleQueryRows",
+          "condition": "HasRemainingRows === true",
+          "request_template": {
+            "QueryID": "<query_id_from_step_1>",
+            "RowBlockSize": 1000
+          },
+          "repeat_until": "HasRemainingRows === false"
+        },
+        {
+          "step": 3,
+          "operation": "GetDocumentIndexData",
+          "description": "Get detailed index data including structured table values",
+          "endpoint": "/GetDocumentIndexData",
+          "optional": true,
+          "when": "Need detailed table data or all field values",
+          "request_template": {
+            "DocNo": "<doc_no_from_result_row>",
+            "VersionNo": "<version_no_from_result_row>",
+            "CategoryNo": "<category_number>"
+          }
+        },
+        {
+          "step": 4,
+          "operation": "ReleaseSingleQuery",
+          "description": "Release query resources (ALWAYS required)",
+          "endpoint": "/ReleaseSingleQuery",
+          "critical": true,
+          "request_template": {
+            "QueryID": "<query_id_from_step_1>"
+          },
+          "notes": ["Always call in finally block", "Required even if query fails"]
+        }
+      ],
+      "code_examples": {
+        "python": "...",
+        "javascript": "...",
+        "curl": "..."
+      },
+      "common_errors": [
+        {
+          "error": "Query session not released",
+          "solution": "Always call ReleaseSingleQuery in finally block"
+        },
+        {
+          "error": "Field not found in Conditions",
+          "solution": "Check field name spelling or use FieldNo instead"
+        }
+      ]
+    },
+    "create_document_web_client_flow": {
+      "name": "Create Document (Web-Client Flow)",
+      "description": "4-step document creation process with validation and conditional logic",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "GetCategoryInfo",
+          "description": "Get category field definitions and constraints",
+          "endpoint": "/GetCategoryInfo",
+          "request_template": {
+            "CategoryNo": "<category_number>"
+          }
+        },
+        {
+          "step": 2,
+          "operation": "PreprocessIndexData",
+          "description": "Validate and normalize index data values",
+          "endpoint": "/PreprocessIndexData",
+          "request_template": {
+            "CategoryNo": "<category_number>",
+            "IndexDataItems": []
+          }
+        },
+        {
+          "step": 3,
+          "operation": "EvaluateConditionalProperties",
+          "description": "Apply conditional field logic and dependencies",
+          "endpoint": "/EvaluateConditionalProperties",
+          "request_template": {
+            "CategoryNo": "<category_number>",
+            "IndexDataItems": "<preprocessed_data_from_step_2>"
+          }
+        },
+        {
+          "step": 4,
+          "operation": "CreateDocument",
+          "description": "Create document with validated index data and streams",
+          "endpoint": "/CreateDocument",
+          "request_template": {
+            "CategoryNo": "<category_number>",
+            "IndexDataItems": "<evaluated_data_from_step_3>",
+            "StreamInfo": [
+              {
+                "FileName": "document.pdf",
+                "StreamData": "<base64_encoded_content>"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "field_types": {
+    "0": {
+      "name": "StringField",
+      "index_data_type": "StringIndexData",
+      "structure": {
+        "FieldNo": "integer",
+        "DataValue": "string",
+        "FieldName": "string (optional)"
+      },
+      "example": {
+        "StringIndexData": {
+          "FieldNo": 101,
+          "DataValue": "ABC123",
+          "FieldName": "Order_No"
+        }
+      },
+      "validation": {
+        "max_length": "Check field.Length property",
+        "regex": "Check field.RegularExpr property"
+      }
+    },
+    "1": {
+      "name": "IntField",
+      "index_data_type": "IntIndexData",
+      "structure": {
+        "FieldNo": "integer",
+        "DataValue": "integer",
+        "FieldName": "string (optional)"
+      },
+      "example": {
+        "IntIndexData": {
+          "FieldNo": 102,
+          "DataValue": 42
+        }
+      }
+    },
+    "9": {
+      "name": "TableField",
+      "index_data_type": "TableData",
+      "structure": {
+        "FieldNo": "integer",
+        "FieldName": "string (optional)",
+        "Rows": [
+          {
+            "RowNo": "integer",
+            "Values": [
+              {
+                "FieldNo": "integer (column field)",
+                "<IndexDataType>": "object (based on column type)"
+              }
+            ]
+          }
+        ]
+      },
+      "example": {
+        "TableData": {
+          "FieldNo": 150,
+          "FieldName": "Line_Items",
+          "Rows": [
+            {
+              "RowNo": 1,
+              "Values": [
+                {
+                  "FieldNo": 151,
+                  "StringIndexData": {"DataValue": "Product A"}
+                },
+                {
+                  "FieldNo": 152,
+                  "IntIndexData": {"DataValue": 5}
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "common_patterns": {
+    "map_index_values_to_columns": {
+      "description": "Map query result IndexValues array to field names using Columns array",
+      "pattern": "IndexValues[i] corresponds to Columns[i].ColName (positional mapping)",
+      "example_python": "def map_row(row, columns):\n    return {columns[i]['ColName']: value for i, value in enumerate(row['IndexValues'])}",
+      "example_javascript": "const mapRow = (row, columns) => \n  row.IndexValues.reduce((acc, val, i) => ({...acc, [columns[i].ColName]: val}), {})"
+    },
+    "query_condition_syntax": {
+      "exact_match": "FieldName = 'value'",
+      "wildcard": "FieldName LIKE 'prefix%'",
+      "numeric_comparison": "FieldName > 100",
+      "date_range": "FieldName >= '2024-01-01' AND FieldName <= '2024-12-31'",
+      "null_check": "FieldName IS NULL",
+      "not_null": "FieldName IS NOT NULL"
+    },
+    "batch_query_results": {
+      "description": "Paginate through large query result sets",
+      "pattern": "1. ExecuteAsyncSingleQuery → get QueryId\n2. While HasRemainingRows: GetNextSingleQueryRows\n3. Always: ReleaseSingleQuery in finally block"
+    }
+  },
+  "api_quirks": [
+    {
+      "issue": "AD/LDAP users return UserId: 0",
+      "explanation": "Non-Therefore user accounts always return UserId 0 from user resolution APIs",
+      "affected_operations": ["ResolveUserName", "GetUserInfo"],
+      "workaround": "Use username instead of UserId for AD/LDAP users"
+    },
+    {
+      "issue": "Keyword fields require KeywordNos, not string values",
+      "explanation": "Passing string values to keyword fields causes conversion errors",
+      "affected_operations": ["CreateDocument", "UpdateDocument"],
+      "workaround": "Resolve keyword strings to KeywordNos using GetDictionaryInfo first",
+      "example": {
+        "wrong": {"SingleKeywordData": {"FieldNo": 105, "DataValue": "Active"}},
+        "correct": {"SingleKeywordData": {"FieldNo": 105, "KeywordNo": 42}}
+      }
+    },
+    {
+      "issue": "Table data in query results is concatenated strings",
+      "explanation": "IndexValues for table fields contain delimited strings, not structured data",
+      "affected_operations": ["ExecuteAsyncSingleQuery", "ExecuteSingleQuery"],
+      "workaround": "Use GetDocumentIndexData to retrieve structured table data"
+    },
+    {
+      "issue": "DeleteDictionaryKeyword doesn't actually delete in-use keywords",
+      "explanation": "API returns success but keyword remains if used in documents",
+      "affected_operations": ["DeleteDictionaryKeyword"],
+      "workaround": "Check keyword usage before attempting deletion"
+    }
+  ],
+  "authentication": {
+    "basic": {
+      "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": "Basic {base64(username:password)}",
+        "TenantName": "{tenant}"
+      },
+      "example_python": "base64.b64encode(b'user:pass').decode('ascii')"
+    },
+    "bearer": {
+      "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": "Bearer {token}",
+        "TenantName": "{tenant}"
+      }
+    }
+  },
+  "endpoints": {
+    "ExecuteAsyncSingleQuery": {
+      "method": "POST",
+      "path": "/ExecuteAsyncSingleQuery",
+      "description": "Execute async query against a category with filters and conditions",
+      "request_schema": {
+        "Query": {
+          "CategoryNo": "integer (required)",
+          "CaseDefinitionNo": "integer (optional)",
+          "MaxRows": "integer (default: 2147483647)",
+          "RowBlockSize": "integer (default: 1000)",
+          "Conditions": "array of WSCondition (optional)",
+          "SelectedFieldsNoOrNames": "array of string (optional)",
+          "OrderByFieldsNoOrNames": "array of string (optional)"
+        },
+        "FullText": "string (optional)"
+      },
+      "response_schema": {
+        "QueryId": "integer (use for subsequent calls)",
+        "QueryResult": {
+          "ResultRows": "array of WSQueryResultRow",
+          "Columns": "array of WSCategoryField"
+        },
+        "HasRemainingRows": "boolean"
+      },
+      "related_operations": [
+        "GetNextSingleQueryRows",
+        "ReleaseSingleQuery"
+      ]
+    },
+    "GetDocumentIndexData": {
+      "method": "POST",
+      "path": "/GetDocumentIndexData",
+      "description": "Get complete index data for a document including structured table values",
+      "request_schema": {
+        "DocNo": "integer (required)",
+        "VersionNo": "integer (required)",
+        "CategoryNo": "integer (required)"
+      },
+      "response_schema": {
+        "IndexDataItems": "array of index data by type"
+      },
+      "use_when": "Need structured table data or all field values"
+    }
+  }
+}
