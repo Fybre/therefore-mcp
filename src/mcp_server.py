@@ -771,7 +771,14 @@ OPERATION_REGISTRY = {
     },
     # therefore_knowledge operations
     ("therefore_knowledge", "search"): {
-        "description": "Search the Therefore API knowledge base",
+        "description": (
+            "Search the Therefore API knowledge base. "
+            "If the local knowledge base does not have a satisfactory answer, "
+            "the extended documentation is available on GitHub: "
+            "https://github.com/Fybre/therefore-mcp/tree/main/docs — "
+            "in particular PYTHON_EXAMPLES.md, PYTHON_QUICK_REFERENCE.md, and "
+            "therefore-api-complete-guide.md."
+        ),
         "required": ["query"],
         "optional": {"limit": "integer - max results (default 5)"},
     },

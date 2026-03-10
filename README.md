@@ -313,6 +313,22 @@ docs/
   knowledge-base.json              # Structured API knowledge (used by therefore_knowledge tool)
 ```
 
+### Keeping Knowledge in Sync
+
+The server's local knowledge base (`docs/knowledge-base.json`) and the extended markdown
+documentation (`docs/PYTHON_EXAMPLES.md`, `docs/PYTHON_QUICK_REFERENCE.md`,
+`docs/therefore-api-complete-guide.md`) are two separate layers that should stay consistent:
+
+- `knowledge-base.json` — structured JSON queried by the `therefore_knowledge` MCP tool at runtime
+- Markdown docs — referenced by the [therefore-api skill](https://github.com/Fybre/therefore-api-skill) via GitHub raw URLs
+
+When you discover a new API quirk, update a workflow, or correct a pattern, **update both**:
+1. Add/edit the relevant entry in `docs/knowledge-base.json`
+2. Update the corresponding section in the relevant markdown doc
+
+The `therefore_knowledge` search tool will direct AI assistants to the GitHub docs as a
+fallback if the local knowledge base does not have a satisfactory answer.
+
 ### Key Design Decisions
 
 - **Grouped tools:** 9 domain tools with an `operation` parameter, rather than hundreds of individual tools. Reduces MCP tool list noise while keeping full coverage.
