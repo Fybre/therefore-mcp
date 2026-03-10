@@ -1,8 +1,8 @@
 # therefore-mcp
 
-A Python [MCP](https://modelcontextprotocol.io/) server that connects AI assistants to the [Therefore](https://therefore.net/) document management system via its WebAPI.
+A Python [MCP](https://modelcontextprotocol.io/) server that connects AI assistants to the [Therefore™](https://therefore.net/) document management system via its WebAPI.
 
-Exposes 60+ tools covering document CRUD, querying, workflow management, keyword dictionaries, user administration, and system operations. Supports stdio and HTTP/SSE transports. Zero external dependencies for stdio mode -- pure Python standard library. HTTP mode requires `fastapi` and `uvicorn`.
+Exposes **9 grouped tools** covering document CRUD, querying, workflow management, keyword dictionaries, user administration, categories, and system operations. Supports multi-tenant deployments with per-client access control and audit logging. Zero external dependencies for stdio mode — pure Python standard library.
 
 ## Quick Start
 
@@ -10,11 +10,11 @@ Exposes 60+ tools covering document CRUD, querying, workflow management, keyword
 
 - Python 3.9+
 - A Therefore instance with WebAPI access
-- An MCP-compatible client (Claude Code, Claude Desktop, Codex, etc.)
+- An MCP-compatible client (Claude Code, Claude Desktop, Codex, Cursor, etc.)
 
 ### Configuration
 
-Create a `.env.local` in the project root (or set `THEREFORE_ENV_PATH`):
+Create a `.env.local` in the project root (or point `THEREFORE_ENV_PATH` at another path):
 
 ```env
 THEREFORE_TENANTS=mytenant
@@ -28,117 +28,34 @@ THEREFORE_MYTENANT_TENANTNAME=mytenant
 THEREFORE_MYTENANT_ALLOW_WRITES=true
 ```
 
-Two authentication methods are supported:
-
-- **Basic** -- uses `USERNAME` and `PASSWORD` (default)
-- **Bearer** -- uses `PASSWORD` as the token (set `AUTH_METHOD=Bearer`)
-
-Multiple tenants are supported -- add additional `THEREFORE_<TENANT>_*` blocks and list them in `THEREFORE_TENANTS`.
+See [Environment Variables](#environment-variables) for the full reference.
 
 ### Running
 
-The server supports three transport modes:
-
 ```bash
-# stdio only (default) -- for MCP clients
+# stdio (default) — for MCP clients
 python3 src/mcp_server.py
 
-# HTTP only -- JSON-RPC over HTTP + SSE transport on port 8000
+# HTTP/SSE on port 8000
 python3 src/mcp_server.py --http 8000
 
-# Both -- stdio for MCP client, HTTP/SSE on port 8000 for other consumers
+# Both simultaneously
 python3 src/mcp_server.py --stdio --http 8000
 ```
 
-HTTP mode requires `fastapi` and `uvicorn` (`pip install fastapi uvicorn`). The HTTP server exposes three transports:
-
-| Endpoint | Transport | Clients |
-|----------|-----------|---------|
-| `POST /mcp` | Streamable HTTP | Goose, newer MCP clients |
-| `GET /sse` + `POST /messages` | SSE | Older MCP clients with `"url"` config |
-| `POST /` | Direct JSON-RPC | curl, custom integrations |
-
-Additionally:
-- `GET /health` -- health check
-- `DELETE /mcp` -- terminate a Streamable HTTP session
-
-### Docker
+HTTP mode requires `fastapi` and `uvicorn`:
 
 ```bash
-# stdio only (default):
-docker run --rm -i --env-file /path/to/.env.local fybre/therefore-mcp
-
-# HTTP only:
-docker run --rm -p 8000:8000 --env-file /path/to/.env.local fybre/therefore-mcp --http 8000
-
-# Both stdio + HTTP:
-docker run --rm -i -p 8000:8000 --env-file /path/to/.env.local fybre/therefore-mcp --stdio --http 8000
-
-# Build locally:
-docker build -t therefore-mcp /path/to/therefore-mcp
-docker run --rm -i --env-file /path/to/.env.local therefore-mcp
-
-# Build multi-platform and push to registry:
-docker buildx create --name multiplatform --driver docker-container --use  # first time only
-docker buildx build --platform linux/amd64,linux/arm64 -t fybre/therefore-mcp --push .
+pip install fastapi uvicorn
 ```
 
-### Docker Compose
+---
 
-The included `docker-compose.yml` uses profiles to select the transport mode:
+## MCP Client Configuration
 
-```bash
-# HTTP mode (production) -- runs detached with auto-restart
-docker compose --profile http up -d
+### Claude Desktop / Claude Code
 
-# stdio mode -- for MCP clients that manage the process
-docker compose --profile stdio up
-```
-
-Create a `.env.local` in the project root before starting (see [Configuration](#configuration) above).
-
-## MCP Host Configuration
-
-Below are example configurations for popular MCP-compatible clients. Replace `/path/to/therefore-mcp` with the actual path to your clone.
-
-All examples below use Python directly. To run via Docker instead, substitute the command and args in any example:
-
-```json
-// Docker Hub -- stdio only (recommended for MCP clients):
-"command": "docker",
-"args": ["run", "--rm", "-i", "--env-file", "/path/to/.env.local", "fybre/therefore-mcp"]
-
-// Docker Hub -- stdio + HTTP on port 8000:
-"command": "docker",
-"args": ["run", "--rm", "-i", "-p", "8000:8000", "--env-file", "/path/to/.env.local", "fybre/therefore-mcp", "--stdio", "--http", "8000"]
-```
-
-### Claude Code (CLI)
-
-```bash
-claude mcp add therefore -- python3 /path/to/therefore-mcp/src/mcp_server.py
-```
-
-Or add to `.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "therefore": {
-      "type": "stdio",
-      "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
-      "env": {
-        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
-      }
-    }
-  }
-}
-```
-
-### Claude Desktop / Claude for Mac
-
-Add to `claude_desktop_config.json`:
+Add to `~/.claude/claude_desktop_config.json` (Desktop) or `~/.claude/config.json` (Code):
 
 ```json
 {
@@ -152,58 +69,6 @@ Add to `claude_desktop_config.json`:
     }
   }
 }
-```
-
-With Docker (stdio + HTTP):
-
-```json
-{
-  "mcpServers": {
-    "therefore": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i", "-p", "8000:8000",
-        "--env-file", "/path/to/.env.local",
-        "fybre/therefore-mcp",
-        "--stdio", "--http", "8000"
-      ]
-    }
-  }
-}
-```
-
-> **Note:** Claude Desktop only supports stdio transport (`"command"`). The `--http` flag adds an HTTP/SSE endpoint on the side for other consumers but is not required.
-
-### Goose
-
-Goose uses Streamable HTTP transport. Start the server with `--http` (Docker or Python), then configure:
-
-```yaml
-# ~/.config/goose/config.yaml
-extensions:
-  therefore:
-    type: sse
-    uri: http://localhost:8000/mcp
-```
-
-If you have `THEREFORE_MCP_AUTH_TOKEN` set, add the token as a header:
-
-```yaml
-extensions:
-  therefore:
-    type: sse
-    uri: http://localhost:8000/mcp
-    headers:
-      Authorization: "Bearer your-secret-token"
-```
-
-Or for a remote server:
-
-```yaml
-extensions:
-  therefore:
-    type: sse
-    uri: http://192.168.x.x:8000/mcp
 ```
 
 ### Cursor
@@ -243,102 +108,244 @@ Add to `.vscode/mcp.json` in your workspace:
 }
 ```
 
-### Kimi Code (Moonshot)
+### Goose (HTTP transport)
 
-Add to your Kimi Code MCP settings:
+Start the server with `--http 8000`, then configure:
 
-```json
-{
-  "mcpServers": {
-    "therefore": {
-      "command": "python3",
-      "args": ["/path/to/therefore-mcp/src/mcp_server.py"],
-      "env": {
-        "THEREFORE_ENV_PATH": "/path/to/therefore-mcp/.env.local"
-      }
-    }
-  }
-}
+```yaml
+# ~/.config/goose/config.yaml
+extensions:
+  therefore:
+    type: sse
+    uri: http://localhost:8000/mcp
+    headers:
+      Authorization: "Bearer your-secret-token"   # if THEREFORE_MCP_AUTH_TOKEN is set
 ```
+
+---
 
 ## Tools
 
-Tools are grouped into the following areas:
+Tools are grouped by domain. Each tool takes a mandatory `operation` string and a mandatory `tenant` string.
 
-| Area | Examples |
-|------|----------|
-| **Categories & Fields** | `resolve_category`, `list_category_fields`, `resolve_field`, `get_categories_tree`, `get_category_info` |
-| **Documents** | `get_document`, `create_document`, `update_document`, `delete_document`, `get_converted_doc_streams` |
-| **Querying** | `execute_single_query`, `execute_async_single_query`, `execute_full_text_query`, `execute_statistics_query` |
-| **Workflows** | `get_my_workflow_tasks`, `get_workflow_instance`, `get_workflow_history`, `get_workflow_process` |
-| **Keywords** | `get_keywords_by_field_no`, `add_dictionary_keyword`, `update_dictionary_keyword`, `validate_keywords` |
-| **Users & System** | `execute_users_query`, `get_connected_user`, `get_domain_info`, `get_logfiles`, `get_login_history` |
-| **Config Generation** | `generate_category_config` -- create category definitions from natural language or structured specs |
+| Tool | Operations |
+|------|-----------|
+| `ask_therefore_expert` | Smart router — describes the right tool and operation for a task |
+| `therefore_system` | Connection info, domain info, server version, JWT/ADFS token exchange |
+| `therefore_categories` | Get info, resolve by name, list fields, resolve field, referenced table info and query, generate config XML |
+| `therefore_documents` | Get, create, update, update index data, add streams, delete, copy, check out/in, undo checkout, get versions/stream/comments/history/properties, add comment |
+| `therefore_query` | Synchronous query, async query, multi-category query, full-text search, users query, workflow instances query, referenced table query |
+| `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition |
+| `therefore_users` | Get connected user, resolve, list, create, set/change password, move license, portal user management, get/set settings, delete |
+| `therefore_keywords` | List dictionaries, get keywords, add/update/delete keyword, get keyword info |
+| `therefore_knowledge` | Search API docs, get workflow guides, field type info, common patterns, known quirks, list resources, fetch live API help |
+
+---
+
+## Authentication
+
+Three authentication methods are supported per tenant:
+
+### Basic Auth (most common)
+
+```env
+THEREFORE_MYTENANT_AUTH_METHOD=Basic
+THEREFORE_MYTENANT_USERNAME=your.username
+THEREFORE_MYTENANT_PASSWORD=your-password
+```
+
+### Bearer Token
+
+```env
+THEREFORE_MYTENANT_AUTH_METHOD=Bearer
+THEREFORE_MYTENANT_PASSWORD=your-bearer-token
+```
+
+### S2S — Trusted Token Issuer
+
+For service-to-service deployments where Therefore credentials are managed by a central auth provider rather than stored in env files:
+
+```env
+THEREFORE_MYTENANT_AUTH_METHOD=S2S
+THEREFORE_MYTENANT_AUTH_PROVIDER_URL=https://your-auth-provider/
+THEREFORE_MYTENANT_BRIDGE_API_KEY=optional-api-key
+THEREFORE_MYTENANT_USER_MAPPING=service-account-name
+```
+
+The server calls `POST {AUTH_PROVIDER_URL}/issue-token` with `{"tenant": "...", "user_hint": "..."}` and caches the returned JWT per tenant. See `services/auth-provider/` for a reference implementation.
+
+### ADFS / Entra ID
+
+Use `therefore_system` → `operation: get_connection_token_from_adfs` to exchange a pre-obtained Entra ID token for a Therefore JWT. Requires a v1 ID token (RS256, ver:1.0 with `upn` claim). See `AUTHENTICATION_README.md` for the full flow and `scripts/` for helper scripts.
+
+---
+
+## Multi-Tenant Setup
+
+Define multiple tenants in `.env.local`:
+
+```env
+THEREFORE_TENANTS=acme,contoso
+THEREFORE_DEFAULT_TENANT=acme
+
+THEREFORE_ACME_BASE_URL=https://acme.thereforeonline.com/theservice/v0001/restun
+THEREFORE_ACME_AUTH_METHOD=Basic
+THEREFORE_ACME_USERNAME=svc.account
+THEREFORE_ACME_PASSWORD=secret
+THEREFORE_ACME_TENANTNAME=acme
+THEREFORE_ACME_ALLOW_WRITES=true
+
+THEREFORE_CONTOSO_BASE_URL=https://contoso.thereforeonline.com/theservice/v0001/restun
+THEREFORE_CONTOSO_AUTH_METHOD=Basic
+THEREFORE_CONTOSO_USERNAME=svc.account
+THEREFORE_CONTOSO_PASSWORD=secret
+THEREFORE_CONTOSO_TENANTNAME=contoso
+THEREFORE_CONTOSO_ALLOW_WRITES=false
+```
+
+**Tenant resolution order** (per request):
+
+1. Explicit `tenant` parameter in the tool call
+2. Inferred from argument content (names, hints)
+3. Smart default — if the caller has access to only one tenant, use it automatically
+4. Sticky — fall back to the last-used tenant
+
+### Client Access Control (HTTP mode)
+
+When running in HTTP mode, create `config/clients.json` to restrict which tenants each API key can access:
+
+```json
+{
+  "api-key-for-team-a": ["acme"],
+  "api-key-for-team-b": ["acme", "contoso"]
+}
+```
+
+Clients authenticate with `Authorization: Bearer <api-key>`. All access is recorded in the audit log.
+
+---
+
+## Docker
+
+```bash
+# stdio (default)
+docker run --rm -i --env-file /path/to/.env.local fybre/therefore-mcp
+
+# HTTP on port 8000
+docker run --rm -p 8000:8000 --env-file /path/to/.env.local fybre/therefore-mcp --http 8000
+
+# Build locally
+docker build -t therefore-mcp .
+docker run --rm -i --env-file /path/to/.env.local therefore-mcp
+```
+
+### Docker Compose
+
+```bash
+# HTTP mode (production, detached)
+docker compose --profile http up -d
+
+# HTTP + optional S2S auth provider
+docker compose --profile http --profile auth up -d
+
+# stdio mode
+docker compose --profile stdio up
+```
+
+Create `.env.local` in the project root before starting.
+
+---
+
+## Environment Variables
+
+### Per-tenant
+
+| Variable | Description |
+|----------|-------------|
+| `THEREFORE_TENANTS` | Comma-separated list of tenant keys |
+| `THEREFORE_DEFAULT_TENANT` | Default tenant when multiple are configured |
+| `THEREFORE_<T>_BASE_URL` | Therefore WebAPI base URL |
+| `THEREFORE_<T>_AUTH_METHOD` | `Basic`, `Bearer`, or `S2S` |
+| `THEREFORE_<T>_USERNAME` | Username (Basic auth) |
+| `THEREFORE_<T>_PASSWORD` | Password or bearer token |
+| `THEREFORE_<T>_TENANTNAME` | TenantName header value (defaults to URL subdomain) |
+| `THEREFORE_<T>_ALLOW_WRITES` | Enable write operations (`true`/`false`) |
+| `THEREFORE_<T>_AUTH_PROVIDER_URL` | Token issuer URL (S2S auth) |
+| `THEREFORE_<T>_BRIDGE_API_KEY` | API key for token issuer (S2S auth) |
+| `THEREFORE_<T>_USER_MAPPING` | User context for S2S token requests |
+| `THEREFORE_<T>_ASSIGNEE_ALIASES` | Comma-separated workflow assignee aliases |
+| `THEREFORE_<T>_USER_GROUPS` | Comma-separated user group filters |
+
+### Server
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `THEREFORE_ENV_PATH` | Path to `.env.local` | Project root |
+| `THEREFORE_MCP_AUTH_TOKEN` | Global Bearer token for HTTP endpoints | None (open) |
+| `THEREFORE_CACHE_DIR` | Cache directory | `./cache` |
+| `THEREFORE_DEBUG` | Verbose request/response logging (`1`/`true`) | Disabled |
+| `THEREFORE_LOCAL_TZ` | Timezone for date calculations | System default |
+| `THEREFORE_WORKFLOW_TIMEOUT_SECONDS` | Workflow call timeout | `240` |
+| `THEREFORE_WORKFLOW_MAX_ROWS` | Max workflow query rows | `10000` |
+| `THEREFORE_WORKFLOW_RETRY_TIMEOUT_SECONDS` | Retry wait time | `480` |
+| `THEREFORE_WORKFLOW_RETRY_COUNT` | Retry attempts | `1` |
+
+---
 
 ## Architecture
 
 ```
 src/
-  mcp_server.py        # MCP server -- tool definitions, handlers, caching, JSON-RPC loop
-  therefore_client.py   # HTTP client for Therefore WebAPI (auth, retries, multi-tenant)
+  mcp_server.py         # MCP server — 9 grouped tools, operation registry, tenant
+  therefore_client.py   # HTTP client — auth, retries, config building, all API methods
+  knowledge_tools.py    # Knowledge base utilities for therefore_knowledge tool
+config/
+  clients.json          # Client API key → tenant access list (HTTP mode)
+  clients.json.example  # Template
+services/
+  auth-provider/        # Reference S2S token issuer implementation
 tools/
-  config_generator/     # Delta XML generator for category creation
+  config_generator/     # Delta XML generator for Therefore category creation
 scripts/
-  validate_therefore_api.py   # API connectivity validation
-  build_therefore_specs.py    # Build constant mappings from docs
-  extract_therefore_docs.py   # Scrape Therefore online documentation
+  validate_therefore_api.py      # API connectivity validation
+  get_entra_token_device_code.py # Entra ID v1 device code flow
+  test_entra_jwt_exchange.py     # Test ADFS/Entra → Therefore JWT exchange
 docs/
-  specs/       # API specifications and constants
-  export/      # Scraped Therefore documentation
-  notes/       # Runtime caches and debug output
+  therefore-api-complete-guide.md  # Comprehensive API reference
+  PYTHON_EXAMPLES.md               # Python code examples
+  PYTHON_QUICK_REFERENCE.md        # Quick field type and pattern reference
+  knowledge-base.json              # Structured API knowledge (used by therefore_knowledge tool)
 ```
 
 ### Key Design Decisions
 
-- **Multi-tenant:** Tenant selection is "sticky" -- once specified, it becomes the session default. Tenants can also be inferred from hints in tool arguments.
-- **Fuzzy matching:** Category and field names are resolved using `difflib.SequenceMatcher` with a configurable confidence threshold.
-- **Web-client document flow:** Document creation follows the four-step pipeline: `GetCategoryInfo -> PreprocessIndexData -> EvaluateConditionalProperties -> CreateDocument`.
-- **Caching:** Category, field, and keyword dictionary metadata is cached with a 300-second TTL.
+- **Grouped tools:** 9 domain tools with an `operation` parameter, rather than hundreds of individual tools. Reduces MCP tool list noise while keeping full coverage.
+- **Multi-tenant with access control:** Per-client API key → tenant allowlist enforced at every tool call. All calls are audit-logged.
+- **Fuzzy matching:** Category and field names resolved with `difflib.SequenceMatcher`. Returns a `needs_confirmation` flag when confidence is below threshold.
+- **Web-client document flow:** Document creation follows the four-step pipeline used by the Therefore web client: `GetCategoryInfo → PreprocessIndexData → EvaluateConditionalProperties → CreateDocument`.
+- **Async query batching:** `execute_async_single_query_all` auto-fetches all pages and always releases the server session in a `finally` block.
+- **Caching:** Category, field, and keyword metadata cached with 300s TTL, persisted to `cache/` per tenant.
 
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `THEREFORE_ENV_PATH` | Path to `.env.local` config | Project root |
-| `THEREFORE_TENANTS` | Comma-separated tenant keys | -- |
-| `THEREFORE_DEFAULT_TENANT` | Default tenant | First in list |
-| `THEREFORE_WORKFLOW_TIMEOUT_SECONDS` | Workflow call timeout | `240` |
-| `THEREFORE_WORKFLOW_MAX_ROWS` | Max workflow query rows | `10000` |
-| `THEREFORE_LOCAL_TZ` | Local timezone | System default |
-| `THEREFORE_<TENANT>_ALLOW_WRITES` | Enable write operations | `false` |
-| `THEREFORE_MCP_AUTH_TOKEN` | Bearer token for HTTP endpoints (optional) | None (no auth) |
-| `THEREFORE_DEBUG` | Enable debug logging to stderr (`1`, `true`, or `yes`) | Disabled |
+---
 
 ## Debugging
 
-Set `THEREFORE_DEBUG=1` to enable verbose request/response logging. All debug output goes to **stderr** so it won't interfere with the JSON-RPC protocol on stdout.
-
-```bash
-# In your .env.local
-THEREFORE_DEBUG=true
-```
-
-Or pass it directly:
+Set `THEREFORE_DEBUG=1` for verbose request/response logging to stderr:
 
 ```bash
 THEREFORE_DEBUG=1 python3 src/mcp_server.py
 ```
 
-When enabled, you'll see output like:
+Output example:
 
 ```
-[THEREFORE] POST https://tenant.thereforeonline.com/theservice/v0001/restun/GetCategoryInfo (142 bytes)
+[THEREFORE] POST https://tenant.thereforeonline.com/.../GetCategoryInfo (142 bytes)
 [THEREFORE]  <- 200 OK (3854 bytes, 237ms)
-[THEREFORE] POST https://tenant.thereforeonline.com/theservice/v0001/restun/ExecuteSingleQuery (285 bytes)
-[THEREFORE]  <- 401 'Invalid credentials' (94 bytes, 58ms)
+[THEREFORE] POST https://tenant.thereforeonline.com/.../ExecuteAsyncSingleQuery (285 bytes)
+[THEREFORE]  <- 200 OK (1204 bytes, 89ms)
 ```
 
-Each log line includes the HTTP method, URL, response status, body size, and round-trip time. Redirect hops are also logged when they occur. This is useful for diagnosing authentication issues, timeouts, and unexpected API responses.
+---
 
 ## License
 
@@ -346,4 +353,4 @@ Each log line includes the HTTP method, URL, response status, body size, and rou
 
 ## Attribution
 
-Built by [Fybre (Craig)](https://github.com/fybre) with assistance from [Claude Code](https://claude.ai/code) (Anthropic).
+Built by [Fybre](https://github.com/fybre) with assistance from [Claude Code](https://claude.ai/code) (Anthropic).
