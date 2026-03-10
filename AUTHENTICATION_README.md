@@ -25,7 +25,6 @@ THEREFORE_MYTENANT_AUTH_METHOD=Basic
 THEREFORE_MYTENANT_USERNAME=your.username
 THEREFORE_MYTENANT_PASSWORD=your-password
 THEREFORE_MYTENANT_TENANTNAME=mytenant
-THEREFORE_MYTENANT_ALLOW_WRITES=true
 ```
 
 Two authentication methods are supported:
@@ -310,7 +309,6 @@ docs/
 | `THEREFORE_WORKFLOW_TIMEOUT_SECONDS` | Workflow call timeout | `240` |
 | `THEREFORE_WORKFLOW_MAX_ROWS` | Max workflow query rows | `10000` |
 | `THEREFORE_LOCAL_TZ` | Local timezone | System default |
-| `THEREFORE_<TENANT>_ALLOW_WRITES` | Enable write operations | `false` |
 | `THEREFORE_MCP_AUTH_TOKEN` | Bearer token for HTTP endpoints (optional) | None (no auth) |
 | `THEREFORE_DEBUG` | Enable debug logging to stderr (`1`, `true`, or `yes`) | Disabled |
 

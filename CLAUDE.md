@@ -115,7 +115,6 @@ THEREFORE_<TENANT>_AUTH_METHOD=Basic         # Basic | Bearer | S2S
 THEREFORE_<TENANT>_USERNAME=...
 THEREFORE_<TENANT>_PASSWORD=...
 THEREFORE_<TENANT>_TENANTNAME=...            # TenantName header override
-THEREFORE_<TENANT>_ALLOW_WRITES=true         # Enable write operations
 THEREFORE_<TENANT>_ASSIGNEE_ALIASES=...      # Task filtering aliases
 THEREFORE_<TENANT>_USER_GROUPS=...           # User group filters
 ```

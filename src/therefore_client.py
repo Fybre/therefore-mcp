@@ -12,7 +12,7 @@ import sys
 import time as _time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -50,7 +50,7 @@ class ThereforeClient:
         self.config = config
         self.base_url = config.base_url.rstrip('/')
         self.ctx = ssl.create_default_context()
-        self._token_cache: Dict[str, str] = {}
+        self._token_cache: Dict[str, Tuple[str, float]] = {}  # tenant_key -> (token, expiry_monotonic)
         # Build a custom opener that tracks redirects when debug is on
         if config.debug:
             self._opener = urllib.request.build_opener(
@@ -66,36 +66,39 @@ class ThereforeClient:
             print(f"[THEREFORE] {message}", file=sys.stderr, flush=True)
 
     def _get_s2s_token(self) -> str:
-        """Fetch a signed JWT from the centralized Auth Provider."""
+        """Fetch a signed JWT from the centralized Auth Provider, with TTL-based caching."""
         if not self.config.auth_provider_url:
             raise ValueError("S2S auth method requires THEREFORE_AUTH_PROVIDER_URL")
-        
-        # Determine the tenant key - either from config or from the base_url
+
+        # Determine tenant key from config or URL subdomain
         tenant_key = self.config.tenant_name
         if not tenant_key and 'thereforeonline.com' in self.base_url.lower():
             parsed = urllib.parse.urlparse(self.base_url)
             if parsed.hostname:
-                 tenant_key = parsed.hostname.split('.')[0]
-        
+                tenant_key = parsed.hostname.split('.')[0]
         if not tenant_key:
-             # Fallback to 'default' if we cannot determine tenant
-             tenant_key = 'default'
+            tenant_key = 'default'
 
-        # Basic cache based on tenant_key
-        if tenant_key in self._token_cache:
-             return self._token_cache[tenant_key]
+        # Return cached token if still valid
+        now = _time.monotonic()
+        cached = self._token_cache.get(tenant_key)
+        if cached:
+            token, expiry = cached
+            if now < expiry:
+                return token
+            self._log(f"S2S token for '{tenant_key}' expired, re-fetching")
 
         provider_url = self.config.auth_provider_url.rstrip('/') + "/issue-token"
-        payload_data = {"tenant": tenant_key}
+        payload_data: Dict[str, str] = {"tenant": tenant_key}
         if self.config.user_mapping:
-             payload_data["user_hint"] = self.config.user_mapping
+            payload_data["user_hint"] = self.config.user_mapping
 
         payload = json.dumps(payload_data).encode('utf-8')
         req = urllib.request.Request(provider_url, data=payload, method='POST')
         req.add_header('Content-Type', 'application/json')
         if self.config.bridge_api_key:
-             req.add_header('X-Bridge-API-Key', self.config.bridge_api_key)
-        
+            req.add_header('X-Bridge-API-Key', self.config.bridge_api_key)
+
         self._log(f"Fetching S2S token for '{tenant_key}' (hint: {self.config.user_mapping or 'none'}) from {provider_url}")
         try:
             with urllib.request.urlopen(req, context=self.ctx, timeout=10) as r:
@@ -103,11 +106,28 @@ class ThereforeClient:
                 token = resp.get('access_token')
                 if not token:
                     raise ValueError(f"No access_token in response from auth provider: {resp}")
-                self._token_cache[tenant_key] = token
-                return token
         except Exception as e:
             self._log(f"Error fetching S2S token: {e}")
             raise ValueError(f"Failed to fetch S2S token from {provider_url}: {e}")
+
+        # Determine TTL: try to read exp claim from JWT payload, fall back to 50 minutes
+        ttl = 3000.0  # 50 minutes default
+        try:
+            parts = token.split('.')
+            if len(parts) >= 2:
+                padding = 4 - len(parts[1]) % 4
+                payload_bytes = base64.b64decode(parts[1] + '=' * padding)
+                claims = json.loads(payload_bytes.decode('utf-8'))
+                if 'exp' in claims:
+                    wall_remaining = float(claims['exp']) - _time.time() - 60  # 60s safety buffer
+                    if wall_remaining > 60:
+                        ttl = wall_remaining
+        except Exception:
+            pass  # Malformed JWT or missing exp — use default TTL
+
+        self._log(f"S2S token for '{tenant_key}' cached for {ttl:.0f}s")
+        self._token_cache[tenant_key] = (token, now + ttl)
+        return token
 
     def _headers(self) -> Dict[str, str]:
         headers = {
@@ -1704,7 +1724,6 @@ def _build_tenant_env(env: Dict[str, str], tenant_key: str) -> Dict[str, str]:
         'THEREFORE_BRIDGE_API_KEY': pick('BRIDGE_API_KEY'),
         'THEREFORE_SAFE_DOC_ID': pick('SAFE_DOC_ID'),
         'THEREFORE_SAFE_CATEGORY_ID': pick('SAFE_CATEGORY_ID'),
-        'THEREFORE_ALLOW_WRITES': pick('ALLOW_WRITES'),
         # global workflow settings (not tenant-specific)
         'THEREFORE_WORKFLOW_TIMEOUT_SECONDS': env.get('THEREFORE_WORKFLOW_TIMEOUT_SECONDS'),
         'THEREFORE_WORKFLOW_MAX_ROWS': env.get('THEREFORE_WORKFLOW_MAX_ROWS'),

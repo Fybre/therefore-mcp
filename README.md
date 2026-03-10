@@ -25,7 +25,6 @@ THEREFORE_MYTENANT_AUTH_METHOD=Basic
 THEREFORE_MYTENANT_USERNAME=your.username
 THEREFORE_MYTENANT_PASSWORD=your-password
 THEREFORE_MYTENANT_TENANTNAME=mytenant
-THEREFORE_MYTENANT_ALLOW_WRITES=true
 ```
 
 See [Environment Variables](#environment-variables) for the full reference.
@@ -193,14 +192,12 @@ THEREFORE_ACME_AUTH_METHOD=Basic
 THEREFORE_ACME_USERNAME=svc.account
 THEREFORE_ACME_PASSWORD=secret
 THEREFORE_ACME_TENANTNAME=acme
-THEREFORE_ACME_ALLOW_WRITES=true
 
 THEREFORE_CONTOSO_BASE_URL=https://contoso.thereforeonline.com/theservice/v0001/restun
 THEREFORE_CONTOSO_AUTH_METHOD=Basic
 THEREFORE_CONTOSO_USERNAME=svc.account
 THEREFORE_CONTOSO_PASSWORD=secret
 THEREFORE_CONTOSO_TENANTNAME=contoso
-THEREFORE_CONTOSO_ALLOW_WRITES=false
 ```
 
 **Tenant resolution order** (per request):
@@ -269,7 +266,6 @@ Create `.env.local` in the project root before starting.
 | `THEREFORE_<T>_USERNAME` | Username (Basic auth) |
 | `THEREFORE_<T>_PASSWORD` | Password or bearer token |
 | `THEREFORE_<T>_TENANTNAME` | TenantName header value (defaults to URL subdomain) |
-| `THEREFORE_<T>_ALLOW_WRITES` | Enable write operations (`true`/`false`) |
 | `THEREFORE_<T>_AUTH_PROVIDER_URL` | Token issuer URL (S2S auth) |
 | `THEREFORE_<T>_BRIDGE_API_KEY` | API key for token issuer (S2S auth) |
 | `THEREFORE_<T>_USER_MAPPING` | User context for S2S token requests |

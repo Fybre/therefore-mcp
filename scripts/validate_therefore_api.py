@@ -49,7 +49,6 @@ def normalize_env(env: dict) -> dict:
         'tenant_name': clean(env.get('THEREFORE_TENANTNAME')),
         'safe_doc_id': clean(env.get('THEREFORE_SAFE_DOC_ID')),
         'safe_category_id': clean(env.get('THEREFORE_SAFE_CATEGORY_ID')),
-        'allow_writes': clean(env.get('THEREFORE_ALLOW_WRITES')),
         'tenant_key': clean(env.get('THEREFORE_TENANT_KEY')),
     }
     return out
@@ -125,7 +124,6 @@ def main():
             'THEREFORE_TENANTNAME': pick('TENANTNAME'),
             'THEREFORE_SAFE_DOC_ID': pick('SAFE_DOC_ID'),
             'THEREFORE_SAFE_CATEGORY_ID': pick('SAFE_CATEGORY_ID'),
-            'THEREFORE_ALLOW_WRITES': pick('ALLOW_WRITES'),
             'THEREFORE_TENANT_KEY': default_name,
         })
     else:
@@ -139,7 +137,6 @@ def main():
 
     results = []
     extra_outputs = {}
-    allow_writes = str(env.get('allow_writes') or '').lower() in ('true', '1', 'yes')
 
     def run_test(name: str, path: str, payload: dict, skip_reason: str | None = None):
         if skip_reason:
@@ -304,8 +301,8 @@ def main():
         for op in ['GetDocument', 'GetDocumentIndexData', 'GetDocumentProperties', 'GetDocumentHistory', 'GetDocumentCheckoutStatus']:
             run_test(op, op, {}, 'Missing THEREFORE_SAFE_DOC_ID')
 
-    # Write tests (optional)
-    if allow_writes and env.get('safe_category_id'):
+    # Write tests (runs when THEREFORE_SAFE_CATEGORY_ID is set)
+    if env.get('safe_category_id'):
         # Web-client style: GetCategoryInfo -> PreprocessIndexData -> EvaluateConditionalProperties -> CreateDocument
         preprocess_payload = {
             'CategoryNo': int(env['safe_category_id']),
@@ -397,19 +394,6 @@ def main():
                 'raw_snippet': (raw.strip().replace('\\n', ' ')[:300] if raw else None),
                 'doc_no': created_doc_no,
             })
-    elif allow_writes and not env.get('safe_category_id'):
-        results.append({
-            'operation': 'CreateDocument',
-            'url': f"{base_url}/CreateDocument",
-            'status': 'SKIPPED',
-            'skip_reason': 'Missing THEREFORE_SAFE_CATEGORY_ID',
-        })
-        results.append({
-            'operation': 'DeleteDocument',
-            'url': f"{base_url}/DeleteDocument",
-            'status': 'SKIPPED',
-            'skip_reason': 'Missing THEREFORE_SAFE_CATEGORY_ID',
-        })
 
     # write report
     lines = []
@@ -427,7 +411,6 @@ def main():
         lines.append(f"- TenantName: {redact(env.get('tenant_name',''))}")
     lines.append(f"- Safe Doc ID: {env.get('safe_doc_id') or ''}")
     lines.append(f"- Safe Category ID: {env.get('safe_category_id') or ''}")
-    lines.append(f"- Allow Writes: {env.get('allow_writes') or ''}")
     lines.append('')
     lines.append('## Results')
     for r in results:
@@ -446,7 +429,6 @@ def main():
             'tenant_name': env.get('tenant_name'),
             'safe_doc_id': env.get('safe_doc_id'),
             'safe_category_id': env.get('safe_category_id'),
-            'allow_writes': env.get('allow_writes'),
         },
         'results': results,
     }
