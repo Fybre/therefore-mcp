@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2026-02-14",
+  "last_updated": "2026-07-16",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -70,7 +70,10 @@
           "request_template": {
             "QueryID": "<query_id_from_step_1>"
           },
-          "notes": ["Always call in finally block", "Required even if query fails"]
+          "notes": [
+            "Always call in finally block",
+            "Required even if query fails"
+          ]
         }
       ],
       "code_examples": {
@@ -205,11 +208,15 @@
               "Values": [
                 {
                   "FieldNo": 151,
-                  "StringIndexData": {"DataValue": "Product A"}
+                  "StringIndexData": {
+                    "DataValue": "Product A"
+                  }
                 },
                 {
                   "FieldNo": 152,
-                  "IntIndexData": {"DataValue": 5}
+                  "IntIndexData": {
+                    "DataValue": 5
+                  }
                 }
               ]
             }
@@ -235,37 +242,134 @@
     },
     "batch_query_results": {
       "description": "Paginate through large query result sets",
-      "pattern": "1. ExecuteAsyncSingleQuery → get QueryId\n2. While HasRemainingRows: GetNextSingleQueryRows\n3. Always: ReleaseSingleQuery in finally block"
+      "pattern": "1. ExecuteAsyncSingleQuery \u2192 get QueryId\n2. While HasRemainingRows: GetNextSingleQueryRows\n3. Always: ReleaseSingleQuery in finally block"
     }
   },
   "api_quirks": [
     {
       "issue": "AD/LDAP users return UserId: 0",
       "explanation": "Non-Therefore user accounts always return UserId 0 from user resolution APIs",
-      "affected_operations": ["ResolveUserName", "GetUserInfo"],
+      "affected_operations": [
+        "ResolveUserName",
+        "GetUserInfo"
+      ],
       "workaround": "Use username instead of UserId for AD/LDAP users"
     },
     {
       "issue": "Keyword fields require KeywordNos, not string values",
       "explanation": "Passing string values to keyword fields causes conversion errors",
-      "affected_operations": ["CreateDocument", "UpdateDocument"],
+      "affected_operations": [
+        "CreateDocument",
+        "UpdateDocument"
+      ],
       "workaround": "Resolve keyword strings to KeywordNos using GetDictionaryInfo first",
       "example": {
-        "wrong": {"SingleKeywordData": {"FieldNo": 105, "DataValue": "Active"}},
-        "correct": {"SingleKeywordData": {"FieldNo": 105, "KeywordNo": 42}}
+        "wrong": {
+          "SingleKeywordData": {
+            "FieldNo": 105,
+            "DataValue": "Active"
+          }
+        },
+        "correct": {
+          "SingleKeywordData": {
+            "FieldNo": 105,
+            "KeywordNo": 42
+          }
+        }
       }
     },
     {
       "issue": "Table data in query results is concatenated strings",
       "explanation": "IndexValues for table fields contain delimited strings, not structured data",
-      "affected_operations": ["ExecuteAsyncSingleQuery", "ExecuteSingleQuery"],
+      "affected_operations": [
+        "ExecuteAsyncSingleQuery",
+        "ExecuteSingleQuery"
+      ],
       "workaround": "Use GetDocumentIndexData to retrieve structured table data"
     },
     {
       "issue": "DeleteDictionaryKeyword doesn't actually delete in-use keywords",
       "explanation": "API returns success but keyword remains if used in documents",
-      "affected_operations": ["DeleteDictionaryKeyword"],
+      "affected_operations": [
+        "DeleteDictionaryKeyword"
+      ],
       "workaround": "Check keyword usage before attempting deletion"
+    },
+    {
+      "issue": "ExecuteUsersQuery requires Flags=4 to list all users",
+      "explanation": "Flags 0-3 silently return an empty Users array; Flags=63 returns only internal system accounts",
+      "affected_operations": [
+        "ExecuteUsersQuery"
+      ],
+      "workaround": "Use {\"Flags\": 4} to list all regular named users"
+    },
+    {
+      "issue": "No GetGroups endpoint",
+      "explanation": "Calling GetGroups returns HTTP 405",
+      "affected_operations": [
+        "GetGroups"
+      ],
+      "workaround": "Use GetObjects {\"Flags\": 0, \"Type\": 11} and filter ItemList by Data==2 for groups (Data==1 = user, Data==3 = system principal)"
+    },
+    {
+      "issue": "GetUsersFromGroup does not accept GroupNo",
+      "explanation": "Sending {\"GroupNo\": N} returns a 500 error (\"Could not find group matching the name provided\") because the server falls back to an empty group-name lookup - it fails loudly, not silently",
+      "affected_operations": [
+        "GetUsersFromGroup"
+      ],
+      "workaround": "Use {\"GroupName\": \"...\"} or {\"GroupId\": N} (GroupId is the group's numeric ID from GetObjects)"
+    },
+    {
+      "issue": "GetCategoriesTree response shape differs from older docs",
+      "explanation": "Response key is TreeItems (not CategoriesTree); items nest under ChildItems (not Children); the ID field is ItemNo, typed by ItemType (1=folder/FolderNo, 2=category/CategoryNo, 3=case definition/CaseDefNo)",
+      "affected_operations": [
+        "GetCategoriesTree"
+      ],
+      "workaround": "Walk TreeItems recursively via ChildItems; filter ItemType==2 for queryable categories"
+    },
+    {
+      "issue": "GetDocumentVersions and GetComments do not exist on the live server",
+      "explanation": "Some client wrapper code references these endpoint names, but the live API 405s on GetDocumentVersions; the real comments endpoint is LoadComments",
+      "affected_operations": [
+        "GetDocumentVersions",
+        "GetComments"
+      ],
+      "workaround": "Use LoadComments {\"ObjNo\": N, \"ObjType\": 2, \"MaxCount\": N} for comments; there is no verified replacement for GetDocumentVersions"
+    },
+    {
+      "issue": "CheckInDocument requires actual content to check in",
+      "explanation": "Calling CheckInDocument with just {\"DocNo\": N} and no changes fails with \"The document file is not open.\"",
+      "affected_operations": [
+        "CheckInDocument"
+      ],
+      "workaround": "Use UndoCheckOutDocument to release a checkout without saving changes"
+    },
+    {
+      "issue": "ExecuteAsyncMultiQuery does not reliably paginate",
+      "explanation": "Live testing showed RowBlockSize had no effect on ExecuteAsyncMultiQuery - all rows for each category were returned inline in the first response with HasRemainingRows: false, even when RowBlockSize was set well below the actual row count",
+      "affected_operations": [
+        "ExecuteAsyncMultiQuery",
+        "GetNextMultiQueryRows"
+      ],
+      "workaround": "For large result sets, use ExecuteAsyncSingleQuery per category instead - its pagination is confirmed reliable. Always call ReleaseMultiQuery when done regardless."
+    },
+    {
+      "issue": "GetCaseDefinition request parameter is CaseDefinitionNo, not CaseDefNo",
+      "explanation": "Despite the response field being named CaseDefNo, the request body requires the longer key CaseDefinitionNo. CreateCase, by contrast, does use CaseDefNo as its request key",
+      "affected_operations": [
+        "GetCaseDefinition",
+        "CreateCase"
+      ],
+      "workaround": "Use {\"CaseDefinitionNo\": N} for GetCaseDefinition and {\"CaseDefNo\": N} for CreateCase"
+    },
+    {
+      "issue": "LinkCaseToDocument may not actually link despite returning success",
+      "explanation": "In testing, {\"CaseNo\": N, \"DocNo\": N} returned 200 {} but the document did not subsequently appear in GetCaseDocuments",
+      "affected_operations": [
+        "LinkCaseToDocument",
+        "GetCaseDocuments"
+      ],
+      "workaround": "Verify the link took effect via GetCaseDocuments before relying on it; the minimal payload may be missing a required field (e.g. CategoryNo)"
     }
   ],
   "authentication": {
@@ -328,6 +432,210 @@
         "IndexDataItems": "array of index data by type"
       },
       "use_when": "Need structured table data or all field values"
+    },
+    "GetCategoriesTree": {
+      "method": "POST",
+      "path": "/GetCategoriesTree",
+      "description": "List the full folder/category/case-definition tree the user has access to",
+      "request_schema": {},
+      "response_schema": {
+        "TreeItems": "array of tree nodes, each with ItemNo, ItemType (1=folder,2=category,3=case def), Name, FolderType, ParentFolderNo, ParentCaseDefNo, Guid, ChildItems (recursive)"
+      },
+      "notes": "ItemType==2 nodes are queryable categories; their ItemNo is the CategoryNo"
+    },
+    "GetObjects": {
+      "method": "POST",
+      "path": "/GetObjects",
+      "description": "List users and groups together (no dedicated GetGroups endpoint exists)",
+      "request_schema": {
+        "Flags": "integer (0)",
+        "Type": "integer (11)"
+      },
+      "response_schema": {
+        "ItemList": "array of {Data, ID, Name, Guid, Flags, FolderNo} - Data: 1=user, 2=group, 3=system principal"
+      }
+    },
+    "GetUsersFromGroup": {
+      "method": "POST",
+      "path": "/GetUsersFromGroup",
+      "description": "List members of a group",
+      "request_schema": {
+        "GroupName": "string (alternative to GroupId)",
+        "GroupId": "integer (alternative to GroupName; the group's ID from GetObjects)"
+      },
+      "response_schema": {
+        "Users": "array of user objects"
+      },
+      "notes": "GroupNo is NOT a valid parameter - use GroupName or GroupId"
+    },
+    "CheckOutDocument": {
+      "method": "POST",
+      "path": "/CheckOutDocument",
+      "description": "Lock a document for editing",
+      "request_schema": {
+        "DocNo": "integer (required)"
+      },
+      "response_schema": {
+        "CheckOutSucceeded": "boolean",
+        "CurrentVersionNumber": "integer",
+        "SomebodyElseName": "string"
+      },
+      "related_operations": [
+        "GetDocumentCheckoutStatus",
+        "CheckInDocument",
+        "UndoCheckOutDocument"
+      ]
+    },
+    "GetDocumentCheckoutStatus": {
+      "method": "POST",
+      "path": "/GetDocumentCheckoutStatus",
+      "description": "Get the check-out state of a document",
+      "request_schema": {
+        "DocNo": "integer (required)"
+      },
+      "response_schema": {
+        "CheckOutStatus": {
+          "CheckOutState": "integer (0=not checked out, 1=checked out by caller)",
+          "SomebodyElseName": "string"
+        }
+      }
+    },
+    "UndoCheckOutDocument": {
+      "method": "POST",
+      "path": "/UndoCheckOutDocument",
+      "description": "Release a checkout without saving changes",
+      "request_schema": {
+        "DocNo": "integer (required)"
+      },
+      "response_schema": {}
+    },
+    "LoadComments": {
+      "method": "POST",
+      "path": "/LoadComments",
+      "description": "List comments on an object (document)",
+      "request_schema": {
+        "ObjNo": "integer (required)",
+        "ObjType": "integer (required, 2 for document)",
+        "MaxCount": "integer (required)"
+      },
+      "response_schema": {
+        "AllLoaded": "boolean",
+        "Comments": "array of {ID, CommentText, CreatedByDisplayName, CreatedByUserNo, CreatedOn, LastModified, ObjNo, ObjType, AllowEdit}"
+      }
+    },
+    "AddComment": {
+      "method": "POST",
+      "path": "/AddComment",
+      "description": "Add a comment to an object (document)",
+      "request_schema": {
+        "ObjNo": "integer (required)",
+        "ObjType": "integer (required, 2 for document)",
+        "CommentText": "string (required)"
+      },
+      "response_schema": {},
+      "notes": "There is no DeleteComment endpoint - comments cannot be removed via the API"
+    },
+    "EditComment": {
+      "method": "POST",
+      "path": "/EditComment",
+      "description": "Edit an existing comment",
+      "request_schema": {
+        "ObjNo": "integer (required)",
+        "ObjType": "integer (required)",
+        "ID": "string GUID (required, from LoadComments)",
+        "CommentText": "string (required)"
+      },
+      "response_schema": {}
+    },
+    "GetCaseDefinition": {
+      "method": "POST",
+      "path": "/GetCaseDefinition",
+      "description": "Get a case definition's linked categories and index fields",
+      "request_schema": {
+        "CaseDefinitionNo": "integer (required - note: NOT CaseDefNo)"
+      },
+      "response_schema": {
+        "CaseDefinition": {
+          "CaseDefNo": "integer",
+          "Categories": "array",
+          "Fields": "array"
+        }
+      }
+    },
+    "CreateCase": {
+      "method": "POST",
+      "path": "/CreateCase",
+      "description": "Create a new case",
+      "request_schema": {
+        "CaseDefNo": "integer (required - note: NOT CaseDefinitionNo)"
+      },
+      "response_schema": {
+        "CaseNo": "integer",
+        "LastChangeTime": "WCF date string",
+        "LastChangeTimeISO8601": "string"
+      }
+    },
+    "GetCase": {
+      "method": "POST",
+      "path": "/GetCase",
+      "description": "Get case metadata and index data",
+      "request_schema": {
+        "CaseNo": "integer (required)"
+      },
+      "response_schema": {
+        "Case": {
+          "CaseDefinitionNo": "integer",
+          "CaseNo": "integer",
+          "IsClosed": "boolean",
+          "IndexData": "object"
+        }
+      },
+      "notes": "Unknown/deleted CaseNo returns 500 ObjectDoesNotExist; a deleted case returns a distinct \"case has already been deleted\" error"
+    },
+    "GetCaseDocuments": {
+      "method": "POST",
+      "path": "/GetCaseDocuments",
+      "description": "List documents linked to a case",
+      "request_schema": {
+        "CaseNo": "integer (required)"
+      },
+      "response_schema": {
+        "DocumentNos": "array of integer"
+      }
+    },
+    "GetCaseHistory": {
+      "method": "POST",
+      "path": "/GetCaseHistory",
+      "description": "Get a case's change history",
+      "request_schema": {
+        "CaseNo": "integer (required)"
+      },
+      "response_schema": {
+        "CaseHistory": "array of {ActionDate, EntryType, UserName, UserNo, Text, AdditionalInfo}"
+      },
+      "related_operations": [
+        "GetCaseHistory2"
+      ]
+    },
+    "DeleteCase": {
+      "method": "POST",
+      "path": "/DeleteCase",
+      "description": "Delete a case",
+      "request_schema": {
+        "CaseNo": "integer (required)"
+      },
+      "response_schema": {}
+    },
+    "LinkCaseToDocument": {
+      "method": "POST",
+      "path": "/LinkCaseToDocument",
+      "description": "Link a document to a case",
+      "request_schema": {
+        "CaseNo": "integer (required)",
+        "DocNo": "integer (required)"
+      },
+      "response_schema": {},
+      "notes": "UNVERIFIED effect: returns 200 {} but in testing the document did not appear in a subsequent GetCaseDocuments call. Confirm the link before relying on it."
     }
   }
 }

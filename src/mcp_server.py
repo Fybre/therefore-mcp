@@ -383,12 +383,17 @@ OPERATION_REGISTRY = {
     ("therefore_documents", "add_comment"): {
         "description": "Add a comment to a document",
         "required": ["doc_no", "comment_text"],
-        "optional": {"version_no": "integer - version number"},
+        "optional": {"obj_type": "integer - object type, default 2 (document)"},
+    },
+    ("therefore_documents", "edit_comment"): {
+        "description": "Edit an existing comment on a document",
+        "required": ["doc_no", "comment_id", "comment_text"],
+        "optional": {"obj_type": "integer - object type, default 2 (document)"},
     },
     ("therefore_documents", "get_comments"): {
         "description": "Get document comments",
         "required": ["doc_no"],
-        "optional": {"version_no": "integer - version number"},
+        "optional": {"obj_type": "integer - object type, default 2 (document)"},
     },
     # therefore_query operations
     ("therefore_query", "search"): {
@@ -945,6 +950,7 @@ Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", 
                             "check_in",
                             "undo_check_out",
                             "add_comment",
+                            "edit_comment",
                             "get_comments",
                         ],
                     },
@@ -1650,11 +1656,18 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return client.add_comment(
                 doc_no=int(args["doc_no"]),
                 comment_text=str(args["comment_text"]),
-                version_no=int(args.get("version_no", 0)),
+                obj_type=int(args.get("obj_type", 2)),
+            )
+        if op == "edit_comment":
+            return client.edit_comment(
+                doc_no=int(args["doc_no"]),
+                comment_id=str(args["comment_id"]),
+                comment_text=str(args["comment_text"]),
+                obj_type=int(args.get("obj_type", 2)),
             )
         if op == "get_comments":
             return client.get_comments(
-                doc_no=int(args["doc_no"]), version_no=int(args.get("version_no", 0))
+                doc_no=int(args["doc_no"]), obj_type=int(args.get("obj_type", 2))
             )
         raise ValueError(f"Unknown operation '{op}' for therefore_documents")
 

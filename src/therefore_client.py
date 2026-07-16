@@ -445,18 +445,33 @@ class ThereforeClient:
         self,
         doc_no: int,
         comment_text: str,
-        version_no: int = 0,
+        obj_type: int = 2,
     ) -> Dict[str, Any]:
         return self._post('AddComment', {
-            'DocNo': doc_no,
-            'VersionNo': version_no,
+            'ObjNo': doc_no,
+            'ObjType': obj_type,
             'CommentText': comment_text,
         })
 
-    def get_comments(self, doc_no: int, version_no: int = 0) -> Dict[str, Any]:
-        return self._post('GetComments', {
-            'DocNo': doc_no,
-            'VersionNo': version_no,
+    def edit_comment(
+        self,
+        doc_no: int,
+        comment_id: str,
+        comment_text: str,
+        obj_type: int = 2,
+    ) -> Dict[str, Any]:
+        return self._post('EditComment', {
+            'ObjNo': doc_no,
+            'ObjType': obj_type,
+            'ID': comment_id,
+            'CommentText': comment_text,
+        })
+
+    def get_comments(self, doc_no: int, obj_type: int = 2, max_count: int = 100) -> Dict[str, Any]:
+        return self._post('LoadComments', {
+            'ObjNo': doc_no,
+            'ObjType': obj_type,
+            'MaxCount': max_count,
         })
 
     def complete_task(
@@ -653,7 +668,9 @@ class ThereforeClient:
         return self._post('CopyDocument', payload)
 
     def get_document_versions(self, doc_no: int) -> Dict[str, Any]:
-        return self._post('GetDocumentVersions', {'DocNo': doc_no})
+        # GetDocumentVersions does not exist on the live server (405) - GetDocumentHistory
+        # is the real endpoint and returns per-version history entries.
+        return self._post('GetDocumentHistory', {'DocNo': doc_no})
 
     def get_referenced_table_info(self, data_type_no: int) -> Dict[str, Any]:
         return self._post('GetReferencedTableInfo', {'DataTypeNo': data_type_no})
