@@ -603,7 +603,7 @@ OPERATION_REGISTRY = {
         "optional": {},
     },
     ("therefore_workflow", "get_case_documents"): {
-        "description": "Get documents in a case",
+        "description": "Get documents in a case. This is the correct way to list a case's documents - therefore_query's search operations do NOT support filtering by case (a Query object's CaseDefinitionNo field is a no-op/errors, see therefore_knowledge quirks).",
         "required": ["case_no"],
         "optional": {"max_rows": "integer - max rows (default 1000)"},
     },

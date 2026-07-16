@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2026-07-16",
+  "last_updated": "2026-07-17",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -370,6 +370,18 @@
         "GetCaseDocuments"
       ],
       "workaround": "Verify the link took effect via GetCaseDocuments before relying on it; the minimal payload may be missing a required field (e.g. CategoryNo)"
+    },
+    {
+      "issue": "Query.CaseDefinitionNo does not filter documents by case",
+      "explanation": "A Query object's CaseDefinitionNo field looks like a case-scoped analog to CategoryNo but isn't one. Without CategoryNo it 500s (tries to load the value as a category ID: 'Failed to load information from database: Category - ID=...'). With CategoryNo present it's silently dropped - QueryResult.CaseDefinitionNo comes back 0 and the result set is identical to a plain CategoryNo query.",
+      "affected_operations": [
+        "ExecuteSingleQuery",
+        "ExecuteAsyncSingleQuery",
+        "ExecuteAsyncMultiQuery",
+        "therefore_query.search",
+        "therefore_query.search_async"
+      ],
+      "workaround": "There is no query-time case filter. Use GetCaseDocuments (therefore_workflow.get_case_documents) to get a case's DocumentNos, or CategoryNo from GetCaseDefinition's Categories list to query normally."
     }
   ],
   "authentication": {
