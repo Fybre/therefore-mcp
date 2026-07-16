@@ -243,12 +243,12 @@ OPERATION_REGISTRY = {
     },
     # therefore_documents operations
     ("therefore_documents", "get"): {
-        "description": "Get a document by number",
+        "description": "Get a document by number. StreamsInfo (attachment filenames/StreamNos, not content) is included by default - use get_stream/get_stream_raw with a StreamNo from here to fetch actual file content.",
         "required": ["doc_no"],
         "optional": {
             "include_index_data": "boolean - include index data (default true)",
-            "include_streams_info": "boolean - include streams info",
-            "include_streams_data": "boolean - include streams data",
+            "include_streams_info": "boolean - include streams info: filenames/StreamNos only, not file content (default true) - an empty StreamsInfo here reliably means no attachments only when this is true",
+            "include_streams_data": "boolean - include full streams data inline, i.e. the actual file bytes (default false - expensive, prefer get_stream/get_stream_raw instead)",
             "include_checkout_status": "boolean - include checkout status",
             "include_access_mask": "boolean - include access mask",
         },
@@ -1670,7 +1670,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return client.get_document(
                 doc_no=int(args["doc_no"]),
                 include_index_data=bool(args.get("include_index_data", True)),
-                include_streams_info=bool(args.get("include_streams_info", False)),
+                include_streams_info=bool(args.get("include_streams_info", True)),
                 include_streams_data=bool(args.get("include_streams_data", False)),
                 include_checkout_status=bool(
                     args.get("include_checkout_status", False)

@@ -306,11 +306,16 @@ class ThereforeClient:
         self,
         doc_no: int,
         include_index_data: bool = True,
-        include_streams_info: bool = False,
+        include_streams_info: bool = True,
         include_streams_data: bool = False,
         include_checkout_status: bool = False,
         include_access_mask: bool = False,
     ) -> Dict[str, Any]:
+        # include_streams_info defaults to True: it's cheap metadata (filename/StreamNo,
+        # not file content - that's include_streams_data), but when False the response's
+        # StreamsInfo is an empty list regardless of whether attachments actually exist,
+        # which is indistinguishable from "no attachments". A caller that trusts an empty
+        # StreamsInfo at face value will wrongly conclude a document has no content.
         return self._post('GetDocument', {
             'DocNo': doc_no,
             'IsCheckOutStatusNeeded': include_checkout_status,

@@ -270,17 +270,11 @@ def test_operation_registry_fully_dispatched():
         )
 
 
-def test_no_dispatch_calls_nonexistent_endpoint():
-    """Every string literal passed as the endpoint name to ThereforeClient._post(...)
-    must be a real WSDL operation. This is exactly the class of bug that shipped
-    silently in add_comment/get_comments (wrong endpoint name entirely) and
-    get_document_versions (endpoint doesn't exist) - both sat broken until this test
-    was written because nothing exercised those code paths. Requires network access
-    to fetch the WSDL; skips gracefully if unreachable (e.g. offline CI)."""
-    import urllib.request
-
+def _load_craigdemo_credentials():
+    """Best-effort load of craigdemo credentials from .env.local, for tests that need
+    a real live tenant. Returns (base_url, username, password) or (None, None, None)."""
     env_path = os.environ.get("THEREFORE_ENV_PATH", ".env.local")
-    tenant, user, pwd, base = None, None, None, None
+    base, user, pwd = None, None, None
     try:
         with open(env_path) as f:
             for line in f:
@@ -293,6 +287,51 @@ def test_no_dispatch_calls_nonexistent_endpoint():
                     pwd = line.split("=", 1)[1]
     except FileNotFoundError:
         pass
+    return base, user, pwd
+
+
+def test_get_document_reports_attachments_by_default():
+    """Regression test: therefore_documents' "get" operation used to default
+    include_streams_info to False, so StreamsInfo came back as an empty list
+    regardless of whether the document actually had an attachment - indistinguishable
+    from "no attachments". This led directly to wrongly concluding real log file
+    documents had no content, when get_stream (which doesn't depend on this flag)
+    proved they did. Uses a known fixture doc (21513, a Logfiles category entry with
+    a Server1U.txt attachment) - skips gracefully if credentials or the fixture doc
+    are unavailable rather than failing CI on unrelated data drift."""
+    base, user, pwd = _load_craigdemo_credentials()
+    if not (base and user and pwd):
+        print("[SKIP] get-reports-attachments check -- no craigdemo credentials in .env.local")
+        return
+
+    cfg = ThereforeConfig(base_url=base, username=user, password=pwd, tenant_name="craigdemo", auth_method="Basic")
+    server = MCPServer(clients={"craigdemo": ThereforeClient(cfg)}, default_tenant="craigdemo", tenant_labels={"craigdemo": "Craig Demo"})
+    resp = server.handle({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "therefore_documents", "arguments": {"operation": "get", "tenant": "craigdemo", "doc_no": 21513}},
+    })
+    if resp["result"].get("isError"):
+        print(f"[SKIP] get-reports-attachments check -- fixture doc 21513 unavailable ({resp['result']['content'][0]['text'][:200]})")
+        return
+    data = json.loads(resp["result"]["content"][0]["text"])
+    streams = data.get("StreamsInfo")
+    check(
+        "get (default args) reports a known attachment instead of an empty StreamsInfo",
+        bool(streams) and any(s.get("FileName") for s in streams),
+        f"got StreamsInfo={streams}",
+    )
+
+
+def test_no_dispatch_calls_nonexistent_endpoint():
+    """Every string literal passed as the endpoint name to ThereforeClient._post(...)
+    must be a real WSDL operation. This is exactly the class of bug that shipped
+    silently in add_comment/get_comments (wrong endpoint name entirely) and
+    get_document_versions (endpoint doesn't exist) - both sat broken until this test
+    was written because nothing exercised those code paths. Requires network access
+    to fetch the WSDL; skips gracefully if unreachable (e.g. offline CI)."""
+    import urllib.request
+
+    base, user, pwd = _load_craigdemo_credentials()
 
     if not (base and user and pwd):
         print("[SKIP] no-dead-endpoints check -- no craigdemo credentials in .env.local")
@@ -338,6 +377,7 @@ if __name__ == "__main__":
     test_shadowed_keywords_still_resolve_correctly()
     test_router_suggestions_are_all_valid()
     test_operation_registry_fully_dispatched()
+    test_get_document_reports_attachments_by_default()
     test_no_dispatch_calls_nonexistent_endpoint()
 
     print("=" * 80)
