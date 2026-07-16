@@ -2421,14 +2421,18 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "add keyword": {"tool": "therefore_keywords", "operation": "add"},
         }
 
-        # Check for direct keyword match
+        # Check for direct keyword match. Match the LONGEST matching keyword, not the
+        # first one in dict order - otherwise a short keyword (e.g. "search") shadows
+        # a more specific one that contains it (e.g. "search users", "full text search").
         suggested_tool = None
         suggested_operation = None
+        matched_keyword = None
         for keyword, suggestion in tool_suggestions.items():
             if keyword in question:
-                suggested_tool = suggestion["tool"]
-                suggested_operation = suggestion["operation"]
-                break
+                if matched_keyword is None or len(keyword) > len(matched_keyword):
+                    matched_keyword = keyword
+                    suggested_tool = suggestion["tool"]
+                    suggested_operation = suggestion["operation"]
 
         # If no keyword match, try fuzzy matching operation names in the registry
         if not suggested_tool:
