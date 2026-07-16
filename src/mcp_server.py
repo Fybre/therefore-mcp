@@ -28,6 +28,7 @@ except Exception:  # pragma: no cover - fallback for older environments
 
 from therefore_client import (
     ThereforeClient,
+    ThereforeConfig,
     build_tenant_configs_from_env,
     load_env,
     normalize_tenant_key,
@@ -865,6 +866,48 @@ Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", 
             },
         },
         {
+            "name": "therefore_connect",
+            "description": """Register a Therefore tenant/login at runtime, without editing server config or restarting.
+
+Give it credentials for any Therefore Online tenant (or on-prem server) and it registers a new client under a tenant key you choose (or one derived automatically), verifies the login actually works (calls GetConnectionToken), and makes that key immediately usable as the 'tenant' argument on every other tool - including as the new default for calls that omit 'tenant' entirely.
+
+Registration is in-memory only for the lifetime of this server process (not written to disk), and - when this server is running in multi-client HTTP mode - is scoped to the caller that registered it, not shared with other API keys.
+
+Two ways to specify where to connect:
+  - Therefore Online (cloud): just give 'tenant_name' (the subdomain, e.g. 'acme' for acme.thereforeonline.com) - base_url is derived automatically and TenantName header is set from it.
+  - Any server (cloud or on-prem): give 'base_url' explicitly, e.g. 'https://acme.thereforeonline.com/theservice/v0001/restun' or an on-prem URL. Pass 'tenant_name' too if it's a Therefore Online host - it's required there or every call 500s with "Tenant name is required."
+
+Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then call other tools with {"tenant": "acme", ...}.""",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tenant_key": {
+                        "type": "string",
+                        "description": "Key to register this login under for later 'tenant' arguments (e.g. 'acme_admin'). Defaults to a normalized form of tenant_name/base_url if omitted.",
+                    },
+                    "tenant_name": {
+                        "type": "string",
+                        "description": "Therefore Online subdomain (e.g. 'acme' for acme.thereforeonline.com). Also sets the required TenantName header for cloud tenants. Required unless base_url is given.",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Explicit REST base URL, e.g. 'https://acme.thereforeonline.com/theservice/v0001/restun' or an on-prem equivalent. Required unless tenant_name is given (cloud shorthand).",
+                    },
+                    "username": {"type": "string", "description": "Login username. Required."},
+                    "password": {"type": "string", "description": "Login password. Required."},
+                    "auth_method": {
+                        "type": "string",
+                        "description": "'Basic' (default) or 'Bearer'.",
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable display name for this tenant (shown in error messages listing available tenants). Defaults to tenant_key.",
+                    },
+                },
+                "required": ["username", "password"],
+            },
+        },
+        {
             "name": "therefore_system",
             "description": "Therefore system operations. Call ask_therefore_expert first to get the operation and parameters needed.",
             "inputSchema": {
@@ -1441,11 +1484,36 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         print(audit_msg, file=sys.stderr, flush=True)
 
     def _call_tool(self, name: str, args: Dict[str, Any]) -> Any:
+        if name == "therefore_connect":
+            # No tenant to resolve yet - this operation is what CREATES one.
+            client_label = "global_admin"
+            if self._current_client_key:
+                client_label = f"client_key(...{self._current_client_key[-4:]})"
+            safe_args = {k: ("[REDACTED]" if k == "password" else v) for k, v in args.items()}
+            print(
+                f"[AUDIT] {datetime.now(timezone.utc).isoformat()} | Client: {client_label} | "
+                f"IP: {self._current_client_ip or 'unknown_ip'} | Tool: therefore_connect | "
+                f"Args: {json.dumps(safe_args)}",
+                file=sys.stderr, flush=True,
+            )
+            return self._connect_tenant(args)
+
+        if name == "ask_therefore_expert":
+            # The router is pure routing logic - it never touches `client` - so it must
+            # not hard-fail just because no tenant is configured/allowed yet. A brand
+            # new caller with zero registered tenants needs to be able to ask "how do
+            # I connect" and get pointed at therefore_connect, not an error.
+            try:
+                tenant = self._resolve_tenant(args)
+            except ValueError:
+                tenant = None
+            self._audit_log(name, tenant or "(none)", args)
+            client = self.clients.get(tenant) if tenant else None
+            return self._ask_therefore_expert(args, tenant, client)
+
         tenant = self._resolve_tenant(args)
         self._audit_log(name, tenant, args)
         client = self.clients[tenant]
-        if name == "ask_therefore_expert":
-            return self._ask_therefore_expert(args, tenant, client)
         if name == "therefore_system":
             return self._dispatch_system(args, tenant, client)
         if name == "therefore_categories":
@@ -1463,6 +1531,72 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if name == "therefore_knowledge":
             return self._dispatch_knowledge(args, tenant, client)
         raise ValueError(f"Unknown tool: {name}")
+
+    def _connect_tenant(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Register a new tenant/login at runtime (see therefore_connect's tool
+        description for the full contract)."""
+        username = args.get("username")
+        password = args.get("password")
+        if not username or not password:
+            raise ValueError("therefore_connect requires 'username' and 'password'.")
+
+        tenant_name = (args.get("tenant_name") or "").strip() or None
+        base_url = (args.get("base_url") or "").strip() or None
+        if not base_url and not tenant_name:
+            raise ValueError(
+                "therefore_connect requires either 'tenant_name' (Therefore Online "
+                "subdomain shorthand) or an explicit 'base_url'."
+            )
+        if not base_url:
+            base_url = f"https://{tenant_name}.thereforeonline.com/theservice/v0001/restun"
+
+        key = normalize_tenant_key(str(args.get("tenant_key") or tenant_name or base_url))
+        if not key:
+            raise ValueError("Could not derive a tenant_key - pass one explicitly.")
+
+        label = str(args.get("label") or args.get("tenant_key") or tenant_name or key)
+        auth_method = str(args.get("auth_method") or "Basic")
+
+        cfg = ThereforeConfig(
+            base_url=base_url,
+            auth_method=auth_method,
+            username=str(username),
+            password=str(password),
+            tenant_name=tenant_name,
+        )
+        client = ThereforeClient(cfg)
+
+        # Fail fast on bad credentials/URL instead of registering a client that will
+        # 401/500 on first real use.
+        try:
+            client.get_connection_token()
+        except Exception as e:
+            raise ValueError(
+                f"Could not connect to '{base_url}' as '{username}': {e}"
+            ) from None
+
+        self.clients[key] = client
+        self.tenant_labels[key] = label
+
+        # In multi-client HTTP mode, scope a dynamically-registered tenant to the caller
+        # that registered it rather than exposing it to every other API key on this
+        # server - matches the existing client_access allowlist model.
+        if self._current_client_key and self.client_access:
+            self.client_access.setdefault(self._current_client_key, [])
+            if key not in self.client_access[self._current_client_key]:
+                self.client_access[self._current_client_key].append(key)
+
+        self._last_tenant = key
+        return {
+            "connected": True,
+            "tenant_key": key,
+            "label": label,
+            "base_url": base_url,
+            "message": (
+                f"Connected and verified. Use \"tenant\": \"{key}\" on subsequent tool "
+                f"calls (or omit it - '{key}' is now the default for this session)."
+            ),
+        }
 
     def _dispatch_system(self, args, tenant, client):
         op = args.get("operation")
@@ -2356,6 +2490,47 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         Uses OPERATION_REGISTRY for comprehensive parameter information.
         """
         question = args["question"].lower()
+
+        # therefore_connect is a standalone tool with no "operation" - it can't live in
+        # OPERATION_REGISTRY/tool_suggestions below, so handle connect-flavored
+        # questions as a special case before the registry-driven matching.
+        connect_phrases = (
+            "connect to", "new tenant", "add tenant", "add a tenant", "different tenant",
+            "another tenant", "switch tenant", "register tenant", "login as", "log in as",
+            "different login", "different user", "different account", "new login",
+            "new credentials", "different credentials",
+        )
+        if any(p in question for p in connect_phrases) or (
+            "connect" in question and "tenant" in question
+        ):
+            return {
+                "question": args["question"],
+                "suggested_tool": "therefore_connect",
+                "description": (
+                    "Register a new tenant/login at runtime - no config file edits or "
+                    "server restart needed. Works for any Therefore Online tenant or "
+                    "on-prem server."
+                ),
+                "call_with": {
+                    "tenant_name": "<Therefore Online subdomain, e.g. 'acme' - or use base_url for on-prem>",
+                    "username": "<required>",
+                    "password": "<required>",
+                },
+                "all_parameters": {
+                    "required": ["username", "password", "tenant_name (or base_url)"],
+                    "optional": {
+                        "tenant_key": "string - key to use as 'tenant' on later calls (defaults to a normalized tenant_name/base_url)",
+                        "base_url": "string - explicit REST base URL, for on-prem or non-standard hosts",
+                        "auth_method": "string - 'Basic' (default) or 'Bearer'",
+                        "label": "string - display name",
+                    },
+                },
+                "answer": (
+                    "Call therefore_connect with tenant_name (or base_url), username, and "
+                    "password. It verifies the login and registers it under a tenant key "
+                    "you can then pass as \"tenant\" on every other tool call."
+                ),
+            }
 
         # Expanded keyword -> tool+operation mapping
         tool_suggestions = {

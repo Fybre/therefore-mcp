@@ -52,6 +52,45 @@ def ask(server, question):
     return json.loads(resp["result"]["content"][0]["text"])
 
 
+def test_expert_router_works_with_zero_tenants_configured():
+    """A brand new server with no preconfigured tenants must still be able to answer
+    "how do I connect" - and must not hard-fail on unrelated questions either.
+    ask_therefore_expert is pure routing logic; it must not require a resolved
+    tenant/client to function."""
+    server = MCPServer(clients={}, default_tenant=None, tenant_labels={})
+    result = ask(server, "how do I connect to a new tenant")
+    check(
+        "connect question routes to therefore_connect with zero tenants configured",
+        result.get("suggested_tool") == "therefore_connect",
+        f"got {result.get('suggested_tool')}",
+    )
+    result2 = ask(server, "how do I search documents")
+    check(
+        "unrelated question does not error out with zero tenants configured",
+        result2.get("suggested_tool") == "therefore_query",
+        f"got {result2}",
+    )
+
+
+def test_connect_tool_appears_in_tools_list():
+    server = make_server()
+    resp = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
+    names = [t["name"] for t in resp["result"]["tools"]]
+    check("therefore_connect is registered as a tool", "therefore_connect" in names)
+
+
+def test_connect_requires_credentials():
+    server = MCPServer(clients={}, default_tenant=None, tenant_labels={})
+    resp = server.handle({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "therefore_connect", "arguments": {"tenant_name": "acme"}},
+    })
+    check(
+        "therefore_connect rejects a call missing username/password",
+        resp["result"].get("isError") is True,
+    )
+
+
 def test_router_picks_most_specific_keyword():
     """Regression test: shorter keywords must not shadow more specific ones that
     contain them, regardless of dict insertion order (found 2026-07-16)."""
@@ -205,6 +244,9 @@ if __name__ == "__main__":
     print("Expert Router & Tool Surface Regression Tests")
     print("=" * 80)
 
+    test_expert_router_works_with_zero_tenants_configured()
+    test_connect_tool_appears_in_tools_list()
+    test_connect_requires_credentials()
     test_router_picks_most_specific_keyword()
     test_router_uses_word_boundaries()
     test_shadowed_keywords_still_resolve_correctly()
