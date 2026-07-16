@@ -2,7 +2,7 @@
 
 A Python [MCP](https://modelcontextprotocol.io/) server that connects AI assistants to the [Therefore™](https://therefore.net/) document management system via its WebAPI.
 
-Exposes **9 grouped tools** covering document CRUD, querying, workflow management, keyword dictionaries, user administration, categories, and system operations. Supports multi-tenant deployments with per-client access control and audit logging. Zero external dependencies for stdio mode — pure Python standard library.
+Exposes **10 tools**: a natural-language router (`ask_therefore_expert`), a runtime tenant/login registration tool (`therefore_connect`), and **8 grouped tools** (100 operations total) covering document CRUD, querying, workflow management and Cases, keyword dictionaries, user administration, categories, and system operations. Supports multi-tenant deployments with per-client access control and audit logging, including tenants registered at runtime via `therefore_connect` rather than pre-configured in `.env.local`. Zero external dependencies for stdio mode — pure Python standard library.
 
 ## Quick Start
 
@@ -28,6 +28,19 @@ THEREFORE_MYTENANT_TENANTNAME=mytenant
 ```
 
 See [Environment Variables](#environment-variables) for the full reference.
+
+**This step is optional.** The server starts fine with zero tenants configured (or none
+at all — no `.env.local` required). An agent can instead call the `therefore_connect`
+tool at runtime to register a tenant/login for the session:
+
+```json
+{"tenant_name": "mytenant", "username": "your.username", "password": "your-password"}
+```
+
+It verifies the login before registering it and returns a `tenant_key` to use as the
+`tenant` argument on every other call. Registration is in-memory only (not written to
+`.env.local`) and, in HTTP mode, scoped to the API key that registered it. Useful for ad
+hoc/multi-tenant agent use without maintaining credentials in a file on disk.
 
 ### Running
 
@@ -125,19 +138,29 @@ extensions:
 
 ## Tools
 
-Tools are grouped by domain. Each tool takes a mandatory `operation` string and a mandatory `tenant` string.
+`ask_therefore_expert` and `therefore_connect` take direct parameters (no `operation`).
+The 8 grouped tools below each take a mandatory `operation` string selecting the
+sub-operation, plus a `tenant` string (optional on most calls — inferred/defaulted per
+the tenant resolution order described later in this doc).
 
 | Tool | Operations |
 |------|-----------|
-| `ask_therefore_expert` | Smart router — describes the right tool and operation for a task |
+| `ask_therefore_expert` | Smart router — describes the right tool, operation, and parameters for a task. Understands connect-flavored questions too, even with zero tenants configured. |
+| `therefore_connect` | Register a tenant/login at runtime — no `.env.local` edit or server restart needed. See [Configuration](#configuration). |
 | `therefore_system` | Connection info, domain info, server version, JWT/ADFS token exchange |
 | `therefore_categories` | Get info, resolve by name, list fields, resolve field, referenced table info and query, generate config XML |
-| `therefore_documents` | Get, create, update, update index data, add streams, delete, copy, check out/in, undo checkout, get versions/stream/comments/history/properties, add comment |
+| `therefore_documents` | Get, create, update, update index data, add streams, delete, check out/in, undo checkout, get versions/stream/comments/history/properties, add/edit comment |
 | `therefore_query` | Synchronous query, async query, multi-category query, full-text search, users query, workflow instances query, referenced table query |
-| `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition |
+| `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition, Cases (get case definition, create/get case, get case documents/history) |
 | `therefore_users` | Get connected user, resolve, list, create, set/change password, move license, portal user management, get/set settings, delete |
 | `therefore_keywords` | List dictionaries, get keywords, add/update/delete keyword, get keyword info |
 | `therefore_knowledge` | Search API docs, get workflow guides, field type info, common patterns, known quirks, list resources, fetch live API help |
+
+**Note:** `therefore_documents`' `get` operation includes attachment metadata
+(`StreamsInfo` — filenames/StreamNos, not content) by default; use `get_stream` /
+`get_stream_raw` with a `StreamNo` from there to fetch the actual file content. There is
+no `copy` operation — the underlying `CopyDocument` endpoint doesn't exist on the live
+Therefore server.
 
 ---
 
@@ -292,7 +315,7 @@ Create `.env.local` in the project root before starting.
 
 ```
 src/
-  mcp_server.py         # MCP server — 9 grouped tools, operation registry, tenant
+  mcp_server.py         # MCP server — router, therefore_connect, 8 grouped tools, operation registry, tenant
   therefore_client.py   # HTTP client — auth, retries, config building, all API methods
   knowledge_tools.py    # Knowledge base utilities for therefore_knowledge tool
 config/
