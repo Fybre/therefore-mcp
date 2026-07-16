@@ -44,12 +44,48 @@ def make_server():
     return MCPServer(clients={"test": client}, default_tenant="test", tenant_labels={"test": "Test"})
 
 
-def ask(server, question):
+def ask(server, question, tenant=None):
+    arguments = {"question": question}
+    if tenant is not None:
+        arguments["tenant"] = tenant
     resp = server.handle({
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-        "params": {"name": "ask_therefore_expert", "arguments": {"question": question}},
+        "params": {"name": "ask_therefore_expert", "arguments": arguments},
     })
     return json.loads(resp["result"]["content"][0]["text"])
+
+
+def test_router_flags_unconfigured_tenant_and_points_at_connect():
+    """Naming a tenant the router doesn't recognize must not be silently ignored -
+    it should surface a warning and push the caller toward therefore_connect, since
+    that's almost certainly the fix (typo aside)."""
+    server = make_server()  # has exactly one tenant: "test"
+
+    result = ask(server, "get user details", tenant="totally_unknown_tenant")
+    check(
+        "unconfigured named tenant produces a warning",
+        bool(result.get("warning")),
+        f"got {result}",
+    )
+    check(
+        "unconfigured named tenant routes to therefore_connect",
+        result.get("suggested_tool") == "therefore_connect",
+        f"got {result.get('suggested_tool')}",
+    )
+    check(
+        "therefore_connect suggestion pre-fills the attempted tenant name",
+        result.get("call_with", {}).get("tenant_name") == "totally_unknown_tenant",
+        f"got {result.get('call_with')}",
+    )
+
+    # Omitting tenant entirely (not naming a bad one) must NOT trigger the warning -
+    # that's normal resolution via the single configured tenant / smart default.
+    result2 = ask(server, "get user details")
+    check(
+        "omitting tenant on a server with a configured tenant does not warn",
+        "warning" not in result2,
+        f"got {result2}",
+    )
 
 
 def test_expert_router_works_with_zero_tenants_configured():
@@ -245,6 +281,7 @@ if __name__ == "__main__":
     print("=" * 80)
 
     test_expert_router_works_with_zero_tenants_configured()
+    test_router_flags_unconfigured_tenant_and_points_at_connect()
     test_connect_tool_appears_in_tools_list()
     test_connect_requires_credentials()
     test_router_picks_most_specific_keyword()

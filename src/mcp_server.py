@@ -1493,14 +1493,21 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             # The router is pure routing logic - it never touches `client` - so it must
             # not hard-fail just because no tenant is configured/allowed yet. A brand
             # new caller with zero registered tenants needs to be able to ask "how do
-            # I connect" and get pointed at therefore_connect, not an error.
+            # I connect" and get pointed at therefore_connect, not an error. But if the
+            # caller DID name a specific tenant and it's not one we recognize, that's
+            # worth surfacing rather than silently discarding - it's very likely a typo
+            # or a tenant that still needs therefore_connect, not "no tenant given".
+            tenant_arg = args.get("tenant") or args.get("tenant_name") or args.get("tenantName")
+            tenant_warning = None
             try:
                 tenant = self._resolve_tenant(args)
-            except ValueError:
+            except ValueError as e:
                 tenant = None
+                if tenant_arg:
+                    tenant_warning = str(e)
             self._audit_log(name, tenant or "(none)", args)
             client = self.clients.get(tenant) if tenant else None
-            return self._ask_therefore_expert(args, tenant, client)
+            return self._ask_therefore_expert(args, tenant, client, tenant_warning=tenant_warning)
 
         tenant = self._resolve_tenant(args)
         self._audit_log(name, tenant, args)
@@ -2466,13 +2473,51 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
 
     # Knowledge base tool handlers
     def _ask_therefore_expert(
-        self, args: Dict[str, Any], tenant: str, client: ThereforeClient
+        self,
+        args: Dict[str, Any],
+        tenant: str,
+        client: ThereforeClient,
+        tenant_warning: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Expert router that returns the exact tool, operation, and parameters needed.
         Uses OPERATION_REGISTRY for comprehensive parameter information.
         """
         question = args["question"].lower()
+
+        # A specific tenant was named but isn't configured/allowed. Don't silently fall
+        # back and answer as if nothing was wrong - point straight at therefore_connect
+        # so the caller can register it, since that's very likely what's actually needed.
+        if tenant_warning:
+            requested = args.get("tenant") or args.get("tenant_name") or args.get("tenantName")
+            return {
+                "question": args["question"],
+                "warning": tenant_warning,
+                "suggested_tool": "therefore_connect",
+                "description": (
+                    f"'{requested}' isn't a configured/accessible tenant yet. Register it "
+                    "with therefore_connect, then ask your original question again."
+                ),
+                "call_with": {
+                    "tenant_name": requested,
+                    "username": "<required>",
+                    "password": "<required>",
+                },
+                "all_parameters": {
+                    "required": ["username", "password", "tenant_name (or base_url)"],
+                    "optional": {
+                        "tenant_key": "string - key to use as 'tenant' on later calls (defaults to a normalized tenant_name/base_url)",
+                        "base_url": "string - explicit REST base URL, for on-prem or non-standard hosts",
+                        "auth_method": "string - 'Basic' (default) or 'Bearer'",
+                        "label": "string - display name",
+                    },
+                },
+                "answer": (
+                    f"{tenant_warning} Call therefore_connect with tenant_name (or "
+                    f"base_url), username, and password to register '{requested}', then "
+                    "retry your question with \"tenant\": \"<the returned tenant_key>\"."
+                ),
+            }
 
         # therefore_connect is a standalone tool with no "operation" - it can't live in
         # OPERATION_REGISTRY/tool_suggestions below, so handle connect-flavored
