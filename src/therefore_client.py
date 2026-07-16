@@ -525,12 +525,19 @@ class ThereforeClient:
             payload['TaskNo'] = task_no
         return self._post('DelegateWorkflowInstance', payload)
 
+    def get_case_definition(self, case_definition_no: int) -> Dict[str, Any]:
+        # Note: unlike CreateCase, this endpoint's request key IS CaseDefinitionNo.
+        return self._post('GetCaseDefinition', {'CaseDefinitionNo': case_definition_no})
+
     def create_case(
         self,
         case_definition_no: int,
         index_data_items: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        payload = {'CaseDefinitionNo': case_definition_no}
+        # Note: CreateCase's request key is CaseDefNo, NOT CaseDefinitionNo (that's the
+        # key GetCaseDefinition uses) - sending CaseDefinitionNo 500s with "required data
+        # member 'CaseDefNo' was not found".
+        payload = {'CaseDefNo': case_definition_no}
         if index_data_items is not None:
             payload['IndexDataItems'] = index_data_items
         return self._post('CreateCase', payload)
@@ -660,12 +667,14 @@ class ThereforeClient:
         target_category_no: Optional[int] = None,
         index_data_items: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        payload = {'DocNo': doc_no}
-        if target_category_no is not None:
-            payload['TargetCategoryNo'] = target_category_no
-        if index_data_items is not None:
-            payload['IndexDataItems'] = index_data_items
-        return self._post('CopyDocument', payload)
+        # CopyDocument does not exist on the live server (confirmed via WSDL operation
+        # list and a live 405) and no equivalent replacement endpoint was found. Fail
+        # fast with a clear message instead of a confusing 405 from _post().
+        raise NotImplementedError(
+            "copy_document is not available: the Therefore REST API has no CopyDocument "
+            "endpoint (verified against a live tenant's WSDL operation list). No "
+            "equivalent replacement was found."
+        )
 
     def get_document_versions(self, doc_no: int) -> Dict[str, Any]:
         # GetDocumentVersions does not exist on the live server (405) - GetDocumentHistory

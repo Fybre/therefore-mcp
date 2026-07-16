@@ -355,7 +355,7 @@ OPERATION_REGISTRY = {
         "optional": {},
     },
     ("therefore_documents", "copy"): {
-        "description": "Copy a document",
+        "description": "NOT AVAILABLE - the underlying CopyDocument endpoint does not exist on the live Therefore server (verified via WSDL); always raises NotImplementedError",
         "required": ["doc_no"],
         "optional": {
             "target_category_no": "integer - target category number",
@@ -593,6 +593,11 @@ OPERATION_REGISTRY = {
         "description": "Delegate a workflow instance",
         "required": ["workflow_instance_token", "user_id"],
         "optional": {"task_no": "integer - task number"},
+    },
+    ("therefore_workflow", "get_case_definition"): {
+        "description": "Get a case definition's linked categories and index fields (needed to know a valid case_definition_no before calling create_case, and to build index_data_items)",
+        "required": ["case_definition_no"],
+        "optional": {},
     },
     ("therefore_workflow", "create_case"): {
         "description": "Create a case",
@@ -1015,6 +1020,7 @@ Returns: {suggested_tool: "therefore_documents", suggested_operation: "create", 
                             "claim",
                             "disclaim",
                             "delegate",
+                            "get_case_definition",
                             "create_case",
                             "get_case",
                             "get_case_documents",
@@ -1845,6 +1851,8 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 if args.get("task_no") is not None
                 else None,
             )
+        if op == "get_case_definition":
+            return client.get_case_definition(int(args["case_definition_no"]))
         if op == "create_case":
             return client.create_case(
                 case_definition_no=int(args["case_definition_no"]),
@@ -2428,7 +2436,9 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         suggested_operation = None
         matched_keyword = None
         for keyword, suggestion in tool_suggestions.items():
-            if keyword in question:
+            # Word-boundary match, not raw substring - otherwise short keywords like
+            # "search" false-positive inside unrelated words like "research".
+            if re.search(r"\b" + re.escape(keyword) + r"\b", question):
                 if matched_keyword is None or len(keyword) > len(matched_keyword):
                     matched_keyword = keyword
                     suggested_tool = suggestion["tool"]
