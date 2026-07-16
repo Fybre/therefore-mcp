@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, 'src')
 
-from mcp_server import MCPServer, OPERATION_REGISTRY
+from mcp_server import MCPServer, OPERATION_REGISTRY, load_clients
 from therefore_client import ThereforeClient, ThereforeConfig
 
 FAILURES = []
@@ -86,6 +86,53 @@ def test_router_flags_unconfigured_tenant_and_points_at_connect():
         "warning" not in result2,
         f"got {result2}",
     )
+
+
+def test_load_clients_does_not_crash_with_no_config():
+    """Regression test: with no .env.local and no THEREFORE_* env vars, the server
+    used to crash at startup (RuntimeError: THEREFORE_BASE_URL is required) before it
+    could ever respond to anything - including therefore_connect, the very tool meant
+    to rescue this situation. Verified live against a real subprocess on 2026-07-16;
+    this covers the same code path via direct import (faster, no subprocess needed)."""
+    saved_env = dict(os.environ)
+    try:
+        for k in list(os.environ):
+            if k.startswith("THEREFORE_"):
+                del os.environ[k]
+        os.environ["THEREFORE_ENV_PATH"] = "/tmp/definitely_does_not_exist_12345.env"
+        try:
+            clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
+            check("load_clients() does not raise with zero config", True)
+            check("load_clients() returns zero clients (not a crash)", clients == {})
+            check("default_tenant is None when nothing loaded", default_tenant is None)
+        except Exception as e:
+            check("load_clients() does not raise with zero config", False, f"raised {type(e).__name__}: {e}")
+    finally:
+        os.environ.clear()
+        os.environ.update(saved_env)
+
+
+def test_load_clients_skips_bad_tenant_keeps_good_one():
+    """A partially-broken THEREFORE_TENANTS list (one tenant missing its base_url)
+    must not take down tenants that ARE configured correctly."""
+    saved_env = dict(os.environ)
+    try:
+        for k in list(os.environ):
+            if k.startswith("THEREFORE_"):
+                del os.environ[k]
+        os.environ["THEREFORE_ENV_PATH"] = "/tmp/definitely_does_not_exist_12345.env"
+        os.environ["THEREFORE_TENANTS"] = "good,bad"
+        os.environ["THEREFORE_GOOD_BASE_URL"] = "https://good.thereforeonline.com/theservice/v0001/restun"
+        os.environ["THEREFORE_GOOD_USERNAME"] = "u"
+        os.environ["THEREFORE_GOOD_PASSWORD"] = "p"
+        # deliberately no THEREFORE_BAD_BASE_URL
+        clients, default_tenant, tenant_labels, tenant_aliases = load_clients()
+        check("good tenant with valid config still loads", "good" in clients, f"got {list(clients.keys())}")
+        check("bad tenant with missing base_url is skipped, not a crash", "bad" not in clients)
+        check("default_tenant falls through to the tenant that actually loaded", default_tenant == "good")
+    finally:
+        os.environ.clear()
+        os.environ.update(saved_env)
 
 
 def test_expert_router_works_with_zero_tenants_configured():
@@ -280,6 +327,8 @@ if __name__ == "__main__":
     print("Expert Router & Tool Surface Regression Tests")
     print("=" * 80)
 
+    test_load_clients_does_not_crash_with_no_config()
+    test_load_clients_skips_bad_tenant_keeps_good_one()
     test_expert_router_works_with_zero_tenants_configured()
     test_router_flags_unconfigured_tenant_and_points_at_connect()
     test_connect_tool_appears_in_tools_list()

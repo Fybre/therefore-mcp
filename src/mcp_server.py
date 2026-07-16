@@ -6433,9 +6433,17 @@ def load_clients() -> Tuple[
     tenant_aliases: Dict[str, List[str]] = {}
     for key, cfg in configs.items():
         if not cfg.base_url:
-            raise RuntimeError(
-                f"THEREFORE_BASE_URL is required for tenant {tenant_labels.get(key, key)}"
+            # No static config for this tenant (e.g. no .env.local at all, or an empty
+            # THEREFORE_BASE_URL). Skip it instead of crashing the whole server at
+            # startup - therefore_connect exists precisely so a server can start with
+            # zero preconfigured tenants and have them registered at runtime instead.
+            print(
+                f"[WARN] Skipping tenant '{tenant_labels.get(key, key)}': no "
+                f"THEREFORE_BASE_URL configured. Use therefore_connect to register it "
+                f"at runtime instead.",
+                file=sys.stderr,
             )
+            continue
         clients[key] = ThereforeClient(cfg)
         label = tenant_labels.get(key, key)
         prefix = f"THEREFORE_{str(label).upper()}_"
@@ -6446,6 +6454,17 @@ def load_clients() -> Tuple[
             or env_values.get("THEREFORE_USER_GROUPS")
         )
         tenant_aliases[key] = _parse_aliases(raw)
+
+    if default_tenant not in clients:
+        default_tenant = next(iter(clients), None)
+
+    if not clients:
+        print(
+            "[WARN] No tenants configured at startup. The server is running with zero "
+            "clients - use therefore_connect to register one at runtime.",
+            file=sys.stderr,
+        )
+
     return clients, default_tenant, tenant_labels, tenant_aliases
 
 
