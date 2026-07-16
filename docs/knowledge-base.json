@@ -382,6 +382,24 @@
         "therefore_query.search_async"
       ],
       "workaround": "There is no query-time case filter. Use GetCaseDocuments (therefore_workflow.get_case_documents) to get a case's DocumentNos, or CategoryNo from GetCaseDefinition's Categories list to query normally."
+    },
+    {
+      "issue": "ExecuteFullTextQuery's real request shape is Search/Categories, not SearchText/CategoryNo",
+      "explanation": "Some older docs/examples show the wrong field names. The live server requires Search (string), Categories (array - [] means all categories, not none), plus ContextMode/SearchScope/SortOrder - omitting any of these causes a 500 'required data members ... were not found'. The response is also a flat {\"Results\": [...]} array with MatchedWords/Relevance per hit, not the QueryResult/Columns/ResultRows shape ExecuteSingleQuery uses.",
+      "affected_operations": [
+        "ExecuteFullTextQuery",
+        "therefore_query.search_fulltext"
+      ],
+      "workaround": "ThereforeClient.execute_full_text_query already builds the correct payload - use it rather than hand-rolling the request body."
+    },
+    {
+      "issue": "A category having IsFulltextEnabled: true does not mean every document in it is full-text searchable",
+      "explanation": "Verified against a live tenant: a document with confirmed real text content (extracted directly from its PDF) in a category with IsFulltextEnabled: true still returned zero full-text hits, even when the query was scoped to only that document's category. There is no REST endpoint to trigger a reindex (checked the live WSDL operation list: ExecuteFullTextQuery, ExecuteAsyncFullTextQuery, GetNextFullTextQueryRows, ReleaseFullTextQuery - no rebuild/reindex operation exists).",
+      "affected_operations": [
+        "ExecuteFullTextQuery",
+        "therefore_query.search_fulltext"
+      ],
+      "workaround": "If a full-text search seems to be missing a document known to contain the term, don't assume the query is wrong - the document may simply not be in the full-text index yet. This needs checking from the Therefore admin console, not the API."
     }
   ],
   "authentication": {

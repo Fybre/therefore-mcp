@@ -415,7 +415,7 @@ OPERATION_REGISTRY = {
         },
     },
     ("therefore_query", "search_fulltext"): {
-        "description": "Execute a full text search",
+        "description": "Execute a full text search over document content. A zero-hit result doesn't necessarily mean the term isn't in any document - a category having full-text enabled doesn't guarantee every document in it is actually indexed (see therefore_knowledge quirks). Returns a flat Results array with MatchedWords/Relevance per hit.",
         "required": ["search"],
         "optional": {
             "categories": "array - category numbers",
