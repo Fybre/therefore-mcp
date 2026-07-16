@@ -355,14 +355,6 @@ OPERATION_REGISTRY = {
         "required": ["doc_no"],
         "optional": {},
     },
-    ("therefore_documents", "copy"): {
-        "description": "NOT AVAILABLE - the underlying CopyDocument endpoint does not exist on the live Therefore server (verified via WSDL); always raises NotImplementedError",
-        "required": ["doc_no"],
-        "optional": {
-            "target_category_no": "integer - target category number",
-            "index_data_items": "array - index data for the copy",
-        },
-    },
     ("therefore_documents", "check_out"): {
         "description": "Check out a document",
         "required": ["doc_no"],
@@ -993,7 +985,6 @@ Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then cal
                             "update_index_data",
                             "add_streams",
                             "delete",
-                            "copy",
                             "check_out",
                             "check_in",
                             "undo_check_out",
@@ -1770,14 +1761,6 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return self._add_streams_to_document(args, tenant, client)
         if op == "delete":
             return client.delete_document(int(args["doc_no"]))
-        if op == "copy":
-            return client.copy_document(
-                doc_no=int(args["doc_no"]),
-                target_category_no=int(args["target_category_no"])
-                if args.get("target_category_no") is not None
-                else None,
-                index_data_items=args.get("index_data_items"),
-            )
         if op == "check_out":
             return client.check_out_document(
                 doc_no=int(args["doc_no"]), version_no=int(args.get("version_no", 0))

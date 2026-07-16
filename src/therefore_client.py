@@ -661,21 +661,6 @@ class ThereforeClient:
         payload.update(settings)
         return self._post('SetUserSettings', payload)
 
-    def copy_document(
-        self,
-        doc_no: int,
-        target_category_no: Optional[int] = None,
-        index_data_items: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
-        # CopyDocument does not exist on the live server (confirmed via WSDL operation
-        # list and a live 405) and no equivalent replacement endpoint was found. Fail
-        # fast with a clear message instead of a confusing 405 from _post().
-        raise NotImplementedError(
-            "copy_document is not available: the Therefore REST API has no CopyDocument "
-            "endpoint (verified against a live tenant's WSDL operation list). No "
-            "equivalent replacement was found."
-        )
-
     def get_document_versions(self, doc_no: int) -> Dict[str, Any]:
         # GetDocumentVersions does not exist on the live server (405) - GetDocumentHistory
         # is the real endpoint and returns per-version history entries.
