@@ -185,6 +185,9 @@ def test_router_picks_most_specific_keyword():
         ("list workflow instances", "therefore_workflow", "get_all_instances"),
         ("search documents for invoices", "therefore_query", "search"),
         ("what workflow do I have", "therefore_workflow", "query_all"),
+        ("show valid referenced values", "therefore_workflow", "execute_dependent_fields_query"),
+        ("fill dependent fields", "therefore_workflow", "fill_dependent_fields"),
+        ("save case index", "therefore_workflow", "save_case_index_data"),
     ]
     for question, exp_tool, exp_op in cases:
         result = ask(server, question)

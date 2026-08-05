@@ -559,6 +559,101 @@ class ThereforeClient:
     def get_case_history(self, case_no: int) -> Dict[str, Any]:
         return self._post('GetCaseHistory', {'CaseNo': case_no})
 
+    def execute_dependent_fields_query(
+        self,
+        field_no: int,
+        index_data_items: List[Dict[str, Any]],
+        case_definition_no: int = 0,
+        category_no: int = 0,
+        max_rows: int = 500,
+        save_mode: bool = False,
+    ) -> Dict[str, Any]:
+        """List referenced-table values valid for the current index-data context."""
+        return self._post('ExecuteDependentFieldsQuery', {
+            'CaseDefinitionNo': int(case_definition_no),
+            'CategoryNo': int(category_no),
+            'FieldNo': int(field_no),
+            'IndexDataItems': index_data_items,
+            'MaxRows': int(max_rows),
+            'SaveMode': bool(save_mode),
+        })
+
+    def fill_dependent_fields(
+        self,
+        index_data_items: List[Dict[str, Any]],
+        primary_field_no: int,
+        *,
+        doc_no: Optional[int] = None,
+        case_definition_no: Optional[int] = None,
+        category_no: Optional[int] = None,
+        exclude_redundant: bool = False,
+        include_access_mask: bool = False,
+        do_calculate_fields: bool = True,
+    ) -> Dict[str, Any]:
+        """Resolve dependent fields in exactly one document, case, or category context."""
+        contexts = [doc_no is not None, case_definition_no is not None, category_no is not None]
+        if sum(contexts) != 1:
+            raise ValueError('Specify exactly one of doc_no, case_definition_no, or category_no')
+
+        payload: Dict[str, Any] = {
+            'IndexDataItems': index_data_items,
+            'ExcludeRedundant': bool(exclude_redundant),
+            'PrimaryFieldNo': int(primary_field_no),
+            'IsAccessMaskNeeded': bool(include_access_mask),
+            'DoCalculateFields': bool(do_calculate_fields),
+        }
+        if doc_no is not None:
+            payload['DocNo'] = int(doc_no)
+        elif case_definition_no is not None:
+            payload['CaseDefinitionNo'] = int(case_definition_no)
+        else:
+            payload['CategoryNo'] = int(category_no)
+        return self._post('FillDependentFields', payload)
+
+    def save_case_index_data_quick(
+        self,
+        case_no: int,
+        index_data_items: List[Dict[str, Any]],
+        check_in_comments: str = '',
+    ) -> Dict[str, Any]:
+        return self._post('SaveCaseIndexDataQuick', {
+            'CaseNo': int(case_no),
+            'CheckInComments': check_in_comments,
+            'IndexData': {'IndexDataItems': index_data_items},
+        })
+
+    def save_case_index_data(
+        self,
+        case_no: int,
+        index_data_items: List[Dict[str, Any]],
+        check_in_comments: str = '',
+        do_fill_dependent_fields: bool = True,
+        last_change_time: Optional[str] = None,
+        last_change_time_iso: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Save case index data using fresh optimistic-concurrency values by default."""
+        if not last_change_time and not last_change_time_iso:
+            current = self.get_case(case_no)
+            idx = ((current.get('Case') or {}).get('IndexData') or {})
+            last_change_time = idx.get('LastChangeTime')
+            last_change_time_iso = idx.get('LastChangeTimeISO8601')
+        if not last_change_time and not last_change_time_iso:
+            raise ValueError('LastChangeTime or LastChangeTimeISO8601 is required for SaveCaseIndexData')
+
+        index_data: Dict[str, Any] = {
+            'IndexDataItems': index_data_items,
+            'DoFillDependentFields': bool(do_fill_dependent_fields),
+        }
+        if last_change_time:
+            index_data['LastChangeTime'] = last_change_time
+        if last_change_time_iso:
+            index_data['LastChangeTimeISO8601'] = last_change_time_iso
+        return self._post('SaveCaseIndexData', {
+            'CaseNo': int(case_no),
+            'CheckInComments': check_in_comments,
+            'IndexData': index_data,
+        })
+
     def create_user(
         self,
         user_name: str,

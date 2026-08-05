@@ -27,20 +27,24 @@ def test_knowledge_tools():
         tenant_labels={'dummy': 'Dummy'}
     )
 
+    def call(operation, **kwargs):
+        return server._call_tool('therefore_knowledge', {
+            'operation': operation,
+            'tenant': 'dummy',
+            **kwargs,
+        })
+
     # Test 1: List available knowledge
-    print("1. Testing list_therefore_knowledge...")
-    result = server._call_tool('list_therefore_knowledge', {})
+    print("1. Testing therefore_knowledge/list_all...")
+    result = call('list_all')
     print(f"   Available workflows: {len(result['available_knowledge']['workflows'])}")
     print(f"   Available field types: {len(result['available_knowledge']['field_types'])}")
     print(f"   Available patterns: {len(result['available_knowledge']['common_patterns'])}")
     print(f"   ✓ Success\n")
 
     # Test 2: Search knowledge
-    print("2. Testing search_therefore_knowledge...")
-    result = server._call_tool('search_therefore_knowledge', {
-        'query': 'how to query with filter',
-        'limit': 3
-    })
+    print("2. Testing therefore_knowledge/search...")
+    result = call('search', query='how to query with filter', limit=3)
     print(f"   Query: '{result['query']}'")
     print(f"   Results found: {result['results_count']}")
     if result['results_count'] > 0:
@@ -48,38 +52,30 @@ def test_knowledge_tools():
     print(f"   ✓ Success\n")
 
     # Test 3: Get workflow
-    print("3. Testing get_therefore_workflow...")
-    result = server._call_tool('get_therefore_workflow', {
-        'workflow_name': 'query_documents_with_filter'
-    })
+    print("3. Testing therefore_knowledge/get_workflow...")
+    result = call('get_workflow', workflow_name='query_documents_with_filter')
     print(f"   Workflow: {result.get('name')}")
     print(f"   Steps: {len(result.get('steps', []))}")
     print(f"   Use cases: {len(result.get('use_cases', []))}")
     print(f"   ✓ Success\n")
 
     # Test 4: Get field type info
-    print("4. Testing get_therefore_field_type_info...")
-    result = server._call_tool('get_therefore_field_type_info', {
-        'field_type': 'StringField'
-    })
+    print("4. Testing therefore_knowledge/get_field_types...")
+    result = call('get_field_types', field_type='StringField')
     print(f"   Field type name: {result.get('name')}")
     print(f"   Index data type: {result.get('index_data_type')}")
     print(f"   ✓ Success\n")
 
     # Test 5: Get common pattern
-    print("5. Testing get_therefore_common_pattern...")
-    result = server._call_tool('get_therefore_common_pattern', {
-        'pattern_name': 'map_index_values_to_columns'
-    })
+    print("5. Testing therefore_knowledge/get_pattern...")
+    result = call('get_pattern', pattern_name='map_index_values_to_columns')
     print(f"   Pattern: {result.get('description')[:60]}...")
     print(f"   Has Python example: {bool(result.get('example_python'))}")
     print(f"   ✓ Success\n")
 
     # Test 6: Get API quirks
-    print("6. Testing get_therefore_api_quirks...")
-    result = server._call_tool('get_therefore_api_quirks', {
-        'search': 'keyword'
-    })
+    print("6. Testing therefore_knowledge/get_quirks...")
+    result = call('get_quirks', search_term='keyword')
     print(f"   Search: '{result.get('search')}'")
     print(f"   Quirks found: {result['quirks_count']}")
     if result['quirks_count'] > 0:
@@ -93,10 +89,7 @@ def test_knowledge_tools():
     query = "how do I map IndexValues to column names"
     print(f"Query: '{query}'\n")
 
-    result = server._call_tool('search_therefore_knowledge', {
-        'query': query,
-        'limit': 1
-    })
+    result = call('search', query=query, limit=1)
 
     if result['results_count'] > 0:
         top_result = result['results'][0]

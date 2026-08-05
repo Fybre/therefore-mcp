@@ -173,7 +173,7 @@
           "description": "Save FillDependentFields.UpdatedIndexDataItems. Full save also uses fresh LastChangeTime values from GetCase"
         }
       ],
-      "verified": "craigdemo Web API 35.0.3.0: field 3742, data type 172, string ID '1'; quick and full save both returned 200 and read back correctly"
+      "verified": "craigdemo Web API 35.0.3.0: grouped therefore_categories/therefore_workflow tools resolved field 3742, data type 172, string ID '1'; quick and full save both returned 200 and read back correctly"
     }
   },
   "field_types": {

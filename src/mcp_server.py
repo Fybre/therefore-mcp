@@ -612,6 +612,44 @@ OPERATION_REGISTRY = {
         "required": ["case_no"],
         "optional": {},
     },
+    ("therefore_workflow", "execute_dependent_fields_query"): {
+        "description": "List referenced-table rows valid for a field in the current case/category index-data context. ResultRows.FieldValues map positionally to QueryResult.Columns.",
+        "required": ["field_no"],
+        "optional": {
+            "index_data_items": "array - current typed index data (default empty)",
+            "case_definition_no": "integer - case definition context (default 0)",
+            "category_no": "integer - category context (default 0)",
+            "max_rows": "integer - maximum rows (default 500)",
+            "save_mode": "boolean - apply save-mode filtering (default false)",
+        },
+    },
+    ("therefore_workflow", "fill_dependent_fields"): {
+        "description": "Populate fields dependent on a selected referenced-table ID. Specify exactly one of doc_no, case_definition_no, or category_no; omitted contexts must not be sent as zero placeholders.",
+        "required": ["primary_field_no", "index_data_items"],
+        "optional": {
+            "doc_no": "integer - document context",
+            "case_definition_no": "integer - case definition context",
+            "category_no": "integer - category context",
+            "exclude_redundant": "boolean - omit redundant returned fields (default false)",
+            "include_access_mask": "boolean - include access masks (default false)",
+            "do_calculate_fields": "boolean - calculate fields (default true)",
+        },
+    },
+    ("therefore_workflow", "save_case_index_data_quick"): {
+        "description": "Save validated case index data without supplying concurrency timestamps. For referenced fields, pass FillDependentFields.UpdatedIndexDataItems.",
+        "required": ["case_no", "index_data_items"],
+        "optional": {"check_in_comments": "string - audit comment"},
+    },
+    ("therefore_workflow", "save_case_index_data"): {
+        "description": "Save validated case index data with optimistic concurrency. If timestamps are omitted, the client fetches fresh values with GetCase.",
+        "required": ["case_no", "index_data_items"],
+        "optional": {
+            "check_in_comments": "string - audit comment",
+            "do_fill_dependent_fields": "boolean - fill dependent fields (default true)",
+            "last_change_time": "string - WCF timestamp; fetched automatically if omitted",
+            "last_change_time_iso": "string - ISO timestamp; fetched automatically if omitted",
+        },
+    },
     # therefore_users operations
     ("therefore_users", "search"): {
         "description": "Search for users",
@@ -1059,6 +1097,10 @@ Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then cal
                             "get_case",
                             "get_case_documents",
                             "get_case_history",
+                            "execute_dependent_fields_query",
+                            "fill_dependent_fields",
+                            "save_case_index_data_quick",
+                            "save_case_index_data",
                         ],
                     },
                     "tenant": {
@@ -1990,6 +2032,45 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             )
         if op == "get_case_history":
             return client.get_case_history(int(args["case_no"]))
+        if op == "execute_dependent_fields_query":
+            return client.execute_dependent_fields_query(
+                field_no=int(args["field_no"]),
+                index_data_items=args.get("index_data_items") or [],
+                case_definition_no=int(args.get("case_definition_no", 0)),
+                category_no=int(args.get("category_no", 0)),
+                max_rows=int(args.get("max_rows", 500)),
+                save_mode=bool(args.get("save_mode", False)),
+            )
+        if op == "fill_dependent_fields":
+            return client.fill_dependent_fields(
+                index_data_items=args["index_data_items"],
+                primary_field_no=int(args["primary_field_no"]),
+                doc_no=int(args["doc_no"]) if args.get("doc_no") is not None else None,
+                case_definition_no=int(args["case_definition_no"])
+                if args.get("case_definition_no") is not None
+                else None,
+                category_no=int(args["category_no"])
+                if args.get("category_no") is not None
+                else None,
+                exclude_redundant=bool(args.get("exclude_redundant", False)),
+                include_access_mask=bool(args.get("include_access_mask", False)),
+                do_calculate_fields=bool(args.get("do_calculate_fields", True)),
+            )
+        if op == "save_case_index_data_quick":
+            return client.save_case_index_data_quick(
+                case_no=int(args["case_no"]),
+                index_data_items=args["index_data_items"],
+                check_in_comments=str(args.get("check_in_comments", "")),
+            )
+        if op == "save_case_index_data":
+            return client.save_case_index_data(
+                case_no=int(args["case_no"]),
+                index_data_items=args["index_data_items"],
+                check_in_comments=str(args.get("check_in_comments", "")),
+                do_fill_dependent_fields=bool(args.get("do_fill_dependent_fields", True)),
+                last_change_time=args.get("last_change_time"),
+                last_change_time_iso=args.get("last_change_time_iso"),
+            )
         raise ValueError(f"Unknown operation '{op}' for therefore_workflow")
 
     def _dispatch_users(self, args, tenant, client):
@@ -2618,6 +2699,10 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "workflow tasks": {"tool": "therefore_workflow", "operation": "get_my_tasks"},
             "complete task": {"tool": "therefore_workflow", "operation": "complete_task"},
             "workflow instances": {"tool": "therefore_workflow", "operation": "get_all_instances"},
+            "valid referenced values": {"tool": "therefore_workflow", "operation": "execute_dependent_fields_query"},
+            "referenced field values": {"tool": "therefore_workflow", "operation": "execute_dependent_fields_query"},
+            "fill dependent fields": {"tool": "therefore_workflow", "operation": "fill_dependent_fields"},
+            "save case index": {"tool": "therefore_workflow", "operation": "save_case_index_data"},
 
             # User operations
             "users": {"tool": "therefore_users", "operation": "search"},
