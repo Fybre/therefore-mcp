@@ -43,13 +43,20 @@ class ReferencedCaseOperationTests(unittest.TestCase):
             "ExecuteDependentFieldsQuery",
             {
                 "CaseDefinitionNo": 11,
-                "CategoryNo": 0,
                 "FieldNo": 3742,
                 "IndexDataItems": [],
                 "MaxRows": 20,
                 "SaveMode": False,
             },
         ))
+
+    def test_dependent_query_requires_one_definition_context(self):
+        with self.assertRaises(ValueError):
+            self.client.execute_dependent_fields_query(3742, [])
+        with self.assertRaises(ValueError):
+            self.client.execute_dependent_fields_query(
+                3742, [], category_no=154, case_definition_no=11
+            )
 
     def test_fill_dependent_fields_omits_unused_contexts(self):
         items = [{"StringIndexData": {"FieldNo": 3742, "DataValue": "1"}}]
@@ -124,6 +131,50 @@ class ReferencedCaseOperationTests(unittest.TestCase):
         self.assertFalse(response["result"].get("isError", False))
         self.assertEqual(self.client.calls[-1][0], "FillDependentFields")
         json.loads(response["result"]["content"][0]["text"])
+
+    def test_high_level_resolver_queries_and_fills_selected_category_row(self):
+        self.client.responses = [
+            {"CategoryFields": [{
+                "FieldNo": 3749,
+                "TypeNo": 173,
+                "IsForeignDatatype": True,
+            }]},
+            {"IndexData": {"IndexDataItems": [
+                {"IntIndexData": {"FieldNo": 3749, "DataValue": None}}
+            ]}},
+            {
+                "IndexColumn": "CaseNo",
+                "TypeNo": 173,
+                "Columns": [{"ColumnName": "CaseNo", "Type": 2}],
+            },
+            {
+                "QueryResult": {
+                    "Columns": [{"FieldNo": 3749}],
+                    "ResultRows": [{"FieldValues": ["66"]}],
+                },
+                "AllRowsReturned": True,
+            },
+            {"UpdatedIndexDataItems": [
+                {"IntIndexData": {"FieldNo": 3749, "DataValue": 66}}
+            ]},
+        ]
+        server = MCPServer(
+            clients={"test": self.client},
+            default_tenant="test",
+            tenant_labels={"test": "Test"},
+        )
+        result = server._call_tool("therefore_categories", {
+            "operation": "resolve_referenced_field",
+            "tenant": "test",
+            "category_no": 154,
+            "field_no": 3749,
+            "selected_row_index": 0,
+        })
+        self.assertEqual(result["selected"]["index_data_item"], {
+            "IntIndexData": {"FieldNo": 3749, "DataValue": 66}
+        })
+        self.assertEqual(self.client.calls[-1][0], "FillDependentFields")
+        self.assertEqual(self.client.calls[-1][1]["CategoryNo"], 154)
 
 
 if __name__ == "__main__":

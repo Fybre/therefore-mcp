@@ -143,14 +143,14 @@
         }
       ]
     },
-    "save_referenced_case_field": {
-      "name": "Resolve and Save a Referenced Case Field",
-      "description": "Resolve a valid referenced-table ID, populate its dependent fields, and save the complete case index state",
+    "resolve_and_save_referenced_field": {
+      "name": "Resolve and Save a Referenced Field",
+      "description": "Resolve a valid referenced-table ID, populate dependent fields, and save category, document, or case index data",
       "steps": [
         {
           "step": 1,
-          "operation": "GetCaseDefinition",
-          "description": "Read the field TypeNo and reference metadata"
+          "operation": "GetCategoryInfo, GetDocumentIndexData, or GetCaseDefinition",
+          "description": "Read the field TypeNo and complete current index-data state for the selected context"
         },
         {
           "step": 2,
@@ -160,20 +160,21 @@
         {
           "step": 3,
           "operation": "ExecuteDependentFieldsQuery",
-          "description": "Enumerate valid rows for FieldNo in the current CaseDefinitionNo and IndexDataItems context; map ResultRows.FieldValues positionally to QueryResult.Columns"
+          "description": "Enumerate valid rows using exactly one CategoryNo or CaseDefinitionNo. New categories require preprocessed IndexDataItems; map FieldValues positionally to Columns."
         },
         {
           "step": 4,
           "operation": "FillDependentFields",
-          "description": "Submit the selected typed ID with PrimaryFieldNo and CaseDefinitionNo; omit DocNo and CategoryNo"
+          "description": "Submit the selected typed ID with PrimaryFieldNo and exactly one DocNo, CategoryNo, or CaseDefinitionNo"
         },
         {
           "step": 5,
-          "operation": "SaveCaseIndexDataQuick or SaveCaseIndexData",
-          "description": "Save FillDependentFields.UpdatedIndexDataItems. Full save also uses fresh LastChangeTime values from GetCase"
+          "operation": "CreateDocument, SaveDocumentIndexData, SaveCaseIndexDataQuick, or SaveCaseIndexData",
+          "description": "Save FillDependentFields.UpdatedIndexDataItems through the endpoint appropriate to the context"
         }
       ],
-      "verified": "craigdemo Web API 35.0.3.0: grouped therefore_categories/therefore_workflow tools resolved field 3742, data type 172, string ID '1'; quick and full save both returned 200 and read back correctly"
+      "mcp_helper": "therefore_categories.resolve_referenced_field performs metadata lookup, preprocessing/current-state loading, valid-row query, typed selected_row_index conversion, and FillDependentFields in one call",
+      "verified": "craigdemo Web API 35.0.3.0: case field 3742/string ID 1; category 154 field 3749/integer CaseNo 66; new-category creation and existing-document 22163 SaveDocumentIndexData read-back passed; disposable objects were deleted"
     }
   },
   "field_types": {
@@ -435,7 +436,7 @@
     },
     {
       "issue": "Referenced-table fields reject arbitrary values even when the typed JSON shape is correct",
-      "explanation": "The field stores the referenced table row's ID, using the scalar type of that table's IndexColumn. The value must be a valid row for the current category/case and current dependent-field context. On craigdemo, arbitrary string markers produced a generic ServerError; a string ID returned by ExecuteDependentFieldsQuery saved successfully.",
+      "explanation": "The field stores the referenced table row's ID, using the scalar type of that table's IndexColumn. The value must be a valid row for the current category/case and current dependent-field context. ExecuteDependentFieldsQuery requires exactly one CategoryNo or CaseDefinitionNo; an unused zero-valued context is not equivalent to omission. New-category queries require complete preprocessed IndexDataItems. On craigdemo, arbitrary string markers produced a generic ServerError; values returned by ExecuteDependentFieldsQuery saved successfully in case, category, and existing-document flows.",
       "affected_operations": [
         "GetReferencedTableInfo",
         "ExecuteDependentFieldsQuery",
@@ -443,7 +444,7 @@
         "SaveCaseIndexDataQuick",
         "SaveCaseIndexData"
       ],
-      "workaround": "Resolve metadata with GetReferencedTableInfo, enumerate permitted rows with ExecuteDependentFieldsQuery, run the selected typed ID through FillDependentFields, and save UpdatedIndexDataItems. For a case FillDependentFields call, specify CaseDefinitionNo and omit DocNo and CategoryNo; zero placeholders are not equivalent to omission."
+      "workaround": "Prefer therefore_categories.resolve_referenced_field. For low-level calls, resolve metadata with GetReferencedTableInfo, prepare complete current/preprocessed items, enumerate permitted rows with exactly one definition context, run the selected typed ID through FillDependentFields with exactly one DocNo/CategoryNo/CaseDefinitionNo context, and save UpdatedIndexDataItems."
     }
   ],
   "authentication": {

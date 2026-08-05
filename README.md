@@ -148,10 +148,10 @@ the tenant resolution order described later in this doc).
 | `ask_therefore_expert` | Smart router — describes the right tool, operation, and parameters for a task. Understands connect-flavored questions too, even with zero tenants configured. |
 | `therefore_connect` | Register a tenant/login at runtime — no `.env.local` edit or server restart needed. See [Configuration](#configuration). |
 | `therefore_system` | Connection info, domain info, server version, JWT/ADFS token exchange |
-| `therefore_categories` | Get info, resolve by name, list fields, resolve field, referenced table info and query, generate config XML |
+| `therefore_categories` | Get info, resolve by name, list/resolve fields, referenced-table metadata/query, dependent-field query/fill, high-level referenced-field resolver, generate config XML |
 | `therefore_documents` | Get, create, update, update index data, add streams, delete, check out/in, undo checkout, get versions/stream/comments/history/properties, add/edit comment |
 | `therefore_query` | Synchronous query, async query, multi-category query, full-text search, users query, workflow instances query, referenced table query |
-| `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition, Cases (definition/create/read/documents/history, referenced-value query, dependent-field fill, quick/full index save) |
+| `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition, Cases (definition/create/read/documents/history, quick/full index save; dependent query/fill retained as compatibility aliases) |
 | `therefore_users` | Get connected user, resolve, list, create, set/change password, move license, portal user management, get/set settings, delete |
 | `therefore_keywords` | List dictionaries, get keywords, add/update/delete keyword, get keyword info |
 | `therefore_knowledge` | Search API docs, get workflow guides, field type info, common patterns, known quirks, list resources, fetch live API help |

@@ -563,20 +563,25 @@ class ThereforeClient:
         self,
         field_no: int,
         index_data_items: List[Dict[str, Any]],
-        case_definition_no: int = 0,
-        category_no: int = 0,
+        case_definition_no: Optional[int] = None,
+        category_no: Optional[int] = None,
         max_rows: int = 500,
         save_mode: bool = False,
     ) -> Dict[str, Any]:
         """List referenced-table values valid for the current index-data context."""
-        return self._post('ExecuteDependentFieldsQuery', {
-            'CaseDefinitionNo': int(case_definition_no),
-            'CategoryNo': int(category_no),
+        if (case_definition_no is None) == (category_no is None):
+            raise ValueError('Specify exactly one of case_definition_no or category_no')
+        payload: Dict[str, Any] = {
             'FieldNo': int(field_no),
             'IndexDataItems': index_data_items,
             'MaxRows': int(max_rows),
             'SaveMode': bool(save_mode),
-        })
+        }
+        if case_definition_no is not None:
+            payload['CaseDefinitionNo'] = int(case_definition_no)
+        else:
+            payload['CategoryNo'] = int(category_no)
+        return self._post('ExecuteDependentFieldsQuery', payload)
 
     def fill_dependent_fields(
         self,

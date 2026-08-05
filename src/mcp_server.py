@@ -220,6 +220,43 @@ OPERATION_REGISTRY = {
         "required": ["data_type_no"],
         "optional": {},
     },
+    ("therefore_categories", "execute_dependent_fields_query"): {
+        "description": "List referenced-table rows valid for a field. Specify exactly one of category_no or case_definition_no and pass the complete current index-data state.",
+        "required": ["field_no"],
+        "optional": {
+            "index_data_items": "array - current typed index data; new categories are preprocessed by resolve_referenced_field",
+            "category_no": "integer - category context",
+            "case_definition_no": "integer - case-definition context",
+            "max_rows": "integer - maximum rows (default 500)",
+            "save_mode": "boolean - apply save-mode filtering (default false)",
+        },
+    },
+    ("therefore_categories", "fill_dependent_fields"): {
+        "description": "Populate dependent fields after selecting a referenced-table ID. Specify exactly one of doc_no, category_no, or case_definition_no.",
+        "required": ["primary_field_no", "index_data_items"],
+        "optional": {
+            "doc_no": "integer - existing-document context",
+            "category_no": "integer - new-category context",
+            "case_definition_no": "integer - case-definition context",
+            "exclude_redundant": "boolean - omit redundant fields (default false)",
+            "include_access_mask": "boolean - include access masks (default false)",
+            "do_calculate_fields": "boolean - calculate fields (default true)",
+        },
+    },
+    ("therefore_categories", "resolve_referenced_field"): {
+        "description": "High-level referenced-field helper: loads field/table metadata, prepares current index data, queries valid rows, and optionally selects/fills one row in the same call.",
+        "required": ["field_no"],
+        "optional": {
+            "doc_no": "integer - existing-document context",
+            "category_no": "integer - new-category context",
+            "case_definition_no": "integer - case-definition context",
+            "index_data_items": "array - current typed index data; inferred/preprocessed when omitted",
+            "max_rows": "integer - maximum valid rows (default 500)",
+            "save_mode": "boolean - apply save-mode filtering (default false)",
+            "selected_row_index": "integer - zero-based row to select and pass to FillDependentFields",
+            "index_data_kind": "string - override typed wrapper, e.g. StringIndexData or IntIndexData",
+        },
+    },
     ("therefore_categories", "query_referenced_table"): {
         "description": "Query rows in a referenced table with optional filter conditions",
         "required": [],
@@ -617,8 +654,8 @@ OPERATION_REGISTRY = {
         "required": ["field_no"],
         "optional": {
             "index_data_items": "array - current typed index data (default empty)",
-            "case_definition_no": "integer - case definition context (default 0)",
-            "category_no": "integer - category context (default 0)",
+            "case_definition_no": "integer - case definition context; mutually exclusive with category_no",
+            "category_no": "integer - category context; mutually exclusive with case_definition_no",
             "max_rows": "integer - maximum rows (default 500)",
             "save_mode": "boolean - apply save-mode filtering (default false)",
         },
@@ -987,6 +1024,9 @@ Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then cal
                             "list_fields",
                             "resolve_field",
                             "get_referenced_table_info",
+                            "execute_dependent_fields_query",
+                            "fill_dependent_fields",
+                            "resolve_referenced_field",
                             "query_referenced_table",
                             "generate_config",
                         ],
@@ -1700,6 +1740,12 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             return self._resolve_field(args, tenant, client)
         if op == "get_referenced_table_info":
             return client.get_referenced_table_info(int(args["data_type_no"]))
+        if op == "execute_dependent_fields_query":
+            return self._execute_dependent_fields_query(args, client)
+        if op == "fill_dependent_fields":
+            return self._fill_dependent_fields(args, client)
+        if op == "resolve_referenced_field":
+            return self._resolve_referenced_field(args, client)
         if op == "query_referenced_table":
             return self._query_referenced_table(args, tenant, client)
         if op == "generate_config":
@@ -2033,29 +2079,9 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if op == "get_case_history":
             return client.get_case_history(int(args["case_no"]))
         if op == "execute_dependent_fields_query":
-            return client.execute_dependent_fields_query(
-                field_no=int(args["field_no"]),
-                index_data_items=args.get("index_data_items") or [],
-                case_definition_no=int(args.get("case_definition_no", 0)),
-                category_no=int(args.get("category_no", 0)),
-                max_rows=int(args.get("max_rows", 500)),
-                save_mode=bool(args.get("save_mode", False)),
-            )
+            return self._execute_dependent_fields_query(args, client)
         if op == "fill_dependent_fields":
-            return client.fill_dependent_fields(
-                index_data_items=args["index_data_items"],
-                primary_field_no=int(args["primary_field_no"]),
-                doc_no=int(args["doc_no"]) if args.get("doc_no") is not None else None,
-                case_definition_no=int(args["case_definition_no"])
-                if args.get("case_definition_no") is not None
-                else None,
-                category_no=int(args["category_no"])
-                if args.get("category_no") is not None
-                else None,
-                exclude_redundant=bool(args.get("exclude_redundant", False)),
-                include_access_mask=bool(args.get("include_access_mask", False)),
-                do_calculate_fields=bool(args.get("do_calculate_fields", True)),
-            )
+            return self._fill_dependent_fields(args, client)
         if op == "save_case_index_data_quick":
             return client.save_case_index_data_quick(
                 case_no=int(args["case_no"]),
@@ -2699,9 +2725,10 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "workflow tasks": {"tool": "therefore_workflow", "operation": "get_my_tasks"},
             "complete task": {"tool": "therefore_workflow", "operation": "complete_task"},
             "workflow instances": {"tool": "therefore_workflow", "operation": "get_all_instances"},
-            "valid referenced values": {"tool": "therefore_workflow", "operation": "execute_dependent_fields_query"},
-            "referenced field values": {"tool": "therefore_workflow", "operation": "execute_dependent_fields_query"},
-            "fill dependent fields": {"tool": "therefore_workflow", "operation": "fill_dependent_fields"},
+            "valid referenced values": {"tool": "therefore_categories", "operation": "resolve_referenced_field"},
+            "referenced field values": {"tool": "therefore_categories", "operation": "resolve_referenced_field"},
+            "resolve referenced field": {"tool": "therefore_categories", "operation": "resolve_referenced_field"},
+            "fill dependent fields": {"tool": "therefore_categories", "operation": "fill_dependent_fields"},
             "save case index": {"tool": "therefore_workflow", "operation": "save_case_index_data"},
 
             # User operations
@@ -4076,6 +4103,219 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "row_count": len(rows),
             "rows": rows,
         }
+
+    def _execute_dependent_fields_query(
+        self, args: Dict[str, Any], client: ThereforeClient
+    ) -> Dict[str, Any]:
+        case_definition_no = args.get("case_definition_no")
+        category_no = args.get("category_no")
+        return client.execute_dependent_fields_query(
+            field_no=int(args["field_no"]),
+            index_data_items=args.get("index_data_items") or [],
+            case_definition_no=int(case_definition_no)
+            if case_definition_no is not None
+            else None,
+            category_no=int(category_no) if category_no is not None else None,
+            max_rows=int(args.get("max_rows", 500)),
+            save_mode=bool(args.get("save_mode", False)),
+        )
+
+    def _fill_dependent_fields(
+        self, args: Dict[str, Any], client: ThereforeClient
+    ) -> Dict[str, Any]:
+        return client.fill_dependent_fields(
+            index_data_items=args["index_data_items"],
+            primary_field_no=int(args["primary_field_no"]),
+            doc_no=int(args["doc_no"]) if args.get("doc_no") is not None else None,
+            case_definition_no=int(args["case_definition_no"])
+            if args.get("case_definition_no") is not None
+            else None,
+            category_no=int(args["category_no"])
+            if args.get("category_no") is not None
+            else None,
+            exclude_redundant=bool(args.get("exclude_redundant", False)),
+            include_access_mask=bool(args.get("include_access_mask", False)),
+            do_calculate_fields=bool(args.get("do_calculate_fields", True)),
+        )
+
+    def _resolve_referenced_field(
+        self, args: Dict[str, Any], client: ThereforeClient
+    ) -> Dict[str, Any]:
+        """Discover valid referenced rows and optionally fill a selected row."""
+        doc_no = args.get("doc_no")
+        category_no = args.get("category_no")
+        case_definition_no = args.get("case_definition_no")
+        if sum(v is not None for v in (doc_no, category_no, case_definition_no)) != 1:
+            raise ValueError(
+                "Specify exactly one of doc_no, category_no, or case_definition_no"
+            )
+
+        field_no = int(args["field_no"])
+        index_data_items = args.get("index_data_items")
+        definition_fields: List[Dict[str, Any]] = []
+        query_category_no: Optional[int] = None
+        query_case_definition_no: Optional[int] = None
+
+        if doc_no is not None:
+            doc_no = int(doc_no)
+            current = client.get_document_index_data(doc_no)
+            current_index = current.get("IndexData") or {}
+            if index_data_items is None:
+                index_data_items = current_index.get("IndexDataItems") or []
+            query_category_no = current_index.get("CategoryNo") or current.get("CategoryNo")
+            if query_category_no is None:
+                raise ValueError("GetDocumentIndexData did not return CategoryNo")
+            query_category_no = int(query_category_no)
+            info = client.get_category_info(query_category_no)
+            definition_fields = info.get("CategoryFields") or []
+        elif category_no is not None:
+            query_category_no = int(category_no)
+            info = client.get_category_info(query_category_no)
+            definition_fields = info.get("CategoryFields") or []
+            if index_data_items is None:
+                preprocessed = client.preprocess_index_data(query_category_no, [])
+                index_data_items = (
+                    (preprocessed.get("IndexData") or {}).get("IndexDataItems") or []
+                )
+            else:
+                preprocessed = client.preprocess_index_data(
+                    query_category_no, index_data_items
+                )
+                index_data_items = (
+                    (preprocessed.get("IndexData") or {}).get("IndexDataItems")
+                    or index_data_items
+                )
+        else:
+            query_case_definition_no = int(case_definition_no)
+            info = client.get_case_definition(query_case_definition_no)
+            definition_fields = (info.get("CaseDefinition") or {}).get("Fields") or []
+            if index_data_items is None:
+                index_data_items = []
+
+        field = next(
+            (f for f in definition_fields if int(f.get("FieldNo", -1)) == field_no),
+            None,
+        )
+        if field is None:
+            raise ValueError(f"FieldNo {field_no} was not found in the selected context")
+        if not field.get("IsForeignDatatype"):
+            raise ValueError(f"FieldNo {field_no} is not a referenced-table field")
+
+        data_type_no = int(field["TypeNo"])
+        table_info = client.get_referenced_table_info(data_type_no)
+        index_column = table_info.get("IndexColumn")
+        index_column_info = next(
+            (
+                col
+                for col in table_info.get("Columns") or []
+                if col.get("ColumnName") == index_column
+            ),
+            None,
+        )
+        query_result = client.execute_dependent_fields_query(
+            field_no=field_no,
+            index_data_items=index_data_items or [],
+            case_definition_no=query_case_definition_no,
+            category_no=query_category_no,
+            max_rows=int(args.get("max_rows", 500)),
+            save_mode=bool(args.get("save_mode", False)),
+        )
+
+        result: Dict[str, Any] = {
+            "context": {
+                "DocNo": doc_no,
+                "CategoryNo": query_category_no,
+                "CaseDefinitionNo": query_case_definition_no,
+            },
+            "field": field,
+            "referenced_table": table_info,
+            "index_column": index_column_info,
+            "index_data_items": index_data_items,
+            "valid_values": query_result,
+        }
+        selected_row_index = args.get("selected_row_index")
+        if selected_row_index is None:
+            return result
+
+        query = query_result.get("QueryResult") or {}
+        rows = query.get("ResultRows") or []
+        selected_row_index = int(selected_row_index)
+        if selected_row_index < 0 or selected_row_index >= len(rows):
+            raise ValueError(
+                f"selected_row_index {selected_row_index} is outside 0..{len(rows) - 1}"
+            )
+        columns = query.get("Columns") or []
+        value_index = next(
+            (i for i, col in enumerate(columns) if int(col.get("FieldNo", -1)) == field_no),
+            0,
+        )
+        values = rows[selected_row_index].get("FieldValues") or []
+        if value_index >= len(values):
+            raise ValueError("The selected row does not contain the referenced field value")
+        selected_value = values[value_index]
+
+        kind = args.get("index_data_kind")
+        if not kind:
+            type_code = (index_column_info or {}).get("Type")
+            kind = {1: "StringIndexData", 2: "IntIndexData", 3: "DateIndexData"}.get(
+                type_code
+            )
+        allowed_kinds = {
+            "StringIndexData",
+            "IntIndexData",
+            "MoneyIndexData",
+            "DateIndexData",
+            "DateTimeIndexData",
+            "LogicalIndexData",
+        }
+        if kind not in allowed_kinds:
+            raise ValueError(
+                "Could not infer the referenced ID type; pass index_data_kind explicitly"
+            )
+        if kind == "IntIndexData" and selected_value is not None:
+            selected_value = int(selected_value)
+
+        selected_item = {kind: {"FieldNo": field_no, "DataValue": selected_value}}
+        type_keys = allowed_kinds | {
+            "SingleKeywordData",
+            "MultipleKeywordData",
+            "TableIndexData",
+        }
+        fill_items: List[Dict[str, Any]] = []
+        replaced = False
+        for item in index_data_items or []:
+            typed = next(
+                ((key, item.get(key)) for key in type_keys if isinstance(item.get(key), dict)),
+                None,
+            )
+            if typed is None:
+                continue
+            key, data = typed
+            if int(data.get("FieldNo", -1)) == field_no:
+                fill_items.append(selected_item)
+                replaced = True
+            else:
+                fill_items.append({key: data})
+        if not replaced:
+            fill_items.append(selected_item)
+
+        filled = client.fill_dependent_fields(
+            index_data_items=fill_items,
+            primary_field_no=field_no,
+            doc_no=doc_no,
+            category_no=query_category_no if doc_no is None else None,
+            case_definition_no=query_case_definition_no,
+            exclude_redundant=bool(args.get("exclude_redundant", False)),
+            include_access_mask=bool(args.get("include_access_mask", False)),
+            do_calculate_fields=bool(args.get("do_calculate_fields", True)),
+        )
+        result["selected"] = {
+            "row_index": selected_row_index,
+            "row": rows[selected_row_index],
+            "index_data_item": selected_item,
+        }
+        result["filled"] = filled
+        return result
 
     def _prepare_index_update(
         self,
