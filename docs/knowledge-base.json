@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2026-07-17",
+  "last_updated": "2026-08-05",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -142,6 +142,38 @@
           }
         }
       ]
+    },
+    "save_referenced_case_field": {
+      "name": "Resolve and Save a Referenced Case Field",
+      "description": "Resolve a valid referenced-table ID, populate its dependent fields, and save the complete case index state",
+      "steps": [
+        {
+          "step": 1,
+          "operation": "GetCaseDefinition",
+          "description": "Read the field TypeNo and reference metadata"
+        },
+        {
+          "step": 2,
+          "operation": "GetReferencedTableInfo",
+          "description": "Use DataTypeNo=field TypeNo; IndexColumn and Columns identify the stored ID and its scalar type"
+        },
+        {
+          "step": 3,
+          "operation": "ExecuteDependentFieldsQuery",
+          "description": "Enumerate valid rows for FieldNo in the current CaseDefinitionNo and IndexDataItems context; map ResultRows.FieldValues positionally to QueryResult.Columns"
+        },
+        {
+          "step": 4,
+          "operation": "FillDependentFields",
+          "description": "Submit the selected typed ID with PrimaryFieldNo and CaseDefinitionNo; omit DocNo and CategoryNo"
+        },
+        {
+          "step": 5,
+          "operation": "SaveCaseIndexDataQuick or SaveCaseIndexData",
+          "description": "Save FillDependentFields.UpdatedIndexDataItems. Full save also uses fresh LastChangeTime values from GetCase"
+        }
+      ],
+      "verified": "craigdemo Web API 35.0.3.0: field 3742, data type 172, string ID '1'; quick and full save both returned 200 and read back correctly"
     }
   },
   "field_types": {
@@ -400,6 +432,18 @@
         "therefore_query.search_fulltext"
       ],
       "workaround": "If a full-text search seems to be missing a document known to contain the term, don't assume the query is wrong - the document may simply not be in the full-text index yet. This needs checking from the Therefore admin console, not the API."
+    },
+    {
+      "issue": "Referenced-table fields reject arbitrary values even when the typed JSON shape is correct",
+      "explanation": "The field stores the referenced table row's ID, using the scalar type of that table's IndexColumn. The value must be a valid row for the current category/case and current dependent-field context. On craigdemo, arbitrary string markers produced a generic ServerError; a string ID returned by ExecuteDependentFieldsQuery saved successfully.",
+      "affected_operations": [
+        "GetReferencedTableInfo",
+        "ExecuteDependentFieldsQuery",
+        "FillDependentFields",
+        "SaveCaseIndexDataQuick",
+        "SaveCaseIndexData"
+      ],
+      "workaround": "Resolve metadata with GetReferencedTableInfo, enumerate permitted rows with ExecuteDependentFieldsQuery, run the selected typed ID through FillDependentFields, and save UpdatedIndexDataItems. For a case FillDependentFields call, specify CaseDefinitionNo and omit DocNo and CategoryNo; zero placeholders are not equivalent to omission."
     }
   ],
   "authentication": {
