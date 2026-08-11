@@ -180,6 +180,11 @@ def test_router_picks_most_specific_keyword():
     server = make_server()
     cases = [
         ("search users by name", "therefore_users", "search"),
+        ("change user password", "therefore_users", "change_password"),
+        ("reset user password", "therefore_users", "reset_password"),
+        ("update user group assignment", "therefore_users", "update_groups"),
+        ("move user license", "therefore_users", "move_license"),
+        ("sign out", "therefore_users", "sign_out"),
         ("I want to do a full text search", "therefore_query", "search_fulltext"),
         ("show me workflow tasks", "therefore_workflow", "get_my_tasks"),
         ("list workflow instances", "therefore_workflow", "get_all_instances"),

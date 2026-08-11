@@ -689,16 +689,22 @@ OPERATION_REGISTRY = {
     },
     # therefore_users operations
     ("therefore_users", "search"): {
-        "description": "Search for users",
-        "required": ["query"],
+        "description": "ExecuteUsersQuery: search for users, or omit query to list regular named users",
+        "required": [],
         "optional": {
+            "query": "string - user search text",
             "domain_names": "array - domain names to search",
-            "flags": "integer - search flags (default 5)",
+            "flags": "integer - defaults to 5 for a filtered search and 4 when listing all users",
         },
     },
+    ("therefore_users", "get_connected"): {
+        "description": "GetConnectedUser: return information about the authenticated user",
+        "required": [],
+        "optional": {"create": "boolean - create the user if needed (default false)"},
+    },
     ("therefore_users", "get_from_group"): {
-        "description": "Get users from a group",
-        "required": ["group_id_or_name"],
+        "description": "GetUsersFromGroup: get users from a group by group_id or group_name",
+        "required": [],
         "optional": {
             "group_id": "integer - group ID",
             "group_name": "string - group name",
@@ -711,18 +717,30 @@ OPERATION_REGISTRY = {
         "optional": {},
     },
     ("therefore_users", "create"): {
-        "description": "Create a new user",
-        "required": ["user_name", "full_name"],
+        "description": "CreateUser: create an internal user or user group using the official nested User contract",
+        "required": ["user_name"],
         "optional": {
-            "email": "string - email address",
+            "display_name": "string - display name",
+            "full_name": "string - compatibility alias for display_name",
+            "email": "string - SMTP email address",
             "password": "string - password",
             "domain_name": "string - domain name",
+            "description": "string - user description",
+            "in_folder": "string - containing user folder",
+            "user_type": "integer - 1 SingleUser, 2 UserGroup, 3 SystemUser (default 1)",
+            "disabled": "boolean - create disabled (default false)",
+            "one_time_password": "boolean - require password change at next login (default false)",
+            "force_2fa": "boolean - force two-factor authentication when supported",
         },
     },
     ("therefore_users", "update_groups"): {
-        "description": "Update user group assignments",
-        "required": ["user_id"],
-        "optional": {"group_ids": "array - group IDs"},
+        "description": "UpdateUserGroupAssignment: add or remove a user from Therefore groups",
+        "required": ["assignments"],
+        "optional": {
+            "user_id": "integer - user ID; use this or user_name/domain_name",
+            "user_name": "string - exact user name",
+            "domain_name": "string - domain required with user_name",
+        },
     },
     ("therefore_users", "get_groups"): {
         "description": "Get user group assignments",
@@ -735,14 +753,14 @@ OPERATION_REGISTRY = {
         "optional": {},
     },
     ("therefore_users", "change_password"): {
-        "description": "Change current user password",
-        "required": ["old_password", "new_password"],
-        "optional": {},
+        "description": "ChangeUserPassword: change the password for a specified user",
+        "required": ["user_name", "old_password", "new_password"],
+        "optional": {"domain_name": "string - domain name for a domain user"},
     },
     ("therefore_users", "reset_password"): {
-        "description": "Reset user password",
-        "required": ["user_id"],
-        "optional": {"send_email": "boolean - send email (default true)"},
+        "description": "ResetUserPwd: trigger forgot-password for an internal user",
+        "required": ["user_info"],
+        "optional": {},
     },
     ("therefore_users", "delete_portal"): {
         "description": "Delete a portal user",
@@ -760,8 +778,13 @@ OPERATION_REGISTRY = {
         },
     },
     ("therefore_users", "move_license"): {
-        "description": "Move a license from one user to another",
-        "required": ["source_user_id", "target_user_id"],
+        "description": "MoveUserLicense: move the authenticated user's license from another node to this node",
+        "required": [],
+        "optional": {},
+    },
+    ("therefore_users", "sign_out"): {
+        "description": "SignOut: release the authenticated user's license on the current node",
+        "required": [],
         "optional": {},
     },
     ("therefore_users", "get_settings"): {
@@ -1162,6 +1185,7 @@ Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then cal
                         "type": "string",
                         "enum": [
                             "search",
+                            "get_connected",
                             "get_from_group",
                             "get_details",
                             "create",
@@ -1173,6 +1197,7 @@ Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then cal
                             "delete_portal",
                             "save_portal",
                             "move_license",
+                            "sign_out",
                             "get_settings",
                             "set_settings",
                         ],
@@ -1533,11 +1558,28 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         ip_label = self._current_client_ip or "unknown_ip"
         timestamp = datetime.now(timezone.utc).isoformat()
         
-        # Scrub sensitive fields from args before logging
-        safe_args = args.copy()
-        for secret_key in ["password", "token", "security_token", "payload", "file_data_base64", "FileDataBase64JSON"]:
-             if secret_key in safe_args:
-                 safe_args[secret_key] = "[REDACTED]"
+        # Scrub sensitive fields recursively before logging. User-management calls use
+        # names such as old_password/new_password, so exact top-level matching is not
+        # sufficient.
+        def scrub(value: Any) -> Any:
+            if isinstance(value, dict):
+                cleaned = {}
+                for key, item in value.items():
+                    normalized = key.lower()
+                    if (
+                        "password" in normalized
+                        or "token" in normalized
+                        or normalized in {"payload", "file_data_base64", "filedatabase64json"}
+                    ):
+                        cleaned[key] = "[REDACTED]"
+                    else:
+                        cleaned[key] = scrub(item)
+                return cleaned
+            if isinstance(value, list):
+                return [scrub(item) for item in value]
+            return value
+
+        safe_args = scrub(args)
         
         # Handle nested streams in create_document
         if "streams" in safe_args and isinstance(safe_args["streams"], list):
@@ -2102,6 +2144,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
     def _dispatch_users(self, args, tenant, client):
         op = args.get("operation")
         if op == "search":
+            query = args.get("query")
             domain_names = args.get("domain_names")
             if domain_names is None:
                 try:
@@ -2110,10 +2153,12 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 except Exception:
                     domain_names = None
             return client.execute_users_query(
-                query=args["query"],
+                query=query,
                 domain_names=domain_names,
-                flags=int(args.get("flags", 5)),
+                flags=int(args.get("flags", 5 if query else 4)),
             )
+        if op == "get_connected":
+            return client.get_connected_user(create=bool(args.get("create", False)))
         if op == "get_from_group":
             return client.get_users_from_group(
                 group_id=args.get("group_id"),
@@ -2125,14 +2170,25 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
         if op == "create":
             return client.create_user(
                 user_name=str(args["user_name"]),
-                full_name=str(args["full_name"]),
+                display_name=args.get("display_name", args.get("full_name")),
                 email=args.get("email"),
                 password=args.get("password"),
                 domain_name=args.get("domain_name"),
+                description=args.get("description"),
+                in_folder=args.get("in_folder"),
+                user_type=int(args.get("user_type", 1)),
+                disabled=bool(args.get("disabled", False)),
+                one_time_password=bool(args.get("one_time_password", False)),
+                force_2fa=args.get("force_2fa"),
             )
         if op == "update_groups":
             return client.update_user_group_assignment(
-                user_id=int(args["user_id"]), group_ids=args.get("group_ids")
+                assignments=args["assignments"],
+                user_id=int(args["user_id"])
+                if args.get("user_id") is not None
+                else None,
+                user_name=args.get("user_name"),
+                domain_name=args.get("domain_name"),
             )
         if op == "get_groups":
             return client.get_user_group_assignment(int(args["user_id"]))
@@ -2142,14 +2198,13 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             )
         if op == "change_password":
             return client.change_user_password(
+                user_name=str(args["user_name"]),
                 old_password=str(args["old_password"]),
                 new_password=str(args["new_password"]),
+                domain_name=args.get("domain_name"),
             )
         if op == "reset_password":
-            return client.reset_user_password(
-                user_id=int(args["user_id"]),
-                send_email=bool(args.get("send_email", True)),
-            )
+            return client.reset_user_password(user_info=str(args["user_info"]))
         if op == "delete_portal":
             return client.delete_portal_user(int(args["user_id"]))
         if op == "save_portal":
@@ -2161,10 +2216,9 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 is_active=args.get("is_active"),
             )
         if op == "move_license":
-            return client.move_user_license(
-                source_user_id=int(args["source_user_id"]),
-                target_user_id=int(args["target_user_id"]),
-            )
+            return client.move_user_license()
+        if op == "sign_out":
+            return client.sign_out()
         if op == "get_settings":
             return client.get_user_settings(int(args["user_id"]))
         if op == "set_settings":
@@ -2737,6 +2791,11 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "search users": {"tool": "therefore_users", "operation": "search"},
             "create user": {"tool": "therefore_users", "operation": "create"},
             "user details": {"tool": "therefore_users", "operation": "get_details"},
+            "change user password": {"tool": "therefore_users", "operation": "change_password"},
+            "reset user password": {"tool": "therefore_users", "operation": "reset_password"},
+            "user group assignment": {"tool": "therefore_users", "operation": "update_groups"},
+            "move user license": {"tool": "therefore_users", "operation": "move_license"},
+            "sign out": {"tool": "therefore_users", "operation": "sign_out"},
 
             # Keyword operations
             "keywords": {"tool": "therefore_keywords", "operation": "get_by_field"},

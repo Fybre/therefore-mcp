@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2026-08-05",
+  "last_updated": "2026-08-11",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -353,6 +353,19 @@
       "workaround": "Use {\"GroupName\": \"...\"} or {\"GroupId\": N} (GroupId is the group's numeric ID from GetObjects)"
     },
     {
+      "issue": "User-management endpoints use nested and authenticated-user-scoped contracts",
+      "explanation": "CreateUser wraps properties in User; ChangeUserPassword requires UserName; ResetUserPwd accepts UserInfo; UpdateUserGroupAssignment uses nested User and Assignments. MoveUserLicense and SignOut accept empty objects and affect the authenticated user's license session.",
+      "affected_operations": [
+        "ChangeUserPassword",
+        "CreateUser",
+        "MoveUserLicense",
+        "ResetUserPwd",
+        "SignOut",
+        "UpdateUserGroupAssignment"
+      ],
+      "workaround": "Use the exact official request contracts exposed by therefore_users; do not send flat CreateUser properties, UserId/SendEmail to ResetUserPwd, or source/target IDs to MoveUserLicense."
+    },
+    {
       "issue": "GetCategoriesTree response shape differs from older docs",
       "explanation": "Response key is TreeItems (not CategoriesTree); items nest under ChildItems (not Children); the ID field is ItemNo, typed by ItemType (1=folder/FolderNo, 2=category/CategoryNo, 3=case definition/CaseDefNo)",
       "affected_operations": [
@@ -542,6 +555,69 @@
         "Users": "array of user objects"
       },
       "notes": "GroupNo is NOT a valid parameter - use GroupName or GroupId"
+    },
+    "GetConnectedUser": {
+      "method": "POST",
+      "path": "/GetConnectedUser",
+      "description": "Return information about the authenticated user",
+      "request_schema": {"Create": "boolean (required)"},
+      "response_schema": {"User": "authenticated WSUser"}
+    },
+    "GetUserDetails": {
+      "method": "POST",
+      "path": "/GetUserDetails",
+      "description": "Return details about a user or group by ID",
+      "request_schema": {"UserOrGroupId": "integer (required)"},
+      "response_schema": {"UserDetails": "WSUser details"}
+    },
+    "CreateUser": {
+      "method": "POST",
+      "path": "/CreateUser",
+      "description": "Create an internal Therefore user or user group",
+      "request_schema": {
+        "Password": "string (optional)",
+        "User": "object (required): UserName, UserType, Disabled, OneTimePwd and optional display/domain/folder/SMTP properties"
+      },
+      "notes": "User properties are nested under User; the former flat wrapper payload was invalid."
+    },
+    "ChangeUserPassword": {
+      "method": "POST",
+      "path": "/ChangeUserPassword",
+      "description": "Change the password for a specified user",
+      "request_schema": {
+        "UserName": "string (required)",
+        "OldPassword": "string (required)",
+        "NewPassword": "string (required)",
+        "DomainName": "string (optional)"
+      }
+    },
+    "ResetUserPwd": {
+      "method": "POST",
+      "path": "/ResetUserPwd",
+      "description": "Trigger forgot-password for an internal user",
+      "request_schema": {"UserInfo": "string username (required)"},
+      "notes": "Does not accept UserId or SendEmail."
+    },
+    "UpdateUserGroupAssignment": {
+      "method": "POST",
+      "path": "/UpdateUserGroupAssignment",
+      "description": "Add or remove a user from Therefore groups",
+      "request_schema": {
+        "User": "object (required): Id, or Name plus DomainName",
+        "Assignments": "array (required): ThereforeGroup plus Remove boolean"
+      }
+    },
+    "MoveUserLicense": {
+      "method": "POST",
+      "path": "/MoveUserLicense",
+      "description": "Move the authenticated user's license from another node to this node",
+      "request_schema": {}
+    },
+    "SignOut": {
+      "method": "POST",
+      "path": "/SignOut",
+      "description": "Release the authenticated user's license on the current node",
+      "request_schema": {}
     },
     "CheckOutDocument": {
       "method": "POST",

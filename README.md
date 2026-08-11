@@ -2,7 +2,7 @@
 
 A Python [MCP](https://modelcontextprotocol.io/) server that connects AI assistants to the [Therefore™](https://therefore.net/) document management system via its WebAPI.
 
-Exposes **10 tools**: a natural-language router (`ask_therefore_expert`), a runtime tenant/login registration tool (`therefore_connect`), and **8 grouped tools** (100 operations total) covering document CRUD, querying, workflow management and Cases, keyword dictionaries, user administration, categories, and system operations. Supports multi-tenant deployments with per-client access control and audit logging, including tenants registered at runtime via `therefore_connect` rather than pre-configured in `.env.local`. Zero external dependencies for stdio mode — pure Python standard library.
+Exposes **10 tools**: a natural-language router (`ask_therefore_expert`), a runtime tenant/login registration tool (`therefore_connect`), and **8 grouped tools** (109 operations total) covering document CRUD, querying, workflow management and Cases, keyword dictionaries, user administration, categories, and system operations. Supports multi-tenant deployments with per-client access control and audit logging, including tenants registered at runtime via `therefore_connect` rather than pre-configured in `.env.local`. Zero external dependencies for stdio mode — pure Python standard library.
 
 ## Quick Start
 
@@ -152,7 +152,7 @@ the tenant resolution order described later in this doc).
 | `therefore_documents` | Get, create, update, update index data, add streams, delete, check out/in, undo checkout, get versions/stream/comments/history/properties, add/edit comment |
 | `therefore_query` | Synchronous query, async query, multi-category query, full-text search, users query, workflow instances query, referenced table query |
 | `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition, Cases (definition/create/read/documents/history, quick/full index save; dependent query/fill retained as compatibility aliases) |
-| `therefore_users` | Get connected user, resolve, list, create, set/change password, move license, portal user management, get/set settings, delete |
+| `therefore_users` | Full official User operations: connected user, search/list/details/group members, create, password change/reset, group assignment, license move/sign-out; plus portal user and settings helpers |
 | `therefore_keywords` | List dictionaries, get keywords, add/update/delete keyword, get keyword info |
 | `therefore_knowledge` | Search API docs, get workflow guides, field type info, common patterns, known quirks, list resources, fetch live API help |
 
