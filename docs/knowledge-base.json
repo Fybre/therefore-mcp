@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2026-08-11",
+  "last_updated": "2026-09-16",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -275,7 +275,7 @@
     },
     "batch_query_results": {
       "description": "Paginate through large query result sets",
-      "pattern": "1. ExecuteAsyncSingleQuery \u2192 get QueryId\n2. While HasRemainingRows: GetNextSingleQueryRows\n3. Always: ReleaseSingleQuery in finally block"
+      "pattern": "1. ExecuteAsyncSingleQuery → get QueryId\n2. While HasRemainingRows: GetNextSingleQueryRows\n3. Always: ReleaseSingleQuery in finally block"
     }
   },
   "api_quirks": [
@@ -458,6 +458,15 @@
         "SaveCaseIndexData"
       ],
       "workaround": "Prefer therefore_categories.resolve_referenced_field. For low-level calls, resolve metadata with GetReferencedTableInfo, prepare complete current/preprocessed items, enumerate permitted rows with exactly one definition context, run the selected typed ID through FillDependentFields with exactly one DocNo/CategoryNo/CaseDefinitionNo context, and save UpdatedIndexDataItems."
+    },
+    {
+      "issue": "No \"list eForms\" operation — use GetObjects Type:47",
+      "explanation": "GetObjects with {\"Flags\": 1, \"Type\": 47} returns every eForm in the tenant in one call (ID=FormNo, Name, FolderNo, Guid, and a Flags bit set when AnonymousAccessEnabled is true). Type 47 (\"eForm\") is a documented GetObjects Type value, but the official docs don't spell out that this also works as a full tenant-wide eForm listing — that's only confirmed by live-tenant testing (Fybre/eform-versioner verified it matches an exhaustive FormNo scan exactly). The response has no version number field.",
+      "affected_operations": [
+        "GetObjects",
+        "GetEForm"
+      ],
+      "workaround": "Call GetObjects({Flags:1, Type:47}) to enumerate FormNo/Name/FolderNo/Guid for every eForm, then GetEForm(FormNo, VersionNo:0) per form to get its latest version number and FormDefinition. If GetObjects(Type:47) ever errors or returns empty on some server version, fall back to probing GetEForm(FormNo, 0) across a sequential FormNo range."
     }
   ],
   "authentication": {
@@ -560,15 +569,23 @@
       "method": "POST",
       "path": "/GetConnectedUser",
       "description": "Return information about the authenticated user",
-      "request_schema": {"Create": "boolean (required)"},
-      "response_schema": {"User": "authenticated WSUser"}
+      "request_schema": {
+        "Create": "boolean (required)"
+      },
+      "response_schema": {
+        "User": "authenticated WSUser"
+      }
     },
     "GetUserDetails": {
       "method": "POST",
       "path": "/GetUserDetails",
       "description": "Return details about a user or group by ID",
-      "request_schema": {"UserOrGroupId": "integer (required)"},
-      "response_schema": {"UserDetails": "WSUser details"}
+      "request_schema": {
+        "UserOrGroupId": "integer (required)"
+      },
+      "response_schema": {
+        "UserDetails": "WSUser details"
+      }
     },
     "CreateUser": {
       "method": "POST",
@@ -595,7 +612,9 @@
       "method": "POST",
       "path": "/ResetUserPwd",
       "description": "Trigger forgot-password for an internal user",
-      "request_schema": {"UserInfo": "string username (required)"},
+      "request_schema": {
+        "UserInfo": "string username (required)"
+      },
       "notes": "Does not accept UserId or SendEmail."
     },
     "UpdateUserGroupAssignment": {
@@ -787,6 +806,27 @@
       },
       "response_schema": {},
       "notes": "UNVERIFIED effect: returns 200 {} but in testing the document did not appear in a subsequent GetCaseDocuments call. Confirm the link before relying on it."
+    },
+    "GetEForm": {
+      "method": "POST",
+      "path": "/GetEForm",
+      "description": "Fetch one eForm's definition by FormNo/VersionNo",
+      "request_schema": {
+        "FormNo": "integer",
+        "VersionNo": "integer (0 = latest)"
+      },
+      "response_schema": {
+        "EForm": "object with FormNo, VersionNo, Name, FolderNo, Guid, AnonymousAccessEnabled, FormDefinition (Base64-encoded JSON/Form.io definition)"
+      }
+    },
+    "SaveEForm": {
+      "method": "POST",
+      "path": "/SaveEForm",
+      "description": "Save a new version of an eForm — Therefore's own eForm designer has no versioning UI, but this operation supports it",
+      "request_schema": {
+        "EForm": "same shape as GetEForm's response, with a new/modified FormDefinition and VersionNo set to create a new version rather than overwrite the current one"
+      },
+      "response_schema": {}
     }
   }
 }
