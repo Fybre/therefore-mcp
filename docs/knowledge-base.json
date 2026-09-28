@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2026-09-16",
+  "last_updated": "2026-09-29",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -467,6 +467,18 @@
         "GetEForm"
       ],
       "workaround": "Call GetObjects({Flags:1, Type:47}) to enumerate FormNo/Name/FolderNo/Guid for every eForm, then GetEForm(FormNo, VersionNo:0) per form to get its latest version number and FormDefinition. If GetObjects(Type:47) ever errors or returns empty on some server version, fall back to probing GetEForm(FormNo, 0) across a sequential FormNo range."
+    },
+    {
+      "issue": "Setting keys are undocumented integers and one bad key fails the whole batch",
+      "explanation": "GetSettings/GetGlobalSettings return 500 'The ID of the setting N is not in the map of the settings.' if any key in the list is unknown, and 'The Setting N is not accessible.' for protected keys (e.g. 4). No key enumeration is published. A read-only scan of keys 1–1500 on craigdemo (35.0.3.0, admin login) found 213 readable keys. Server Logging config is at 700–704 (703 = archive time in minutes, server time/UTC). GetPublicSettings/GetPublicSettingString/GetPublicSettingInt returned 'Not enough values returned in GetSettings.' for every key tried. Non-admin readability not yet verified; several keys expose infrastructure (DB server, storage paths, SMTP, OAuth config).",
+      "affected_operations": [
+        "GetSettings",
+        "GetGlobalSettings",
+        "GetSettingString",
+        "GetSettingInt",
+        "GetPublicSettings"
+      ],
+      "workaround": "Discover keys one per request (parallelise), then batch only known keys. Use GetSettings when unsure of a key's type (it returns IntValue or StringValue). For logging-config drift detection, snapshot keys 700–704 and compare."
     }
   ],
   "authentication": {
@@ -827,6 +839,50 @@
         "EForm": "same shape as GetEForm's response, with a new/modified FormDefinition and VersionNo set to create a new version rather than overwrite the current one"
       },
       "response_schema": {}
+    },
+    "GetSettings": {
+      "method": "POST",
+      "path": "/GetSettings",
+      "description": "Read server/tenant settings by integer key (keys are undocumented). One unknown key fails the whole batch. Server Logging: 700 LogMask XML (52 positional values: 0 do not log, 1 failure, 3 always), 701 archive mode (1=every day), 702 archive weekday, 703 archive time in minutes after midnight UTC (1020=17:00), 704 split size MB (only for archive-by-size).",
+      "request_schema": {
+        "SettingKeys": "int[] — every key must exist"
+      },
+      "response_schema": {
+        "Settings": "[{Key:int, IntValue?:int, StringValue?:string}] — exactly one of IntValue/StringValue present"
+      }
+    },
+    "GetGlobalSettings": {
+      "method": "POST",
+      "path": "/GetGlobalSettings",
+      "description": "Read settings by integer key; values always returned as strings. Settings is a plain int array — [{SettingNo:n}] fails deserialization.",
+      "request_schema": {
+        "Settings": "int[]"
+      },
+      "response_schema": {
+        "SettingValues": "[{SettingNo:int, Value:string}]"
+      }
+    },
+    "GetSettingString": {
+      "method": "POST",
+      "path": "/GetSettingString",
+      "description": "Read one string setting. Int keys fail with 'Invalid variant type 3'.",
+      "request_schema": {
+        "SettingKey": "int"
+      },
+      "response_schema": {
+        "SettingValue": "string"
+      }
+    },
+    "GetSettingInt": {
+      "method": "POST",
+      "path": "/GetSettingInt",
+      "description": "Read one integer setting. String keys fail with 'Invalid variant type 8'.",
+      "request_schema": {
+        "SettingKey": "int"
+      },
+      "response_schema": {
+        "SettingValue": "int"
+      }
     }
   }
 }
