@@ -843,7 +843,7 @@
     "GetSettings": {
       "method": "POST",
       "path": "/GetSettings",
-      "description": "Read server/tenant settings by integer key (keys are undocumented). One unknown key fails the whole batch. Server Logging: 700 LogMask XML (52 positional values: 0 do not log, 1 failure, 3 always), 701 archive mode (1=every day), 702 archive weekday, 703 archive time in minutes after midnight UTC (1020=17:00), 704 split size MB (only for archive-by-size).",
+      "description": "Read server/tenant settings by integer key (keys are undocumented). One unknown key fails the whole batch. Server Logging: 700 LogMask XML (52 positional values, no names — event is identified by one-based slot, e.g. 4 user connect/disconnect, 6 new document; values 0 do not log, 1 log always, 2 log success, 3 log failure), 701 archive mode (1 daily, 2 weekly, 3 monthly, 4 by file size), 702 archive weekday, 703 archive time in minutes after midnight UTC (1020=17:00), 704 split size MB (only for archive-by-size).",
       "request_schema": {
         "SettingKeys": "int[] — every key must exist"
       },
