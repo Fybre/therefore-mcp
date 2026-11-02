@@ -151,7 +151,7 @@ the tenant resolution order described later in this doc).
 | `therefore_categories` | Get info, resolve by name, list/resolve fields, referenced-table metadata/query, dependent-field query/fill, high-level referenced-field resolver, generate config XML |
 | `therefore_documents` | Get, create, update, update index data, add streams, delete, check out/in, undo checkout, get versions/stream/comments/history/properties, add/edit comment |
 | `therefore_query` | Synchronous query, async query, multi-category query, full-text search, users query, workflow instances query, referenced table query |
-| `therefore_workflow` | Get tasks, get instance, claim, release, complete, delegate, get history, start workflow, get process list and definition, Cases (definition/create/read/documents/history, quick/full index save; dependent query/fill retained as compatibility aliases) |
+| `therefore_workflow` | Get tasks, get instance, claim, disclaim, delegate, finish the current step, attach a document, complete a task-module task, get history, start workflow, get process list and definition, Cases (definition/create/read/documents/history, quick/full index save; dependent query/fill retained as compatibility aliases) |
 | `therefore_users` | Full official User operations: connected user, search/list/details/group members, create, password change/reset, group assignment, license move/sign-out; plus portal user and settings helpers |
 | `therefore_keywords` | List dictionaries, get keywords, add/update/delete keyword, get keyword info |
 | `therefore_knowledge` | Search API docs, get workflow guides, field type info, common patterns, known quirks, list resources, fetch live API help |

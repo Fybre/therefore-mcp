@@ -481,54 +481,79 @@ class ThereforeClient:
 
     def complete_task(
         self,
-        workflow_instance_token: str,
         task_no: int,
-        user_decision: Optional[str] = None,
-        index_data_items: Optional[List[Dict[str, Any]]] = None,
+        task_decision: int,
+        comment: str = '',
     ) -> Dict[str, Any]:
-        payload = {
-            'WorkflowInstanceToken': workflow_instance_token,
-            'TaskNo': task_no,
-        }
-        if user_decision is not None:
-            payload['UserDecision'] = user_decision
-        if index_data_items is not None:
-            payload['IndexDataItems'] = index_data_items
-        return self._post('CompleteTask', payload)
+        """Complete a Therefore *task* (task module, not a workflow step).
 
-    def claim_workflow_instance(
-        self,
-        workflow_instance_token: str,
-        task_no: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        payload = {'WorkflowInstanceToken': workflow_instance_token}
-        if task_no is not None:
-            payload['TaskNo'] = task_no
-        return self._post('ClaimWorkflowInstance', payload)
+        Contract: Comment, TaskDecision, TaskNo. For workflow steps use
+        finish_current_workflow_task.
+        """
+        return self._post('CompleteTask', {
+            'TaskNo': int(task_no),
+            'TaskDecision': int(task_decision),
+            'Comment': comment or '',
+        })
 
-    def disclaim_workflow_instance(
-        self,
-        workflow_instance_token: str,
-        task_no: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        payload = {'WorkflowInstanceToken': workflow_instance_token}
-        if task_no is not None:
-            payload['TaskNo'] = task_no
-        return self._post('DisclaimWorkflowInstance', payload)
+    def claim_workflow_instance(self, instance_no: int, token_no: int) -> Dict[str, Any]:
+        return self._post('ClaimWorkflowInstance', {'InstanceNo': int(instance_no), 'TokenNo': int(token_no)})
+
+    def disclaim_workflow_instance(self, instance_no: int, token_no: int) -> Dict[str, Any]:
+        return self._post('DisclaimWorkflowInstance', {'InstanceNo': int(instance_no), 'TokenNo': int(token_no)})
 
     def delegate_workflow_instance(
         self,
-        workflow_instance_token: str,
-        user_id: int,
-        task_no: Optional[int] = None,
+        instance_no: int,
+        token_no: int,
+        user_name: str,
+        domain_name: str = '',
     ) -> Dict[str, Any]:
-        payload = {
-            'WorkflowInstanceToken': workflow_instance_token,
-            'UserId': user_id,
+        """Delegate to a user. The server requires DomainName ('' for internal users)
+        and the instance must be claimed first."""
+        return self._post('DelegateWorkflowInstance', {
+            'InstanceNo': int(instance_no),
+            'TokenNo': int(token_no),
+            'UserName': user_name,
+            'DomainName': domain_name or '',
+        })
+
+    def finish_current_workflow_task(
+        self,
+        instance_no: int,
+        token_no: int,
+        next_task_no: int,
+        text_information: Optional[str] = None,
+        next_user_nos: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
+        """Complete the current workflow step (claim first if needed).
+
+        next_task_no comes from GetWorkflowInstance -> Transitions[].NextTask.
+        """
+        payload: Dict[str, Any] = {
+            'InstanceNo': int(instance_no),
+            'TokenNo': int(token_no),
+            'NextTaskNo': int(next_task_no),
         }
-        if task_no is not None:
-            payload['TaskNo'] = task_no
-        return self._post('DelegateWorkflowInstance', payload)
+        if text_information:
+            payload['TextInformation'] = text_information
+        if next_user_nos:
+            payload['NextUsers'] = {'NextUserNoList': [int(n) for n in next_user_nos]}
+        return self._post('FinishCurrentWorkflowTask', payload)
+
+    def link_document_to_workflow(
+        self,
+        doc_no: int,
+        instance_no: int,
+        token_no: int,
+        auto_claim: bool = True,
+    ) -> Dict[str, Any]:
+        return self._post('LinkDocAndWFInstance', {
+            'DocNo': int(doc_no),
+            'WorkflowInstanceNo': int(instance_no),
+            'TokenNo': int(token_no),
+            'AutoClaimWorkflowInstance': bool(auto_claim),
+        })
 
     def get_case_definition(self, case_definition_no: int) -> Dict[str, Any]:
         # Note: unlike CreateCase, this endpoint's request key IS CaseDefinitionNo.
@@ -1259,7 +1284,9 @@ class ThereforeClient:
         max_rows: int = 100,
         include_index_data: bool = False,
         case_no: int = 0,
+        search_scope: int = 2,
     ) -> Dict[str, Any]:
+        """search_scope: 0 = index data only, 1 = document content, 2 = both."""
         payload = {
             'FullTextQuery': {
                 'Search': search,
@@ -1272,7 +1299,7 @@ class ThereforeClient:
                 'FuzzySearchLevel': 0,
                 'LCID': 0,
                 'MaxContentChars': 0,
-                'SearchScope': 0,
+                'SearchScope': int(search_scope),
                 'SortOrder': 0,
                 'UseThesaurus': False,
             },

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "last_updated": "2026-09-29",
+  "version": "1.1.0",
+  "last_updated": "2026-11-03",
   "workflows": {
     "query_documents_with_filter": {
       "name": "Query Documents with Field Filter",
@@ -479,6 +479,113 @@
         "GetPublicSettings"
       ],
       "workaround": "Discover keys one per request (parallelise), then batch only known keys. Use GetSettings when unsure of a key's type (it returns IntValue or StringValue). For logging-config drift detection, snapshot keys 700–704 and compare."
+    },
+    {
+      "issue": "WorkflowFlags 1 is not the inbox",
+      "explanation": "RunningInstances (1) also returns instances the user only sees as process owner, e.g. tasks they delegated away. DefaultInstances (0) is the inbox and includes tasks assigned to the user's groups. Others: 2 Finished, 3 All, 4 Error, 8 Overdue.",
+      "affected_operations": [
+        "ExecuteWorkflowQueryForAll",
+        "ExecuteWorkflowQueryForProcess"
+      ],
+      "workaround": "Use WorkflowFlags 0 for \"my tasks\"."
+    },
+    {
+      "issue": "Workflow instances are addressed by InstanceNo + TokenNo",
+      "explanation": "Claim, disclaim, delegate, finish and GetWorkflowInstance all require InstanceNo and TokenNo. There is no WorkflowInstanceToken member.",
+      "affected_operations": [
+        "ClaimWorkflowInstance",
+        "DisclaimWorkflowInstance",
+        "DelegateWorkflowInstance",
+        "FinishCurrentWorkflowTask",
+        "GetWorkflowInstance"
+      ],
+      "workaround": "Take InstanceNo/TokenNo from the workflow query rows."
+    },
+    {
+      "issue": "DelegateWorkflowInstance needs DomainName and a claimed instance",
+      "explanation": "Without DomainName the request fails deserialization (\"required data member 'DomainName' was not found\"). On an unclaimed instance it fails with \"The workflow instance must be claimed before you can perform this action\".",
+      "affected_operations": [
+        "DelegateWorkflowInstance"
+      ],
+      "workaround": "Claim first, then delegate with UserName and DomainName (\"\" for internal users; GetUserDetails gives DomainName)."
+    },
+    {
+      "issue": "Inbox rows have positional workflow columns and no claim state",
+      "explanation": "ExecuteWorkflowQueryForAll IndexValues: 0 instance no, 1 task name, 2 assigned-to text, 3 task due (UTC ISO or null), 4 process due, then category fields. Claim state is only in GetWorkflowInstance (Claimed, AssignedToUsers, OriginallyAssignedToUsers). Once claimed, AssignedToUsers is the claimer.",
+      "affected_operations": [
+        "ExecuteWorkflowQueryForAll",
+        "GetWorkflowInstance"
+      ],
+      "workaround": "Call GetWorkflowInstance for claim/assignment details."
+    },
+    {
+      "issue": "Full-text SearchScope 0 searches index data only",
+      "explanation": "ExecuteFullTextQuery SearchScope: 0 index data only, 1 document content, 2 both. With 0, words only in the file text are never found, which looks like an indexing gap. Each hit has HitCount.",
+      "affected_operations": [
+        "ExecuteFullTextQuery",
+        "ExecuteAsyncFullTextQuery"
+      ],
+      "workaround": "Use SearchScope 2 (MCP default). Run 0 and 1 side by side to tell index-data matches from text hits."
+    },
+    {
+      "issue": "Query.FullText is ignored",
+      "explanation": "In ExecuteSingleQuery/ExecuteAsyncSingleQuery, Query.FullText returns every row with no error.",
+      "affected_operations": [
+        "ExecuteSingleQuery",
+        "ExecuteAsyncSingleQuery"
+      ],
+      "workaround": "Put FullText at the top level of the request, next to Query."
+    },
+    {
+      "issue": "JWT renewal works once",
+      "explanation": "GetJWTToken with Basic auth gives a 24 h token. Called with that token as Bearer it returns a token valid 12 h from now, but renewing a renewed token returns the identical token.",
+      "affected_operations": [
+        "GetJWTToken"
+      ],
+      "workaround": "Re-authenticate (or use GetConnectionToken with Basic + UseToken: 1) after ~36 h; compare the returned expiry."
+    },
+    {
+      "issue": "GetObjectsList fails as a whole on one unsupported type",
+      "explanation": "Types 12 (Group) and 20 (WorkflowTask) are rejected (\"not supported by GetObjects\") and fail the entire call.",
+      "affected_operations": [
+        "GetObjectsList"
+      ],
+      "workaround": "Request only supported types, e.g. 19 workflow processes and 11 users/groups."
+    },
+    {
+      "issue": "Webhook subscriptions expire after 14 days by default",
+      "explanation": "CreateWorkflowUserInboxSubscription ExpiryOption 0 (default) is time-based: refresh within 14 days or it is removed. 1 is error-based: removed only after failures (unreachable or HTTP error status) spanning more than 14 days. NotificationType is always 1. Mobile is for Therefore Go only.",
+      "affected_operations": [
+        "CreateWorkflowUserInboxSubscription",
+        "RefreshNotificationSubscriptions"
+      ],
+      "workaround": "Use ExpiryOption 1 for push relays and answer 2xx quickly."
+    },
+    {
+      "issue": "Webhook payloads carry numbers only",
+      "explanation": "data has eventType, wfInstance, wfToken, wfProcess, wfTask, wfTaskGuid, wfVersion; the optional message is generic. eventType: 1 Assigned, 2 Delegated (sent to the delegator), 3 Processed, 4 Claimed, 5 Unclaimed, 6 Deleted (to the deleting user; others get 8), 7 Rerouted, 8 Unassigned.",
+      "affected_operations": [
+        "CreateWorkflowUserInboxSubscription"
+      ],
+      "workaround": "Resolve names with GetWorkflowProcess {ProcessNo, VersionNo: 0, LoadTasks: true} and cache them; de-duplicate repeated posts."
+    },
+    {
+      "issue": "No delete for comments",
+      "explanation": "LoadComments/AddComment/EditComment exist; there is no DeleteComment. Workflow instance comments use ObjType 21 with WFInstanceNo.",
+      "affected_operations": [
+        "AddComment",
+        "EditComment",
+        "LoadComments"
+      ],
+      "workaround": "Only add comments you intend to keep."
+    },
+    {
+      "issue": "FinishWorkflowTaskQuick not deployed yet",
+      "explanation": "Documented in the 2026 Web API reference but not available on Therefore Online as of Nov 2026.",
+      "affected_operations": [
+        "FinishWorkflowTaskQuick"
+      ],
+      "workaround": "Use FinishCurrentWorkflowTask."
     }
   ],
   "authentication": {
@@ -496,7 +603,21 @@
         "Authorization": "Bearer {token}",
         "TenantName": "{tenant}"
       }
-    }
+    },
+    "jwt": {
+      "obtain": "POST GetJWTToken {} with Basic auth -> {JWTToken, ExpiresAt, ExpiresAtISO8601}",
+      "headers": {
+        "Authorization": "Bearer {JWTToken}",
+        "TenantName": "{tenant}"
+      },
+      "lifetime": "24 h; one renewal (call GetJWTToken with the Bearer token) gives 12 h from now, further renewals return the same token"
+    },
+    "connection_token": {
+      "obtain": "POST GetConnectionToken {}",
+      "usage": "Basic auth with the token in place of the password plus header UseToken: 1",
+      "lifetime": "Long-lived; cleared on sign-out or after configured days of inactivity (documented, not yet verified here)"
+    },
+    "sso_discovery": "GetClientDiscoveryInfo {} (no auth) lists ClientSettings with FederationProvider 0 None, 1 ADFS, 2 Azure AD, 3 Okta, 4 Generic OIDC, 5 OneLogin, 6 ADFS OIDC."
   },
   "endpoints": {
     "ExecuteAsyncSingleQuery": {
@@ -883,6 +1004,206 @@
       "response_schema": {
         "SettingValue": "int"
       }
+    },
+    "ExecuteWorkflowQueryForAll": {
+      "method": "POST",
+      "path": "/ExecuteWorkflowQueryForAll",
+      "description": "List workflow instances (the inbox with WorkflowFlags 0)",
+      "request_schema": {
+        "WorkflowFlags": "integer (required) - 0 inbox, 1 running, 2 finished, 3 all, 4 error, 8 overdue",
+        "MaxRows": "integer"
+      },
+      "response_schema": {
+        "WorkflowQueryResultList": "array per process: ProcessNo, ProcessName, Columns, ResultRows (InstanceNo, TokenNo, IndexValues)"
+      }
+    },
+    "GetWorkflowInstance": {
+      "method": "POST",
+      "path": "/GetWorkflowInstance",
+      "description": "Instance details, assignment and transitions",
+      "request_schema": {
+        "InstanceNo": "integer (required)",
+        "TokenNo": "integer (required)"
+      },
+      "response_schema": {
+        "WorkflowInstance": "ProcessName, CurrTaskName, CurrTaskNo, AssignedToUsers, OriginallyAssignedToUsers, Claimed, IsAssignedToUser, IsProcessOwner, DelegationDisabled, BlockWorkflowComments, TaskDueDateISO8601, LinkedDocuments, Transitions[] (ActionText, NextTask)"
+      }
+    },
+    "ClaimWorkflowInstance": {
+      "method": "POST",
+      "path": "/ClaimWorkflowInstance",
+      "description": "Claim a workflow instance",
+      "request_schema": {
+        "InstanceNo": "integer (required)",
+        "TokenNo": "integer (required)"
+      },
+      "response_schema": {
+        "IsAlreadyClaimed": "boolean",
+        "ClaimedByUserName": "string"
+      }
+    },
+    "DisclaimWorkflowInstance": {
+      "method": "POST",
+      "path": "/DisclaimWorkflowInstance",
+      "description": "Release a claimed workflow instance",
+      "request_schema": {
+        "InstanceNo": "integer (required)",
+        "TokenNo": "integer (required)"
+      },
+      "response_schema": {}
+    },
+    "DelegateWorkflowInstance": {
+      "method": "POST",
+      "path": "/DelegateWorkflowInstance",
+      "description": "Delegate a claimed instance to a user",
+      "request_schema": {
+        "InstanceNo": "integer (required)",
+        "TokenNo": "integer (required)",
+        "UserName": "string (required)",
+        "DomainName": "string (required by server; \"\" for internal users)"
+      },
+      "response_schema": {}
+    },
+    "FinishCurrentWorkflowTask": {
+      "method": "POST",
+      "path": "/FinishCurrentWorkflowTask",
+      "description": "Complete the current workflow step",
+      "request_schema": {
+        "InstanceNo": "integer (required)",
+        "TokenNo": "integer (required)",
+        "NextTaskNo": "integer (required, from Transitions[].NextTask)",
+        "TextInformation": "string (optional)",
+        "NextUsers": "{NextUserNoList: [int]} (optional)"
+      },
+      "response_schema": {}
+    },
+    "LinkDocAndWFInstance": {
+      "method": "POST",
+      "path": "/LinkDocAndWFInstance",
+      "description": "Attach a document to a workflow instance",
+      "request_schema": {
+        "DocNo": "integer (required)",
+        "WorkflowInstanceNo": "integer (required)",
+        "TokenNo": "integer (required)",
+        "AutoClaimWorkflowInstance": "boolean"
+      },
+      "response_schema": {}
+    },
+    "GetWorkflowProcess": {
+      "method": "POST",
+      "path": "/GetWorkflowProcess",
+      "description": "Process and task names",
+      "request_schema": {
+        "ProcessNo": "integer (required)",
+        "VersionNo": "integer (0 = current)",
+        "LoadTasks": "boolean"
+      },
+      "response_schema": {
+        "WorkflowProcess": "Name, Tasks[] (TaskNo, Name, Type, TaskGUID)"
+      }
+    },
+    "GetObjectsList": {
+      "method": "POST",
+      "path": "/GetObjectsList",
+      "description": "Several object lists in one call",
+      "request_schema": {
+        "LoadItemsList": "array of {Type, Flags, RoleAccessMask} (19 workflow processes, 11 users and groups; 12 and 20 unsupported)"
+      },
+      "response_schema": {
+        "AllItemsList": "array of {ItemList: [{ID, Name, Data, FolderNo, Guid}]}"
+      }
+    },
+    "CreateWorkflowUserInboxSubscription": {
+      "method": "POST",
+      "path": "/CreateWorkflowUserInboxSubscription",
+      "description": "Webhook for the signed-in user's workflow inbox",
+      "request_schema": {
+        "Webhook": "{WebhookUrl, ExpiryOption (0 time-based 14 d, 1 error-based), AddTextMessage}",
+        "EventFilter": "{Whitelist: [{EventType, NotificationType: 1}]} (optional)"
+      },
+      "response_schema": {
+        "Id": "subscription GUID"
+      },
+      "related_operations": [
+        "GetNotificationSubscriptions",
+        "RefreshNotificationSubscriptions",
+        "RemoveNotificationSubscriptions"
+      ]
+    },
+    "ExecuteFullTextQuery": {
+      "method": "POST",
+      "path": "/ExecuteFullTextQuery",
+      "description": "Full-text search across categories",
+      "request_schema": {
+        "FullTextQuery": "{Search, Categories: [], MaxRows, BlockSize, CaseNo, ContextMaxSizeKB, ContextMode, FuzzySearchLevel, LCID, MaxContentChars, SearchScope (0 index, 1 content, 2 both), SortOrder, UseThesaurus}",
+        "IncludeIndexData": "boolean"
+      },
+      "response_schema": {
+        "Results": "array: DocNo, CategoryNo, Title, HitCount, MatchedWords, Relevance"
+      }
+    },
+    "GetOutOfOfficeInfoForUser": {
+      "method": "POST",
+      "path": "/GetOutOfOfficeInfoForUser",
+      "description": "Out-of-office state and delegates",
+      "request_schema": {
+        "GetAsDelegateInfoList": "boolean"
+      },
+      "response_schema": {
+        "UserOutOfOfficeInfo": "IsOutOfOfficeEnabled, DelegateUsers[]"
+      },
+      "related_operations": [
+        "SaveOutOfOfficeInfoForUser"
+      ]
+    },
+    "SaveOutOfOfficeInfoForUser": {
+      "method": "POST",
+      "path": "/SaveOutOfOfficeInfoForUser",
+      "description": "Turn out of office on/off and set delegates (replaces the list)",
+      "request_schema": {
+        "IsOutOfOfficeEnabled": "boolean",
+        "DelegateUsers": "array of {UserId, UserName, DomainName, UserType: 1}"
+      },
+      "response_schema": {}
+    },
+    "CreateSharedLink": {
+      "method": "POST",
+      "path": "/CreateSharedLink",
+      "description": "Share a document by link",
+      "request_schema": {
+        "DocNo": "integer (required)",
+        "ShareType": "integer (required)",
+        "PermissionType": "integer (required) - 0 organization, 1 specific people, 2 public"
+      },
+      "response_schema": {
+        "SharedLink": "LinkId, LinkUrl (/tdwv/#/sharedlink?id=...), ExpiresAt"
+      },
+      "related_operations": [
+        "RevokeSharedLink",
+        "GetSharedLinksForDocument"
+      ],
+      "notes": "Web Client URLs: /tdwv/#/document/{DocNo}, /tdwv/#/workflows/instance/{InstanceNo}/{TokenNo}"
+    },
+    "RevokeSharedLink": {
+      "method": "POST",
+      "path": "/RevokeSharedLink",
+      "description": "Revoke a shared link",
+      "request_schema": {
+        "LinkId": "string (required)"
+      },
+      "response_schema": {}
+    },
+    "GetJWTToken": {
+      "method": "POST",
+      "path": "/GetJWTToken",
+      "description": "JWT for Bearer auth",
+      "request_schema": {},
+      "response_schema": {
+        "JWTToken": "string",
+        "ExpiresAt": "string",
+        "ExpiresAtISO8601": "string"
+      },
+      "notes": "24 h from Basic auth; one 12 h renewal with Bearer"
     }
   }
 }

@@ -63,7 +63,7 @@ The server exposes **9 grouped tools** via an operation registry (`OPERATION_REG
 | `therefore_categories` | get_info, resolve, list_fields, resolve_field, get_referenced_table_info, query_referenced_table, generate_config |
 | `therefore_documents` | get, create, update, update_index_data, add_streams, delete, copy, check_out, check_in, undo_check_out, get_versions, get_stream, get_comments, add_comment, get_history, get_checkout_status, get_document_properties |
 | `therefore_query` | single, async_single, async_multi, full_text, users, workflow_instances, referenced_table |
-| `therefore_workflow` | get_tasks, get_instance, claim, release, complete, delegate, get_history, start, get_process_list, get_workflow_definition |
+| `therefore_workflow` | query_all, get_my_tasks, get_instance, claim, disclaim, delegate, finish_task, link_document, complete_task, get_history, get_process, cases |
 | `therefore_users` | get_connected, resolve, list, create, set_password, change_password, move_license, set_portal_user, get_settings, set_settings, delete |
 | `therefore_keywords` | list_dictionaries, get_keywords, add_keyword, update_keyword, delete_keyword, get_keyword_info |
 | `therefore_knowledge` | search, get_workflow, get_field_type_info, get_common_pattern, get_api_quirks, list, get_api_help |
@@ -232,4 +232,7 @@ The server exposes knowledge tools via `therefore_knowledge`:
 - Non-Therefore user accounts (AD/LDAP) return `UserId: 0` from user resolution APIs.
 - Table data in query `IndexValues` is concatenated strings; use `GetDocumentIndexData` for structured access.
 - Wildcard character in query conditions is `*` not `%` — using `%` returns 0 results silently.
+- Workflow instances are addressed by `InstanceNo` + `TokenNo` (claim, disclaim, delegate, finish). `DelegateWorkflowInstance` also requires `UserName` and `DomainName` (`""` for internal users) and a claimed instance.
+- `WorkflowFlags` 0 (DefaultInstances) is the user's inbox, including group tasks; 1 (RunningInstances) also returns instances the user only owns as process owner (e.g. tasks they delegated away).
+- `ExecuteFullTextQuery` `SearchScope`: 0 index data only, 1 document content, 2 both (the MCP default). For a full-text filter in a category query, use the top-level `FullText`; `Query.FullText` is ignored.
 - `ExecuteAsyncSingleQuery` returns `QueryId` (lowercase d); `GetNextSingleQueryRows` and `ReleaseSingleQuery` expect `QueryID` (uppercase D).

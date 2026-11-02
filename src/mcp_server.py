@@ -459,6 +459,7 @@ OPERATION_REGISTRY = {
             "max_rows": "integer - max rows (default 100)",
             "include_index_data": "boolean - include index data",
             "case_no": "integer - case number",
+            "search_scope": "integer - 0 index data only, 1 document content, 2 both (default 2)",
         },
     },
     ("therefore_query", "get_next_rows"): {
@@ -602,27 +603,37 @@ OPERATION_REGISTRY = {
         "optional": {"wf_doc_link_type": "integer - link type"},
     },
     ("therefore_workflow", "complete_task"): {
-        "description": "Complete a workflow task",
-        "required": ["workflow_instance_token", "task_no"],
+        "description": "Complete a Therefore task-module task (CompleteTask). For a workflow step use finish_task.",
+        "required": ["task_no", "task_decision"],
+        "optional": {"comment": "string - completion comment"},
+    },
+    ("therefore_workflow", "finish_task"): {
+        "description": "Finish the current workflow step (FinishCurrentWorkflowTask). Claim first if the task is assigned to a group. next_task_no comes from get_instance -> Transitions[].NextTask.",
+        "required": ["instance_no", "token_no", "next_task_no"],
         "optional": {
-            "user_decision": "string - user decision",
-            "index_data_items": "array - index data updates",
+            "text_information": "string - comment for the step",
+            "next_user_nos": "array - user numbers when the next task asks for a user choice",
         },
     },
     ("therefore_workflow", "claim"): {
         "description": "Claim a workflow instance",
-        "required": ["workflow_instance_token"],
-        "optional": {"task_no": "integer - task number"},
+        "required": ["instance_no", "token_no"],
+        "optional": {},
     },
     ("therefore_workflow", "disclaim"): {
-        "description": "Disclaim a workflow instance",
-        "required": ["workflow_instance_token"],
-        "optional": {"task_no": "integer - task number"},
+        "description": "Release (unclaim) a workflow instance",
+        "required": ["instance_no", "token_no"],
+        "optional": {},
     },
     ("therefore_workflow", "delegate"): {
-        "description": "Delegate a workflow instance",
-        "required": ["workflow_instance_token", "user_id"],
-        "optional": {"task_no": "integer - task number"},
+        "description": "Delegate a workflow instance to a user. The instance must be claimed first; domain_name is required by the server ('' for internal users).",
+        "required": ["instance_no", "token_no", "user_name"],
+        "optional": {"domain_name": "string - user's domain ('' for Therefore users)"},
+    },
+    ("therefore_workflow", "link_document"): {
+        "description": "Attach a document to a workflow instance (LinkDocAndWFInstance)",
+        "required": ["doc_no", "instance_no", "token_no"],
+        "optional": {"auto_claim": "boolean - claim temporarily if needed (default true)"},
     },
     ("therefore_workflow", "get_case_definition"): {
         "description": "Get a case definition's linked categories and index fields (needed to know a valid case_definition_no before calling create_case, and to build index_data_items)",
@@ -1152,9 +1163,11 @@ Example: {"tenant_name": "acme", "username": "jdoe", "password": "..."} then cal
                             "get_history",
                             "get_linked",
                             "complete_task",
+                            "finish_task",
                             "claim",
                             "disclaim",
                             "delegate",
+                            "link_document",
                             "get_case_definition",
                             "create_case",
                             "get_case",
@@ -1999,6 +2012,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
                 max_rows=int(args.get("max_rows", 100)),
                 include_index_data=bool(args.get("include_index_data", False)),
                 case_no=int(args.get("case_no", 0)),
+                search_scope=int(args.get("search_scope", 2)),
             )
         if op == "get_next_rows":
             return client.get_next_single_query_rows(
@@ -2078,32 +2092,39 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             )
         if op == "complete_task":
             return client.complete_task(
-                workflow_instance_token=str(args["workflow_instance_token"]),
                 task_no=int(args["task_no"]),
-                user_decision=args.get("user_decision"),
-                index_data_items=args.get("index_data_items"),
+                task_decision=int(args["task_decision"]),
+                comment=str(args.get("comment") or ""),
+            )
+        if op == "finish_task":
+            return client.finish_current_workflow_task(
+                instance_no=int(args["instance_no"]),
+                token_no=int(args["token_no"]),
+                next_task_no=int(args["next_task_no"]),
+                text_information=args.get("text_information"),
+                next_user_nos=args.get("next_user_nos"),
             )
         if op == "claim":
             return client.claim_workflow_instance(
-                workflow_instance_token=str(args["workflow_instance_token"]),
-                task_no=int(args["task_no"])
-                if args.get("task_no") is not None
-                else None,
+                instance_no=int(args["instance_no"]), token_no=int(args["token_no"])
             )
         if op == "disclaim":
             return client.disclaim_workflow_instance(
-                workflow_instance_token=str(args["workflow_instance_token"]),
-                task_no=int(args["task_no"])
-                if args.get("task_no") is not None
-                else None,
+                instance_no=int(args["instance_no"]), token_no=int(args["token_no"])
             )
         if op == "delegate":
             return client.delegate_workflow_instance(
-                workflow_instance_token=str(args["workflow_instance_token"]),
-                user_id=int(args["user_id"]),
-                task_no=int(args["task_no"])
-                if args.get("task_no") is not None
-                else None,
+                instance_no=int(args["instance_no"]),
+                token_no=int(args["token_no"]),
+                user_name=str(args["user_name"]),
+                domain_name=str(args.get("domain_name") or ""),
+            )
+        if op == "link_document":
+            return client.link_document_to_workflow(
+                doc_no=int(args["doc_no"]),
+                instance_no=int(args["instance_no"]),
+                token_no=int(args["token_no"]),
+                auto_claim=bool(args.get("auto_claim", True)),
             )
         if op == "get_case_definition":
             return client.get_case_definition(int(args["case_definition_no"]))
@@ -5576,6 +5597,7 @@ Keep it conversational. Ask clarifying questions if the user's requirements are 
             "error": 4,
             "overdue": 8,
             "default": 0,
+            "inbox": 0,
         }
         normalized = self._normalize_enum_value(value, mapping, "WorkflowFlags")
         if normalized is None:
